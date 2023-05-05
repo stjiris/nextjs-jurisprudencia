@@ -1,6 +1,7 @@
 import GenericPage, { GenericPageWithForm } from "@/components/genericPageStructure"
 import search, { createQueryDslQueryContainer, DEFAULT_AGGS, getSearchedArray, parseSort, populateFilters, RESULTS_PER_PAGE } from "@/core/elasticsearch";
 import { AggregationsMaxAggregate, AggregationsMinAggregate, long, SearchTotalHits, SortCombinations } from "@elastic/elasticsearch/lib/api/types";
+import { GetServerSideProps } from "next";
 import Head from "next/head"
 
 export const getServerSideProps: GetServerSideProps<EstatisticaProps> = async (ctx) => {

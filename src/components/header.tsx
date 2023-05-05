@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import ModalSobre from "./sobre";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation"
+import logoname from '../../public/images/PT-logoLogo-STJ.png'
 
 const NAVEGACAO = ["Pesquisa", "Índices", /*"Estatísticas"*/]
 
@@ -23,7 +24,7 @@ export default function Header(props: {keys_to_remove: string[]}){
         <header className="mb-1 py-2 align-items-center d-flex flex-wrap border-bottom">
             <Link href="/" className="align-items-center d-flex flex-wrap text-decoration-none nav-link">
                 <Image 
-                    src="/PT-logoLogo-STJ.png"
+                    src={logoname}
                     alt="Logótipo STJ"
                     height={70}
                     width={180}></Image>

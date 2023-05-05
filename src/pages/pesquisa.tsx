@@ -3,6 +3,7 @@ import SearchForm from "@/components/searchForm"
 import { modifySearchParams, SelectNavigate } from "@/components/select-navigate"
 import search, { createQueryDslQueryContainer, DEFAULT_AGGS, getSearchedArray, parseSort, populateFilters, RESULTS_PER_PAGE } from "@/core/elasticsearch"
 import { JurisprudenciaDocument } from "@/core/jurisprudencia"
+import { saveSearch } from "@/core/track-search"
 import { HighlightFragment, SearchHandlerResponse, SearchHandlerResponseItem } from "@/types/search"
 import { AggregationsAggregate, long, SearchHit, SearchResponse, SortCombinations } from "@elastic/elasticsearch/lib/api/types"
 import { AggregationsMaxAggregate, AggregationsMinAggregate, SearchTotalHits } from "@elastic/elasticsearch/lib/api/typesWithBodyKey"
@@ -10,7 +11,7 @@ import { GetServerSideProps } from "next"
 import Head from "next/head"
 import Link from "next/link"
 import { ReadonlyURLSearchParams, useSearchParams } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useState, MouseEventHandler } from "react"
 
 export const getServerSideProps: GetServerSideProps<SearchInfo> = async (ctx) => {
 
@@ -30,9 +31,9 @@ export const getServerSideProps: GetServerSideProps<SearchInfo> = async (ctx) =>
             total = (result.hits.total as SearchTotalHits).value;
         }
     }
-    console.log(result.aggregations?.MinAno)
+
     return {props: {
-        searchId: "TODO",
+        searchId: await saveSearch(ctx.resolvedUrl),
         pages:  Math.ceil(total / RESULTS_PER_PAGE),
         searchedArray: await getSearchedArray(Array.isArray(ctx.query.q) ? ctx.query.q.join(" ") : (ctx.query.q || "")),
         total: total,
@@ -44,7 +45,7 @@ export const getServerSideProps: GetServerSideProps<SearchInfo> = async (ctx) =>
 
 interface SearchInfo{
     searchedArray: string[]
-    searchId: string
+    searchId?: string
     pages: number
     total: number
     filtersUsed: Record<string, string[]>
@@ -78,9 +79,20 @@ export default function Pesquisa(props: SearchInfo){
     </GenericPageWithForm>
 }
 
+const onClickShare: MouseEventHandler<HTMLElement> = (event) => {
+    let id = event.currentTarget.dataset.id;
+    let url = `./go/${id}`;
+    if( "canShare" in navigator && navigator.canShare({url})){
+        navigator.share({url});
+    }
+    else{
+        let text = window.location.href.replace(/\/pesquisa.*/,url.slice(1))
+        navigator.clipboard.writeText(text);
+    }
+}
+
 function ShowResults({results, searchParams, searchInfo}: {results: SearchHandlerResponse, searchParams: ReadonlyURLSearchParams, searchInfo: SearchInfo}){
     const sort = searchParams.get("sort") || "des"
-    const searchId = searchParams.get("searchId")
     const page = parseInt(searchParams.get("page") || "0")
     return <>
         <article>
@@ -90,14 +102,14 @@ function ShowResults({results, searchParams, searchInfo}: {results: SearchHandle
                 <option value="asc">Data Ascendente</option>
                 <option value="des">Data Descendente</option>
             </SelectNavigate></b>
-            {searchId ? <i className="bi bi-share" role="button" onClick={() => navigator.share({url: `/go/${searchId}`})}></i>:""}
+            {searchInfo.searchId ? <i className="bi bi-share" role="button" onClick={onClickShare} data-id={searchInfo.searchId}></i>:""}
             <div className="d-inline float-end d-print-none">
                 {searchInfo.searchedArray.length > 0 ? 
                     ["Termos da pesquisa destacados:", searchInfo.searchedArray.map( (s,i) => <span key={i} className="badge bg-white text-dark" style={{border: `3px solid var(--highlight-${i}, var(--primary-gold))`}}>{s}</span>)]
                 : ""}
             </div>
         </article>
-        {...results.map((h, i) => <JurisprudenciaItem key={i} hit={h}/>)}
+        {...results.map((h, i) => <JurisprudenciaItem key={i} hit={h} searchId={searchInfo.searchId}/>)}
         <article className="row d-print-none">
             <nav>
                 <ul className="pagination justify-content-center text-center">
@@ -133,13 +145,14 @@ function NavLink({page, icon, searchParams}: {page: number, icon: string, search
 
 const scoreColor = (per:number) => per < 0.2 ? '#E3D5A1' : per < 0.4 ? '#CEB65E' : per < 0.6 ? '#B49936' : per < 0.8 ? '#8C752C' : '#6C5A22';
 
-function JurisprudenciaItem({hit}:{hit: SearchHandlerResponseItem}){
+function JurisprudenciaItem({hit, searchId}:{hit: SearchHandlerResponseItem, searchId?: string}){
+    const searchParam = searchId ? `?search=${searchId}` : ""
     return <article className="row border-top result">
         <div className="col-12 pt-1 d-flex flex-wrap">
             <small className="relevancia" style={{color: scoreColor(hit.score!/hit.max_score)}}>
                 {[0.2,0.4,0.6,0.8,1].map((b,i) => <i key={i} className={`bi bi-square${hit.score!/hit.max_score < b ? "" : "-fill"} me-1`}></i>)}
             </small>
-            <Link href={hit._source?.ECLI.startsWith("ECLI:PT:STJ:") ? `/a/ecli/${hit._source.ECLI}` : `/a/${encodeURIComponent(hit._source?.["Número de Processo"])}/${hit._source?.UUID}`} target="_blank">{hit._source?.["Número de Processo"]}</Link>
+            <Link href={hit._source?.ECLI.startsWith("ECLI:PT:STJ:") ? `/a/ecli/${hit._source.ECLI}${searchParam}` : `/a/${encodeURIComponent(hit._source?.["Número de Processo"])}/${hit._source?.UUID}${searchParam}`} target="_blank">{hit._source?.["Número de Processo"]}</Link>
             <span>&nbsp;- {hit._source?.Data}</span>
             {hit._source?.Área ? <span>&nbsp;- {hit._source.Área}</span> : ""}
             {hit._source?.["Meio Processual"] ? <span>&nbsp;- {hit._source["Meio Processual"].join(" / ")}</span> : ""}

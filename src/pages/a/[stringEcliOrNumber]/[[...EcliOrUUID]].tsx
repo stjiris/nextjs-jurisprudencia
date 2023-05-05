@@ -8,11 +8,15 @@ import TargetBlankLink from "@/components/link";
 import Head from "next/head";
 import GenericPage from "@/components/genericPageStructure";
 import { useRouter } from "next/navigation";
+import { trackClickedDocument } from "@/core/track-search";
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
-    let {stringEcliOrNumber,EcliOrUUID} = ctx.query;
-    console.log(ctx.query)
+    let {stringEcliOrNumber,EcliOrUUID,search: searchId} = ctx.query;
     if(!stringEcliOrNumber) throw new Error("Invalid request")
+
+    if(searchId){
+        await trackClickedDocument(searchId as string, EcliOrUUID as string)
+    }
 
 
     let must = [];
@@ -53,7 +57,7 @@ export default function MaybeDocumentPage(props: {doc?: JurisprudenciaDocument |
     }
 
 
-    return <GenericPage keys_to_remove={["stringEcliOrNumber", "EcliOrUUID"]}>
+    return <GenericPage keys_to_remove={["stringEcliOrNumber", "EcliOrUUID","search"]}>
         {Comp}
     </GenericPage>
 }

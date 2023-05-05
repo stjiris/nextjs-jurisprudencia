@@ -1,8 +1,3 @@
-import { Client } from '@elastic/elasticsearch'
-import { MappingProperty, PropertyName } from '@elastic/elasticsearch/lib/api/types';
-
-const client = new Client({ node: process.env.ES_URL || 'http://localhost:9200' });
-
 export const Index: string = "jurisprudencia.9.4";
 export const Properties = {
     "Original": {
@@ -376,62 +371,9 @@ export const Properties = {
     }
 } as const;
 
-export const deleteIndex = () => client.indices.delete({ index: Index });
-export const exists = () => client.indices.exists({ index: Index });
-export const create = () => client.indices.create({
-    index: Index,
-    mappings: {
-        dynamic_date_formats: ['dd/MM/yyyy'],
-        properties: Properties
-    },
-    settings: {
-        analysis: {
-            normalizer: {
-                term_normalizer: {
-                    type: 'custom',
-                    filter: ['uppercase', 'asciifolding']
-                }
-            },
-            analyzer: {
-                default: {
-                    type: 'custom',
-                    char_filter: ['html_strip'],
-                    filter: ['trim', 'lowercase', 'stopwords_pt', 'asciifolding'],
-                    tokenizer: 'classic',
-                }
-            },
-            filter: {
-                stopwords_pt: {
-                    type: 'stop',
-                    ignore_case: true,
-                    stopwords_path: "stopwords_pt.txt"
-                }
-            }
-        },
-        number_of_shards: 1,
-        number_of_replicas: 0,
-        max_result_window: 550000
-    }
-});
-
 export type JurisprudenciaDocument = {
     [key in keyof typeof Properties]?: any
 };
 export function isValidKey(accessKey: string): accessKey is keyof JurisprudenciaDocument{
     return accessKey in Properties
 } 
-
-if( require.main == module ){
-
-    exists().then( async exists => {
-        if( !exists ){
-            console.log("Creating index...", Index);
-            await module.exports.create();
-        }
-        else{
-            console.log("Index already exists", Index);
-        }
-    }).catch( err => {
-        console.log( err );
-    });
-}

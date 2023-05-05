@@ -1,8 +1,11 @@
+import { getShearchParams } from "@/core/track-search"
 import { GetServerSideProps } from "next"
 import Link from "next/link"
 
-export const getServerSideProps: GetServerSideProps = async () => {
-    return { redirect: {destination: "/pesquisa"}, props: {url: ""}}
+export const getServerSideProps: GetServerSideProps = async (ctx) => {
+    let params = await getShearchParams(ctx.params?.searchId as string);
+
+    return { redirect: {destination: params}, props: {url: params}}
 }
 
 export default function GoToSearch({url}: {url: string}){
