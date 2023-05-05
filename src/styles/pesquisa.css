@@ -1,0 +1,55 @@
+@media print{
+    article {
+        max-height: none !important;
+        width: 100%;
+        display: block;
+    }
+
+    article::after{
+        top:100% !important;
+    }
+
+    article{
+        break-inside: avoid !important;
+    }
+    .border{ border: none !important; }
+}
+
+article {
+    position: relative;
+    /*max-height: 300px;*/
+    overflow: hidden;
+    transition: 0.5s 0.3s;
+    padding-bottom: 2.5px;
+}
+
+.relevancia{
+    font-size: 0.65rem;
+    align-self: center;
+    white-space: nowrap;
+}
+
+
+article.result::before {
+    content: '';
+    background: var(--primary-red);
+    top: 10px;
+    width: 5px;
+    position: absolute;
+    border-radius: 10px;
+    bottom: 10px;
+}
+article.result::after {
+    /*content: "";*/
+    position: absolute; 
+    top: 50%;
+    bottom: 0;
+    left: -15px;
+    right: -15px;
+    box-shadow: inset white 0 -45px 20px;
+    transition: 0.5s 0.3s;
+}
+
+article:focus-within::after, article:hover::after{
+    box-shadow: inset white 0 0px 0px;
+}
