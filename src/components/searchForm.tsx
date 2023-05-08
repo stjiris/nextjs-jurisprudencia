@@ -106,8 +106,6 @@ function InvertFilter({accessKey, currValue}: {accessKey: string, currValue: str
     const isNeg = currValue.startsWith("not:");
     const newValue = isNeg ? currValue.replace(/^not:/,"") : `not:${currValue}`;
 
-    
-    console.log(isNeg, currValue, newValue)
     return <div role="button" onClick={() => router.push(`?${replaceSearchParams(searchParams, accessKey, newValue, currValue).toString()}`)}>
         <i className={`mx-1 bi bi-dash-circle${isNeg?"-fill":""}`}></i>
         <i className={`me-1 bi bi-plus-circle${!isNeg?"-fill":""}`}></i>
