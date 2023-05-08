@@ -22,3 +22,19 @@ export function addSearchParams(searchParams: URLSearchParams, key: string, valu
     newParams.append(key, value);
     return newParams;
 }
+
+
+export function replaceSearchParams(searchParams: URLSearchParams, key: string, newValue: string, oldValue: string){
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete(key);
+    for( let value of searchParams.getAll(key) ){
+        if( value == oldValue ){
+            newParams.append(key, newValue);
+        }
+        else{
+            newParams.append(key, value);
+        }
+    }
+    
+    return newParams;
+}

@@ -14,7 +14,7 @@ export default function Header(props: {keys_to_remove: string[]}){
     for(let key of querystring_from_next.keys()){
         if( !props.keys_to_remove.includes(key)){
             for( let val of querystring_from_next.getAll(key)){
-                new_query_string.set(key, val);
+                new_query_string.append(key, val);
             }
         }
     }

@@ -1,8 +1,9 @@
 import { JurisprudenciaDocument } from "@/core/jurisprudencia";
 import { DatalistObj } from "@/types/search";
 import Link from "next/link";
-import { ReadonlyURLSearchParams, useSearchParams } from "next/navigation"
+import { ReadonlyURLSearchParams, useRouter, useSearchParams } from "next/navigation"
 import { ChangeEvent, ChangeEventHandler, useEffect, useRef, useState, Dispatch, SetStateAction } from "react";
+import { replaceSearchParams } from "./select-navigate";
 
 export default function SearchForm({count, filtersUsed, minAno, maxAno}:{count: number, filtersUsed: Record<string, string[]>, minAno: number, maxAno: number}) {
     const form = useRef<HTMLFormElement>(null);
@@ -98,18 +99,37 @@ export default function SearchForm({count, filtersUsed, minAno, maxAno}:{count: 
     </form>
 }
 
+function InvertFilter({accessKey, currValue}: {accessKey: string, currValue: string}){
+    const router = useRouter();
+    const searchParams = useSearchParams();
+
+    const isNeg = currValue.startsWith("not:");
+    const newValue = isNeg ? currValue.replace(/^not:/,"") : `not:${currValue}`;
+
+    
+    console.log(isNeg, currValue, newValue)
+    return <div role="button" onClick={() => router.push(`?${replaceSearchParams(searchParams, accessKey, newValue, currValue).toString()}`)}>
+        <i className={`mx-1 bi bi-dash-circle${isNeg?"-fill":""}`}></i>
+        <i className={`me-1 bi bi-plus-circle${!isNeg?"-fill":""}`}></i>
+    </div>
+}
+
 function UsedFilters({filtersUsed, accessKey}: {filtersUsed: Record<string, string[]>, accessKey: string}){
     let cache = [];
     let comps = [];
     if( accessKey in filtersUsed ){
         for(let [i, value] of filtersUsed[accessKey].entries()){
             if( cache.indexOf(value) == -1){
-                const id = `checkbox-${encodeURIComponent(value)}`
                 cache.push(value);
+                const id = `checkbox-${encodeURIComponent(value)}`
+                
+                
+
                 comps.push(<div key={i} className="p-1 m-0 d-flex align-items-center" style={{background: "var(--secondary-gold)", borderBottom: "1px solid var(--primary-gold)"}}>
                     <input type="checkbox" className="form-check-input" name={accessKey} value={value} id={id} hidden defaultChecked={true}/>
-                    <label role="button" htmlFor={id} className="form-check-label d-flex justify-content-between align-items-center w-100">
-                        <span className="d-block">{value}</span>
+                    <InvertFilter currValue={value} accessKey={accessKey}/>
+                    <span className="d-block flex-grow-1 mx-1">{value.replace(/^not:/, "")}</span>
+                    <label role="button" htmlFor={id} className="form-check-label d-flex justify-content-between align-items-center">
                         <span className="d-block text-danger"><i className="bi bi-trash"></i></span>
                     </label>
                 </div>)

@@ -104,7 +104,7 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
             }
             let fieldName = (aggObj[aggField] as AggregationsTermsAggregation).field!;
             let should = filtersUsed[aggName].filter(o => !o.startsWith("not:"))
-            let must_not = filtersUsed[aggName].filter(o => o.startsWith("not:"))
+            let must_not = filtersUsed[aggName].filter(o => o.startsWith("not:")).map(o => o.substring(4))
             filters[when].push({
                 bool: {
                     should: should.map( o => (o.startsWith("\"") && o.endsWith("\"") ? {
