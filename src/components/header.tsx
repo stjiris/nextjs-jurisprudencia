@@ -13,6 +13,7 @@ export default function Header(props: {keys_to_remove: string[]}){
     const new_query_string = new URLSearchParams();
     for(let key of querystring_from_next.keys()){
         if( !props.keys_to_remove.includes(key)){
+            new_query_string.delete(key)
             for( let val of querystring_from_next.getAll(key)){
                 new_query_string.append(key, val);
             }

@@ -1,17 +1,33 @@
 import { JurisprudenciaDocument } from "@/core/jurisprudencia";
 import { DatalistObj } from "@/types/search";
+import { AppRouterInstance } from "next/dist/shared/lib/app-router-context";
 import Link from "next/link";
 import { ReadonlyURLSearchParams, useRouter, useSearchParams } from "next/navigation"
 import { ChangeEvent, ChangeEventHandler, useEffect, useRef, useState, Dispatch, SetStateAction } from "react";
 import { replaceSearchParams } from "./select-navigate";
 
+function submit(form: HTMLFormElement, router: AppRouterInstance){
+    const fd = new FormData(form);
+    const searchParams = new URLSearchParams();
+    for( let key of fd.keys() ){
+        let values = fd.getAll(key).filter(v => v.length > 0);
+        searchParams.delete(key);
+        for( let v of values ){
+            searchParams.append(key, v as string)
+        }
+    }
+    router.push(`?${searchParams.toString()}`);
+}
+
 export default function SearchForm({count, filtersUsed, minAno, maxAno}:{count: number, filtersUsed: Record<string, string[]>, minAno: number, maxAno: number}) {
     const form = useRef<HTMLFormElement>(null);
+    const router = useRouter();
     useEffect(() => {
         const element = form.current;
         const handleSubmit = () => {
             if( element?.checkValidity() ){
-                element?.submit();
+                submit(element, router);
+                form.current?.reset();
             }
             else{
                 element?.reportValidity();
@@ -21,7 +37,7 @@ export default function SearchForm({count, filtersUsed, minAno, maxAno}:{count: 
         return () => {
             element?.removeEventListener("change", handleSubmit)
         }
-    }, [form])
+    }, [form, router])
 
     const search = useSearchParams();
     const q = search.get("q");
