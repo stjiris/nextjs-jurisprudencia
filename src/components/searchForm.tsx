@@ -77,8 +77,8 @@ export default function SearchForm({count, filtersUsed, minAno, maxAno}:{count: 
                     <input id="data_fim" type="number" className="form-control form-control-sm rounded-0 p-1" name="MaxAno" min={minAno} max={maxAno} defaultValue={search.get("MaxAno") || ""} step={1} placeholder={`${maxAno}`}/>
                 </div>
             </div>
-            <FilterList filtersUsed={filtersUsed} accessKey="Número de Processo" suggest={false}/>
-            <FilterList filtersUsed={filtersUsed} accessKey="ECLI" suggest={false}/>
+            <FilterList filtersUsed={filtersUsed} accessKey="Número de Processo" dontSuggest/>
+            <FilterList filtersUsed={filtersUsed} accessKey="ECLI" dontSuggest/>
             <FilterList filtersUsed={filtersUsed} accessKey="Jurisprudência"/>
             <FilterList filtersUsed={filtersUsed} accessKey="Área"/>
             <FilterList filtersUsed={filtersUsed} accessKey="Secção"/>
@@ -153,7 +153,7 @@ function UsedFilters({filtersUsed, accessKey}: {filtersUsed: Record<string, stri
     return <>{comps}</>;
 }
 
-function FilterList({filtersUsed, accessKey, suggest, showKey}: {filtersUsed: Record<string, string[]>, accessKey: keyof JurisprudenciaDocument | string, suggest?: boolean, showKey?: string}){
+function FilterList({filtersUsed, accessKey, dontSuggest, showKey}: {filtersUsed: Record<string, string[]>, accessKey: keyof JurisprudenciaDocument | string, dontSuggest?: boolean, showKey?: string}){
     const datalistId = `datalist-${encodeURIComponent(accessKey)}`
     const searchParams = useSearchParams();
     const [datalist, setDatalist] = useState<DatalistObj[]>([]);
@@ -162,7 +162,7 @@ function FilterList({filtersUsed, accessKey, suggest, showKey}: {filtersUsed: Re
         <datalist id={datalistId}>
             {datalist.map(({key, count}, i) => <option key={i} value={`"${key}"`} label={count ? `Quantidade: ${count}` : ""}/>)}
         </datalist>
-        <input type="text" className="form-control form-control-sm border-0 border-bottom rounded-0" name={accessKey} autoComplete="off" list={datalistId} placeholder={showKey || accessKey} onFocus={() => datalist.length == 0 ? loadDatalist(accessKey, searchParams, setDatalist) : null}/>
+        <input type="text" className="form-control form-control-sm border-0 border-bottom rounded-0" name={accessKey} autoComplete="off" list={datalistId} placeholder={showKey || accessKey} onFocus={() => !dontSuggest && datalist.length == 0 ? loadDatalist(accessKey, searchParams, setDatalist) : null}/>
         <UsedFilters filtersUsed={filtersUsed} accessKey={accessKey}/>
     </div>
 }
