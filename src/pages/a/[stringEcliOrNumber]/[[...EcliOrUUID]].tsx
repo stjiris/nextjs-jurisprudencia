@@ -36,6 +36,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
 
     let r = await search({bool: {must}}, {pre:[], after:[]}, 0, {}, 100, {_source: {excludes: ["Original","HASH"]}});
     if( r.hits.hits.length <= 0 ){
+        ctx.res.statusCode = 404;
         return {props: {}}
     }
     if( r.hits.hits.length == 1 ){
