@@ -6,6 +6,30 @@ import logoname from '../../public/images/PT-logoLogo-STJ.png'
 
 const NAVEGACAO = ["Pesquisa", "Índices", /*"Estatísticas"*/]
 
+export function DashboardHeader(){
+    return <>
+        <header className="mb-1 py-2 align-items-center d-flex flex-wrap border-bottom">
+            <Link href="/dashboard" className="align-items-center d-flex flex-wrap text-decoration-none nav-link">
+                <Image 
+                    src={logoname}
+                    alt="Logótipo STJ"
+                    height={70}
+                    width={180}></Image>
+                <div className="ps-2 d-flex flex-column align-items-center">
+                    <h5 className="m-0 fancy-font">Jurisprudência - Dashboard</h5>
+                </div>
+            </Link>
+            <div className="flex-fill d-none d-lg-block"></div>
+            <nav>
+                <ul className="container d-flex nav align-items-center justify-content-evenly flex-wrap">
+                    <li className="nav-link py-1 px-2 mx-1">
+                        <Link href={`/`} className="border-0 nav-link fs-6 bg-transparent">Jurisprudência</Link>
+                    </li>
+                </ul>
+            </nav>
+        </header>
+    </>
+}
 
 export default function Header(props: {keys_to_remove: string[]}){
     const pathname = usePathname();

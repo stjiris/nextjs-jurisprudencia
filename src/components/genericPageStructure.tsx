@@ -1,17 +1,17 @@
 import Script from "next/script";
 import React, { useEffect } from "react";
-import Header from "./header";
+import Header, { DashboardHeader } from "./header";
 import SearchForm from "./searchForm";
 
+const BootScript = () => <Script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossOrigin="anonymous"/>
 
-
-export default function GenericPage(props: any){
+export default function GenericPage(props: {keys_to_remove?: string[], children: React.ReactNode}){
     return <>
         <Header keys_to_remove={props.keys_to_remove || []}></Header>
         <main className='container-fluid'>
             {props.children}
         </main>
-        <Script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossOrigin="anonymous"/>
+        <BootScript/>
     </>
 }
 
@@ -29,6 +29,16 @@ export function GenericPageWithForm(props: {keys_to_remove?: string[], count: nu
             </div>
         </main>
         {props.escapeChildren}
-        <Script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossOrigin="anonymous"/>
+        <BootScript/>
+    </>
+}
+
+export function DashboardGenericPage(props: {children: React.ReactNode}){
+    return <>
+        <DashboardHeader/>
+        <main className='container-fluid'>
+            {props.children}
+        </main>
+        <BootScript/>
     </>
 }
