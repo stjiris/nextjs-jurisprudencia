@@ -1,9 +1,8 @@
 import { Client } from "@elastic/elasticsearch"
 import { AggregationsAggregationContainer, AggregationsStringTermsBucket, AggregationsTermsAggregation, QueryDslQueryContainer, SearchRequest, SortCombinations } from "@elastic/elasticsearch/lib/api/types";
+import { isValidJurisprudenciaDocumentKey, JurisprudenciaDocument, JurisprudenciaDocumentProperties, JurisprudenciaVersion } from "@stjiris/jurisprudencia-document";
 
-import { Index as INDEXNAME , isValidKey, JurisprudenciaDocument, Properties as properties} from "./jurisprudencia"
-
-export const filterableProps = Object.entries(properties).filter(([_, obj]) => obj.type == 'keyword' || ("fields" in obj && obj.fields.keyword)).map( ([name, _]) => name).filter( o => o != "URL" && o != "UUID");
+export const filterableProps = Object.entries(JurisprudenciaDocumentProperties).filter(([_, obj]) => obj.type == 'keyword' || ("fields" in obj && obj.fields.keyword)).map( ([name, _]) => name).filter( o => o != "URL" && o != "UUID");
 
 const DATA_FIELD = "Data";
 
@@ -23,7 +22,7 @@ export const aggs = {
 } as Record<string, AggregationsAggregationContainer>;
 filterableProps.forEach(name => {
     let key = name
-    if( isValidKey(name) && "fields" in properties[name] ){
+    if( isValidJurisprudenciaDocumentKey(name) && "fields" in JurisprudenciaDocumentProperties[name] ){
         key += ".keyword"
     }
     aggs[name] = {
@@ -60,7 +59,7 @@ export default function search(
     rpp=RESULTS_PER_PAGE,
     extras: Partial<SearchRequest>={}){
     return getElasticSearchClient().then(client => client.search<JurisprudenciaDocument>({
-        index: INDEXNAME,
+        index: JurisprudenciaVersion,
         query: {
             bool: {
                 must: query,
@@ -247,7 +246,7 @@ export function createQueryDslQueryContainer(string: string | string[] | undefin
 
 
 export function getSearchedArray(text: string){
-    return getElasticSearchClient().then(c => c.indices.analyze({index: INDEXNAME, text: text})).then( r => r.tokens?.map( o => o.token ) || []).catch( e => [] as string[])
+    return getElasticSearchClient().then(c => c.indices.analyze({index: JurisprudenciaVersion, text: text})).then( r => r.tokens?.map( o => o.token ) || []).catch( e => [] as string[])
 }
 
 export function sortBucketsAlphabetically(a: AggregationsStringTermsBucket,b: AggregationsStringTermsBucket) {
