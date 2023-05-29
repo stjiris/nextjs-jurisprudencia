@@ -22,7 +22,7 @@ export const getServerSideProps : GetServerSideProps<LoginProps> = async (ctx) =
         if( r === AuthenticateResponse.AUTHORIZED){
             let session = await createSession(user!);
             ctx.res.setHeader("Set-cookie", [`user=${user}; HttpOnly; Secure; Path=/`,`session=${session}; HttpOnly; Secure; Path=/`])
-            return {redirect: {destination: redirect, permanent: false}}
+            return {redirect: {destination: redirect, statusCode: 303}}
         }
         else{
             return {props: {response: r || AuthenticateResponse.INVALID_USER}}
@@ -43,11 +43,25 @@ export const getServerSideProps : GetServerSideProps<LoginProps> = async (ctx) =
 
 export default function Login(props: LoginProps){
     return <GenericPage>
-        { props.response && <div className="alert alert-waring">Utilizador ou palavra passe errados</div> }
-        <form method="POST">
-            <input name="user" type="text" />
-            <input name="pass" type="password" />
-            <input type="submit" />
+        <form method="POST" className="container-sm">
+            { props.response !== undefined && <div className="alert alert-warning">Utilizador ou palavra passe errados</div> }
+            <div className="form-group row">
+                <label htmlFor="UserInput" className="col-sm-2 col-form-label">Utilizador:</label>
+                <div className="col-sm-10">
+                    <input name="user" type="text" className="form-control" id="UserInput" placeholder="Utilizador"/>
+                </div>
+            </div>
+            <div className="form-group row">
+                <label htmlFor="PassInput" className="col-sm-2 col-form-label">Palavra-passe:</label>
+                <div className="col-sm-10">
+                    <input name="pass" type="password" className="form-control" id="PassInput" placeholder="Palavra-passe"/>
+                </div>
+            </div>
+            <div className="form-group row">
+                <div className="col-sm-12 d-flex justify-content-end">
+                    <button type="submit" className="btn btn-primary">Entrar</button>
+                </div>
+            </div>
         </form>
     </GenericPage>
 }

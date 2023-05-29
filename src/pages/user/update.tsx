@@ -4,9 +4,10 @@ import { createSession, deleteSession, deleteUserSession, updateSession, validat
 import { deleteUser, readUser, updateUser, User } from "@/core/user/usercrud";
 import { SearchHit } from "@elastic/elasticsearch/lib/api/types";
 import { GetServerSideProps } from "next";
+import Link from "next/link";
 
 
-export const getServerSideProps : GetServerSideProps<UpdateProps> = withAuthentication(async (ctx) => {
+export const getServerSideProps = withAuthentication<UpdateProps>(async (ctx) => {
     if( ctx.req.method === "POST" ){
         let requestPostDataParams = await new Promise<URLSearchParams>((resolve) => {
             let _data = ""
@@ -28,7 +29,7 @@ export const getServerSideProps : GetServerSideProps<UpdateProps> = withAuthenti
     return {props: {user: (await readUser(ctx.req.cookies["user"]!))!}}
 }, "/user/update")
 
-interface UpdateProps {
+type UpdateProps = {
     success?: boolean
     user: SearchHit<User>
 }
@@ -36,7 +37,7 @@ interface UpdateProps {
 export default function Update({user, success}: UpdateProps){
     return <GenericPage>
         <form method="post" className="container">
-            {typeof success === "boolean" && (success ? <div className="alert alert-success">Alterações registadas</div> : <div className="alert alert-danger">Ocurreu um erro</div>)}
+            {typeof success === "boolean" && (success ? <div className="alert alert-success">Alterações registadas</div> : <div className="alert alert-danger">Ocorreu um erro</div>)}
             <div className="form-group row">
                 <label htmlFor="IDInput" className="col-sm-2 col-form-label">ID</label>
                 <div className="col-sm-10">
@@ -63,7 +64,10 @@ export default function Update({user, success}: UpdateProps){
             </div>
             <div className="form-group row">
                 <div className="col-sm-10">
-                <button type="submit" className="btn btn-primary">Atualizar</button>
+                    <button type="submit" className="btn btn-primary">Atualizar</button>
+                </div>
+                <div className="col-sm-2">
+                    <Link className="btn btn-warning" href="/user/logout">Sair</Link>
                 </div>
             </div>
         </form>
