@@ -36,40 +36,30 @@ type UpdateProps = {
 
 export default function Update({user, success}: UpdateProps){
     return <GenericPage>
-        <form method="post" className="container">
-            {typeof success === "boolean" && (success ? <div className="alert alert-success">Alterações registadas</div> : <div className="alert alert-danger">Ocorreu um erro</div>)}
-            <div className="form-group row">
-                <label htmlFor="IDInput" className="col-sm-2 col-form-label">ID</label>
-                <div className="col-sm-10">
-                    <input type="text" className="form-control" id="IDInput" readOnly value={user._id} placeholder="ID"/>
+        <div className="row justify-content-sm-center">
+            <div className="col-sm-12 col-md-6 col-xl-4">
+                <div className="card shadow">
+                    <div className="card-body">
+                        <h4 className="card-title">Alterar palavra-passe</h4>
+                        {typeof success === "boolean" && (success ? <div className=" w-75 mx-auto alert alert-success">Alterações registadas</div> : <div className=" w-75 mx-auto alert alert-danger">Ocorreu um erro</div>)}
+                        <form method="POST">
+                            <div className="w-75 mx-auto my-2">
+                                <input name="user" type="text" className="form-control" placeholder="Utilizador" readOnly value={user._source?.username}/>
+                            </div>
+                            <div className="w-75 mx-auto my-2">
+                                <input name="oldpass" type="password" className="form-control" placeholder="Palavra passe atual"/>
+                            </div>
+                            <div className="w-75 mx-auto my-2">
+                                <input name="newpass" type="password" className="form-control" placeholder="Nova palavra passe"/>
+                            </div>
+                            <div className="w-75 mx-auto my-2 d-flex justify-content-between">
+                                <button className="btn btn-primary" type="submit">Alterar</button>
+                                <Link href="/user" className="btn btn-warning">Cancelar</Link>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
-            <div className="form-group row">
-                <label htmlFor="IDInput" className="col-sm-2 col-form-label">Utilizador</label>
-                <div className="col-sm-10">
-                    <input name="user" type="text" className="form-control" id="IDInput" readOnly value={user._source?.username} placeholder="Utilizador"/>
-                </div>
-            </div>
-            <div className="form-group row">
-                <label htmlFor="currentPassInput" className="col-sm-2 col-form-label">Palavra-passe atual</label>
-                <div className="col-sm-10">
-                    <input name="oldpass" type="password" className="form-control" id="currentPassInput" placeholder="Palavra-passe atual" />
-                </div>
-            </div>
-            <div className="form-group row">
-                <label htmlFor="newPassInput" className="col-sm-2 col-form-label">Nova palavra-passe</label>
-                <div className="col-sm-10">
-                    <input name="newpass" type="password" className="form-control" id="newPassInput" placeholder="Nova palavra-passe" />
-                </div>
-            </div>
-            <div className="form-group row">
-                <div className="col-sm-10">
-                    <button type="submit" className="btn btn-primary">Atualizar</button>
-                </div>
-                <div className="col-sm-2">
-                    <Link className="btn btn-warning" href="/user/logout">Sair</Link>
-                </div>
-            </div>
-        </form>
+        </div>
     </GenericPage>
 }

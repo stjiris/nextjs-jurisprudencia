@@ -25,6 +25,9 @@ export function DashboardHeader(){
                     <li className="nav-link py-1 px-2 mx-1">
                         <Link href={`/`} className="border-0 nav-link fs-6 bg-transparent">Jurisprudência</Link>
                     </li>
+                    <li className="nav-link py-1 px-2 mx-1">
+                        <Link href={`/user`} className="border-0 nav-link fs-6 bg-transparent">Utilizador</Link>
+                    </li>
                 </ul>
             </nav>
         </header>

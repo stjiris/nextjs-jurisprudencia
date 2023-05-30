@@ -229,7 +229,7 @@ export function parseSort(value: string | undefined, array: SortCombinations[]){
     return sortV;
 }
 
-export function createQueryDslQueryContainer(string: string | string[] | undefined): QueryDslQueryContainer | QueryDslQueryContainer[] {
+export function createQueryDslQueryContainer(string?: string | string[]): QueryDslQueryContainer | QueryDslQueryContainer[] {
     if( !string ){
         return {
             match_all: {}

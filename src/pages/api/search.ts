@@ -1,8 +1,7 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 import search, { createQueryDslQueryContainer, filterableProps, parseSort, populateFilters, RESULTS_PER_PAGE } from '@/core/elasticsearch';
-import { JurisprudenciaDocument, Properties } from '@/core/jurisprudencia'
 import { HighlightFragment, SearchHandlerResponse } from '@/types/search';
-import { AggregationsAggregate, SearchHighlight, SearchHit, SearchResponse, SortCombinations } from '@elastic/elasticsearch/lib/api/types';
+import { SearchHighlight, SortCombinations } from '@elastic/elasticsearch/lib/api/types';
 import type { NextApiRequest, NextApiResponse } from 'next'
 
 export default async function searchHandler(

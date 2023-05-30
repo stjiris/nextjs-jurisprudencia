@@ -42,26 +42,27 @@ export const getServerSideProps : GetServerSideProps<LoginProps> = async (ctx) =
 
 
 export default function Login(props: LoginProps){
-    return <GenericPage>
-        <form method="POST" className="container-sm">
-            { props.response !== undefined && <div className="alert alert-warning">Utilizador ou palavra passe errados</div> }
-            <div className="form-group row">
-                <label htmlFor="UserInput" className="col-sm-2 col-form-label">Utilizador:</label>
-                <div className="col-sm-10">
-                    <input name="user" type="text" className="form-control" id="UserInput" placeholder="Utilizador"/>
+    return <GenericPage keys_to_remove={["redirect"]}>
+        <div className="row justify-content-sm-center">
+            <div className="col-sm-12 col-md-6 col-xl-4">
+                <div className="card shadow">
+                    <div className="card-body">
+                        <h4 className="card-title">Autenticação</h4>
+                        { props.response !== undefined && <div className="alert alert-warning w-75 mx-auto">Utilizador ou palavra passe errados</div> }
+                        <form method="POST">
+                            <div className="w-75 mx-auto my-2">
+                                <input name="user" type="text" className="form-control" placeholder="Utilizador"/>
+                            </div>
+                            <div className="w-75 mx-auto my-2">
+                                <input name="pass" type="password" className="form-control" placeholder="Palavra passe"/>
+                            </div>
+                            <div className="w-75 mx-auto my-2">
+                                <button className="btn btn-primary" type="submit">Entrar</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
-            <div className="form-group row">
-                <label htmlFor="PassInput" className="col-sm-2 col-form-label">Palavra-passe:</label>
-                <div className="col-sm-10">
-                    <input name="pass" type="password" className="form-control" id="PassInput" placeholder="Palavra-passe"/>
-                </div>
-            </div>
-            <div className="form-group row">
-                <div className="col-sm-12 d-flex justify-content-end">
-                    <button type="submit" className="btn btn-primary">Entrar</button>
-                </div>
-            </div>
-        </form>
+        </div>
     </GenericPage>
 }

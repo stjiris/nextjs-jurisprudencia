@@ -1,8 +1,7 @@
 import search, { aggs, createQueryDslQueryContainer, filterableProps, getElasticSearchClient, parseSort, populateFilters, RESULTS_PER_PAGE, SearchFilters, sortBucketsAlphabetically } from '@/core/elasticsearch';
-import { JurisprudenciaDocument, Properties, Index } from '@/core/jurisprudencia'
-import { DatalistObj, HighlightFragment, SearchHandlerResponse } from '@/types/search';
-import { AggregationsAggregationContainer, AggregationsAggregation, SearchHighlight, SearchHit, SearchResponse, SortCombinations, AggregationsTermsAggregationCollectMode, AggregationsStringTermsAggregate, AggregationsBucketAggregationBase } from '@elastic/elasticsearch/lib/api/types';
-import { AggregationsTermsAggregateBase, AggregationsTermsAggregation } from '@elastic/elasticsearch/lib/api/typesWithBodyKey';
+import { DatalistObj } from '@/types/search';
+import { AggregationsAggregationContainer, AggregationsStringTermsAggregate } from '@elastic/elasticsearch/lib/api/types';
+import { JurisprudenciaVersion } from '@stjiris/jurisprudencia-document';
 import type { NextApiRequest, NextApiResponse } from 'next'
 
 export default async function datalistHandler(
@@ -12,8 +11,8 @@ export default async function datalistHandler(
     let aggKey = Array.isArray(req.query.agg) ? req.query.agg[0] : req.query.agg || "";
     let client = await getElasticSearchClient();
     if( aggKey == "Campos" ){
-        return client.indices.getMapping({index: Index}).then(body => {
-            let datalist = Object.keys(body[Index].mappings.properties || {}).map(k => ({key: k}))
+        return client.indices.getMapping({index: JurisprudenciaVersion}).then(body => {
+            let datalist = Object.keys(body[JurisprudenciaVersion].mappings.properties || {}).map(k => ({key: k}))
             return res.json(datalist)
         });
     }

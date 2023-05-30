@@ -1,13 +1,11 @@
 import { GetServerSideProps } from "next";
 import search from "@/core/elasticsearch"
-import { JurisprudenciaDocument } from "@/core/jurisprudencia";
-import Header from "@/components/header";
+import { JurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
 import React, { CSSProperties, HTMLAttributes, ReactNode, useEffect, useState } from "react";
 import Link from "next/link";
 import TargetBlankLink from "@/components/link";
 import Head from "next/head";
 import GenericPage from "@/components/genericPageStructure";
-import { useRouter } from "next/navigation";
 import { trackClickedDocument } from "@/core/track-search";
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
