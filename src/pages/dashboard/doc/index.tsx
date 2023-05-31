@@ -1,4 +1,4 @@
-import GenericPage, { DashboardGenericPage } from "@/components/genericPageStructure";
+import { DashboardGenericPage } from "@/components/genericPageStructure";
 import { withAuthentication } from "@/core/user/authenticate";
 import { JurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
 import { GetServerSideProps } from "next";
@@ -47,7 +47,7 @@ function SearchResults({id}:{id: string}){
         return () => {
             controller.abort();
         }
-    }, [id])
+    }, [id, router.basePath])
 
     return <div className="my-2">
         {results ?

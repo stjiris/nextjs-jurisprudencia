@@ -1,8 +1,7 @@
 import GenericPage, { DashboardGenericPage } from "@/components/genericPageStructure"
 import { getElasticSearchClient } from "@/core/elasticsearch";
 import { withAuthentication } from "@/core/user/authenticate"
-import Table from "material-react-table";
-import { JurisprudenciaDocument, JurisprudenciaVersion } from "@stjiris/jurisprudencia-document";
+import { JurisprudenciaDocument, JurisprudenciaDocumentKey, JurisprudenciaVersion } from "@stjiris/jurisprudencia-document";
 import { useState, Dispatch, SetStateAction } from "react";
 
 export const getServerSideProps = withAuthentication<UpdateProps>( async (ctx) => {
@@ -87,7 +86,7 @@ export default function Update({doc, id}: UpdateProps){
     </DashboardGenericPage>
 }
 
-type MaybeKeyOfJurisprudencia = keyof JurisprudenciaDocument | (string & Record<never,never>)
+type MaybeKeyOfJurisprudencia = JurisprudenciaDocumentKey | (string & Record<never,never>)
 
 function ReadOnlyInput({accessKey, value}: {accessKey: MaybeKeyOfJurisprudencia, value: string | string[]}){
     return <div className="input-group">

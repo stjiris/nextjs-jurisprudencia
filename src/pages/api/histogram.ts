@@ -1,9 +1,6 @@
-import search, { aggs, createQueryDslQueryContainer, filterableProps, getElasticSearchClient, parseSort, populateFilters, RESULTS_PER_PAGE, SearchFilters, sortBucketsAlphabetically } from '@/core/elasticsearch';
-import { JurisprudenciaDocument, Properties, Index } from '@/core/jurisprudencia'
-import { DatalistObj, HighlightFragment, SearchHandlerResponse } from '@/types/search';
-import { AggregationsAggregationContainer, AggregationsAggregation, SearchHighlight, SearchHit, SearchResponse, SortCombinations, AggregationsTermsAggregationCollectMode, AggregationsStringTermsAggregate, AggregationsBucketAggregationBase } from '@elastic/elasticsearch/lib/api/types';
-import { AggregationsTermsAggregateBase, AggregationsTermsAggregation } from '@elastic/elasticsearch/lib/api/typesWithBodyKey';
-import type { NextApiRequest, NextApiResponse } from 'next'
+import search, { aggs, createQueryDslQueryContainer, populateFilters, SearchFilters } from '@/core/elasticsearch';
+import { AggregationsAggregationContainer } from '@elastic/elasticsearch/lib/api/types';
+import type { NextApiRequest, NextApiResponse } from 'next';
 
 function histogramAggregation(key: string, value: string): Record<string, AggregationsAggregationContainer> {
     const termFieldName = aggs[key].terms?.field!;

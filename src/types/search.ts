@@ -1,4 +1,4 @@
-import { JurisprudenciaDocument } from "@/core/jurisprudencia";
+import { PartialTypedJurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
 
 export interface HighlightFragment {
     textFragment: string,
@@ -8,7 +8,7 @@ export interface HighlightFragment {
 }
 
 export interface SearchHandlerResponseItem{
-    _source: JurisprudenciaDocument,
+    _source: PartialTypedJurisprudenciaDocument,
     score: number,
     max_score: number,
     highlight?: Record<string, (string | HighlightFragment)[]>

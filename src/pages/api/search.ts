@@ -72,7 +72,7 @@ export default async function searchHandler(
                             textFragment: m[0],
                             textMatch: mat,
                             offset: m.index || 0,
-                            size: hit._source?.Sumário.length
+                            size: hit._source?.Sumário?.length || 0
                         })
                     }
                 }
@@ -87,8 +87,8 @@ export default async function searchHandler(
                     highlight.Texto.push({
                         textFragment: text.replace(/<[^>]+>/g, "").replace(/MARK_START/g, "<mark>").replace(/MARK_END/g, "</mark>").replace(/<\/?\w*$/, ""),
                         textMatch: mat,
-                        offset: hit._source?.Texto.indexOf(text.substring(0, text.indexOf("MARK_START"))) || 0,
-                        size: hit._source?.Texto.length || 0,
+                        offset: hit._source?.Texto?.indexOf(text.substring(0, text.indexOf("MARK_START"))) || 0,
+                        size: hit._source?.Texto?.length || 0,
                     })
                 }
             }

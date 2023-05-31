@@ -1,4 +1,4 @@
-import { JurisprudenciaDocument } from "@/core/jurisprudencia";
+import { JurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
 import { DatalistObj } from "@/types/search";
 import { AppRouterInstance } from "next/dist/shared/lib/app-router-context";
 import Link from "next/link";

@@ -1,6 +1,6 @@
-import { Client } from "@elastic/elasticsearch"
+import { Client } from "@elastic/elasticsearch";
 import { AggregationsAggregationContainer, AggregationsStringTermsBucket, AggregationsTermsAggregation, QueryDslQueryContainer, SearchRequest, SortCombinations } from "@elastic/elasticsearch/lib/api/types";
-import { isValidJurisprudenciaDocumentKey, JurisprudenciaDocument, JurisprudenciaDocumentProperties, JurisprudenciaVersion } from "@stjiris/jurisprudencia-document";
+import { isValidJurisprudenciaDocumentKey, JurisprudenciaDocumentProperties, JurisprudenciaVersion, PartialTypedJurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
 
 export const filterableProps = Object.entries(JurisprudenciaDocumentProperties).filter(([_, obj]) => obj.type == 'keyword' || ("fields" in obj && obj.fields.keyword)).map( ([name, _]) => name).filter( o => o != "URL" && o != "UUID");
 
@@ -58,7 +58,7 @@ export default function search(
     saggs: Record<string, AggregationsAggregationContainer>=DEFAULT_AGGS,
     rpp=RESULTS_PER_PAGE,
     extras: Partial<SearchRequest>={}){
-    return getElasticSearchClient().then(client => client.search<JurisprudenciaDocument>({
+    return getElasticSearchClient().then(client => client.search<PartialTypedJurisprudenciaDocument>({
         index: JurisprudenciaVersion,
         query: {
             bool: {

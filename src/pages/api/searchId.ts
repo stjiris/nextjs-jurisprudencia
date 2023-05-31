@@ -1,10 +1,10 @@
 import search, { createQueryDslQueryContainer, getElasticSearchClient, populateFilters, SearchFilters } from "@/core/elasticsearch";
-import { JurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
+import { ExactTypedJurisprudenciaDocument, JurisprudenciaDocument, PartialTypedJurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
 import { NextApiRequest, NextApiResponse } from "next";
 
 export default async function datalistHandler(
   req: NextApiRequest,
-  res: NextApiResponse<{[key: string] : JurisprudenciaDocument}>
+  res: NextApiResponse<{[key: string] : PartialTypedJurisprudenciaDocument}>
 ) {
     let id = Array.isArray(req.query.id) ? req.query.id[0] : req.query.id || "";
     if( id === ""){
@@ -58,7 +58,7 @@ export default async function datalistHandler(
     }
 
     let {hits: {hits}} = await search(createQueryDslQueryContainer(), sf, 0, {}, 5, {_source: ["Relator Nome Profissional", "Data", "Número de Processo", "ECLI"]});
-    let r = {} as {[key: string]: JurisprudenciaDocument}
+    let r = {} as {[key: string]: PartialTypedJurisprudenciaDocument}
     for( let hit of hits ){
         r[hit._id] = hit._source!
     }
