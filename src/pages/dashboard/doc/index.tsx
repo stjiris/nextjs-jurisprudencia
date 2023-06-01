@@ -25,7 +25,10 @@ function SearchCard(){
     let [id, setId] = useState<string>(inputRef.current?.value || "");
     
     return <div className="card-body">
-        <h4 className="card-title">Editar documento</h4>
+        <div className="card-title d-flex align-items-baseline justify-content-between">
+            <h4 className="card-title">Editar documento</h4>
+            <Link href="/dashboard/doc/criar" className="btn btn-primary">Criar</Link>
+        </div>
         <div className="input-group">
             <span className="input-group-text">Pesquisar:</span>
             <input ref={inputRef} className="form-control" type="text" placeholder="ID, ECLI, UUID ou Processo" onInput={(evt) => setId(evt.currentTarget.value)}/>
