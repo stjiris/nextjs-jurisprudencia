@@ -249,12 +249,16 @@ export function getSearchedArray(text: string){
     return getElasticSearchClient().then(c => c.indices.analyze({index: JurisprudenciaVersion, text: text})).then( r => r.tokens?.map( o => o.token ) || []).catch( e => [] as string[])
 }
 
-export function sortBucketsAlphabetically(a: AggregationsStringTermsBucket,b: AggregationsStringTermsBucket) {
-    if (a.key.startsWith("«") && !b.key.startsWith("«"))
+export function sortAlphabetically(a: string, b: string){
+    if (a.startsWith("«") && !b.startsWith("«"))
         return 1;
-    if (b.key.startsWith("«") && !a.key.startsWith("«"))
+    if (b.startsWith("«") && !a.startsWith("«"))
         return -1;
-    let ak = a.key.replace(/^[^A-Za-zÀ-ÖØ-öø-ÿ0-9]*/, "");
-    let bk = b.key.replace(/^[^A-Za-zÀ-ÖØ-öø-ÿ0-9]*/, "");
+    let ak = a.replace(/^[^A-Za-zÀ-ÖØ-öø-ÿ0-9]*/, "");
+    let bk = b.replace(/^[^A-Za-zÀ-ÖØ-öø-ÿ0-9]*/, "");
     return ak.localeCompare(bk);
+}
+
+export function sortBucketsAlphabetically(a: AggregationsStringTermsBucket,b: AggregationsStringTermsBucket) {
+    return sortAlphabetically(a.key, b.key);
 }

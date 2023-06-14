@@ -2,14 +2,7 @@ import { AggregationsStringTermsAggregate } from "@elastic/elasticsearch/lib/api
 
 export const INDICES_OTHERS = "[Outros]"
 
-export interface IndicesProps{
-    total: number
-    filtersUsed: Record<string, string[]>
-    minAno: number
-    maxAno: number
+export interface IndicesNewProps{
     termAggregation: AggregationsStringTermsAggregate
-    term: string
-    group: string
     sortedGroup: [string, number][]
-    LIMIT_ROWS: number
 }

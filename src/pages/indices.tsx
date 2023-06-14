@@ -1,30 +1,40 @@
-import { AggregationsAggregate, AggregationsAggregationContainer, AggregationsMaxAggregate, AggregationsMinAggregate, AggregationsStringTermsAggregate, AggregationsTermsAggregation, AggregationsTermsBucketBase, Indices, long, SearchTotalHits } from "@elastic/elasticsearch/lib/api/types";
-import search, { aggs, filterableProps, createQueryDslQueryContainer, populateFilters, sortBucketsAlphabetically } from "@/core/elasticsearch"
-import { GetServerSideProps } from "next";
 import { GenericPageWithForm } from "@/components/genericPageStructure";
-import { ChangeEvent, useEffect, useRef, useState } from "react";
-import { ReadonlyURLSearchParams, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { ReadonlyURLSearchParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { AggregationsTermsAggregateBase } from "@elastic/elasticsearch/lib/api/typesWithBodyKey";
-import { count } from "console";
 import { addSearchParams, modifySearchParams, SelectNavigate } from "@/components/select-navigate";
 import Head from "next/head";
 import Script from "next/script";
-import { getServerSidePropsHelper } from "@/components/indices-helpers";
-import { IndicesProps, INDICES_OTHERS } from "@/types/indices";
+import { FormProps, withForm } from "@/components/pageWithForm";
+import { useRouter } from "next/router";
+import { IndicesNewProps, INDICES_OTHERS } from "@/types/indices";
+import { Loading, SmallSpinner } from "@/components/loading";
 
-export const getServerSideProps = getServerSidePropsHelper;
+interface IndicesProps extends FormProps {
+    term: string
+    group: string
+    limits: number
+}
+
+export const getServerSideProps = withForm<IndicesProps>(async (ctx, formProps) => {
+    const limits = Array.isArray(ctx.query.LIMIT_ROWS) ? parseInt(ctx.query.LIMIT_ROWS[0]) : parseInt(ctx.query.LIMIT_ROWS || "5000") || 5000;
+    const term = Array.isArray(ctx.query.term) ? ctx.query.term[0] : ctx.query.term  || "Área";
+    let group = "Secção";
+    if( "group" in ctx.query ){
+        group = Array.isArray(ctx.query.group) ? ctx.query.group[0] : ctx.query.group!;
+    }
+    
+    return {
+        ...formProps,
+        term,
+        group,
+        limits
+    }
+    
+});
 
 export default function Indices(props: IndicesProps){
-    const [termInfo, setTermInfo] = useState<string>("A carregar informação...");
-    const searchParams = useSearchParams();
-    if( !Array.isArray(props.termAggregation.buckets) ) throw new Error("Invalid bucket")
-
-    useEffect(() => {
-        fetch(`./api/terms-info?term=${encodeURIComponent(props.term)}`).then( r => r.status == 200 ? r.text() : "Sem informação..." ).then(setTermInfo)
-    }, [props.term])
-
-    return <GenericPageWithForm escapeChildren={<HistogramModal />} count={props.total} filtersUsed={props.filtersUsed} minAno={props.minAno} maxAno={props.maxAno}>
+    return <GenericPageWithForm escapeChildren={<HistogramModal />} {...props}>
         <Head>
             <title>Jurisprudência STJ - Índices</title>
             <meta name="description" content="Permite explorar, pesquisar e filtrar os acórdãos publicados pelo Supremo Tribunal de Justiça na DGSI.pt." />
@@ -32,15 +42,48 @@ export default function Indices(props: IndicesProps){
             <link rel="icon" href="/favicon.ico" />
         </Head>
         <Script src="https://cdn.plot.ly/plotly-2.12.1.min.js" />
-        {(props.termAggregation.sum_other_doc_count || 0) > 0 ? <div className="alert alert-warning" role="alert">
+        <TermInfo term={props.term}/>
+        <IndicesTable {...props}/>
+    </GenericPageWithForm>
+}
+
+function IndicesTable(props: IndicesProps){
+    let router = useRouter()
+    let searchParams = useSearchParams();
+    let [state, setTermAggregation] = useState<IndicesNewProps>()
+    
+    useEffect(() => {
+        let abort = new AbortController();
+        fetch(`${router.basePath}/api/indices?${searchParams.toString()}`, {signal: abort.signal})
+            .then(r => r.status === 200 ?
+                r.json() as Promise<IndicesNewProps> :
+                Promise.resolve({sortedGroup: [], termAggregation: {buckets: [], sum_other_doc_count: 0}}))
+            .then(setTermAggregation)
+        
+        return () => {
+            abort.abort();
+            setTermAggregation(undefined)    
+        }
+    },[searchParams, router.basePath])
+
+    if( !state ){
+        return <Loading />
+    }
+
+    let {sortedGroup, termAggregation} = state;
+    if( !Array.isArray(termAggregation.buckets) ){
+        return <div className="alert alert-danger">Erro: Esperada lista, recebido objeto</div>;
+    }
+
+    return <>
+        {(termAggregation.sum_other_doc_count || 0) > 0 && <div className="alert alert-warning" role="alert">
             <h5 className="alert-heading">
                 <strong><i className="bi bi-exclamation-circle"></i> Atenção:</strong> 
             </h5>
             <ul>
-                <li>Existem {props.termAggregation.sum_other_doc_count} outros valores não listados.</li>
+                <li>Existem {termAggregation.sum_other_doc_count} outros valores não listados.</li>
             </ul>
-        </div> : ""}
-        {termInfo ? <div className="alert alert-info m-1 p-1" role="alert"><p className="m-0" dangerouslySetInnerHTML={{__html: termInfo}}></p></div> : ""}
+        </div>}
         <table className="table table-sm" style={{width: "fit-content"}}>
             <thead>
                 <tr>
@@ -49,29 +92,29 @@ export default function Indices(props: IndicesProps){
                     <th className="text-end-border-end">
                         <SelectGroup group={props.group}/>
                     </th>
-                    {props.sortedGroup.map(([name, count],i) => <td key={i} className="text-end border-end">{name == INDICES_OTHERS || props.group in props.filtersUsed ? name : <Link href={`?${modifySearchParams(searchParams, props.group, `"${name}"`)}`}>{name}</Link>}</td>)}
+                    {sortedGroup.map(([name, count],i) => <td key={i} className="text-end border-end">{name == INDICES_OTHERS || props.group in props.filtersUsed ? name : <Link href={`?${modifySearchParams(searchParams, props.group, `"${name}"`)}`}>{name}</Link>}</td>)}
                     <th></th>
                     <th className="text-start">Datas</th>
                 </tr>
                 <tr>
-                    <th>{props.termAggregation.buckets.length}</th>
+                    <th>{termAggregation.buckets.length}</th>
                     <th>
                         <SelectTerm term={props.term}/>
                     </th>
-                    <th className="text-end border-end"><Link href={`/pesquisa?${searchParams.toString()}`}>{props.termAggregation.buckets.reduce((acc, b)=> acc+b.doc_count, 0)}</Link></th>
-                    {props.sortedGroup.map(([name,count], i) => <td key={i} className="text-end border-end"><Link href={`/pesquisa?${modifySearchParams(searchParams, props.group, `"${name}"`)}`}>{count}</Link></td>)}
+                    <th className="text-end border-end"><Link href={`/pesquisa?${searchParams.toString()}`}>{termAggregation.buckets.reduce((acc, b)=> acc+b.doc_count, 0)}</Link></th>
+                    {sortedGroup.map(([name,count], i) => <td key={i} className="text-end border-end"><Link href={`/pesquisa?${modifySearchParams(searchParams, props.group, `"${name}"`)}`}>{count}</Link></td>)}
                     <th></th>
                     <th className="text-start">de ... até</th>
                 </tr>
             </thead>
-            {props.termAggregation.buckets.length <= props.LIMIT_ROWS ? <tbody>
-                {props.termAggregation.buckets.map( (b, i) => <ShowBucketRow key={i} index={i} bucket={b} filtersUsed={props.filtersUsed} searchParams={searchParams} term={props.term} group={props.group} sortedGroup={props.sortedGroup} />)}
-            </tbody>: ""}
+            <tbody>
+                {termAggregation.buckets.length <= props.limits && termAggregation.buckets.map( (b, i) => <ShowBucketRow key={i} index={i} bucket={b} filtersUsed={props.filtersUsed} searchParams={searchParams} term={props.term} group={props.group} sortedGroup={sortedGroup} />)}
+            </tbody>
         </table>
-        {props.termAggregation.buckets.length > props.LIMIT_ROWS ? <div className="d-flex flex-wrap">
-            {props.termAggregation.buckets.map( (b, i) => <ShowBucketLine key={i} index={i} bucket={b} filtersUsed={props.filtersUsed} searchParams={searchParams} term={props.term} group={props.group} sortedGroup={props.sortedGroup} />)}
-        </div> : ""}
-    </GenericPageWithForm>
+        {termAggregation.buckets.length > props.limits && <div className="d-flex flex-wrap">
+            {termAggregation.buckets.map( (b, i) => <ShowBucketLine key={i} index={i} bucket={b} filtersUsed={props.filtersUsed} searchParams={searchParams} term={props.term} group={props.group} sortedGroup={sortedGroup} />)}
+        </div>}
+    </>
 }
 
 function SelectGroup(props: {group: string}){
@@ -209,4 +252,25 @@ function HistogramModal(){
             </div>
         </div>
     </div>
+}
+
+function TermInfo(props: {term: string}){
+    let router = useRouter();
+    let [termInfo, setTermInfo] = useState<string>();
+
+    useEffect(() => {
+        fetch(`${router.basePath}/api/term-info/${encodeURIComponent(props.term)}`).then( r => r.status == 200 ? r.json() : "Sem informação..." ).then(s => s.length > 0 ? setTermInfo(s) : setTermInfo("Sem informação..."))
+    }, [props.term])
+
+    return <>
+        {termInfo !== undefined ? 
+            <div className="alert alert-info m-1 p-1" role="alert" dangerouslySetInnerHTML={{__html: termInfo}}></div>
+            :
+            <div className="alert alert-info m-1 p-1" role="alert">
+                <p className="m-0">
+                    <SmallSpinner />&nbsp;A carregar informação...
+                </p>
+            </div>
+        }
+    </>
 }

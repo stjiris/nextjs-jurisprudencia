@@ -1,4 +1,4 @@
-import { GetServerSideProps, GetServerSidePropsContext, PreviewData } from "next";
+import { GetServerSideProps, GetServerSidePropsContext, NextApiHandler, NextApiRequest, PreviewData } from "next";
 import { ParsedUrlQuery } from "querystring";
 import { validateSession } from "./session";
 import { getClient, User, USERS_INDEX, compare, hashPassword, readUser } from "./usercrud";
@@ -44,4 +44,10 @@ export function withAuthentication<
         }
 
     }
+}
+
+export async function authenticatedHandler<T>(req: NextApiRequest){
+    let user = req.cookies["user"];
+    let session = req.cookies["session"];
+    return !!user && !!session && await validateSession(user, session);
 }

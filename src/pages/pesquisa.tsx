@@ -1,57 +1,35 @@
 import { GenericPageWithForm } from "@/components/genericPageStructure"
+import { Loading } from "@/components/loading"
+import { FormProps, withForm } from "@/components/pageWithForm"
 import { modifySearchParams, SelectNavigate } from "@/components/select-navigate"
 import search, { createQueryDslQueryContainer, DEFAULT_AGGS, getSearchedArray, parseSort, populateFilters, RESULTS_PER_PAGE } from "@/core/elasticsearch"
 import { saveSearch } from "@/core/track-search"
 import { HighlightFragment, SearchHandlerResponse, SearchHandlerResponseItem } from "@/types/search"
-import { long, SortCombinations } from "@elastic/elasticsearch/lib/api/types"
-import { AggregationsMaxAggregate, AggregationsMinAggregate, SearchTotalHits } from "@elastic/elasticsearch/lib/api/typesWithBodyKey"
-import { GetServerSideProps } from "next"
 import Head from "next/head"
 import Link from "next/link"
 import { ReadonlyURLSearchParams, useSearchParams } from "next/navigation"
 import { MouseEventHandler, useEffect, useState } from "react"
 
-export const getServerSideProps: GetServerSideProps<SearchInfo> = async (ctx) => {
-
-    const sfilters = {pre: [], after: []};
-    const filtersUsed = populateFilters(sfilters, ctx.query)
-    const sort: SortCombinations[] = [];
-    parseSort(Array.isArray(ctx.query?.sort) ? ctx.query.sort[0] : ctx.query.sort, sort)
-    const page = parseInt(Array.isArray(ctx.query.page) ? ctx.query.page[0] : ctx.query.page || "" ) || 0
-    const queryObj = createQueryDslQueryContainer(ctx.query.q);
-    const result = await search(queryObj, sfilters, page, DEFAULT_AGGS, 0, {sort, track_scores: true, _source: []})
-    let total = 0;
-    if( result.hits.total ){
-        if( Number.isInteger(result.hits.total) ){
-            total = result.hits.total as long;
-        }
-        else{
-            total = (result.hits.total as SearchTotalHits).value;
-        }
-    }
-
-    return {props: {
-        searchId: await saveSearch(ctx.resolvedUrl),
-        pages:  Math.ceil(total / RESULTS_PER_PAGE),
-        searchedArray: await getSearchedArray(Array.isArray(ctx.query.q) ? ctx.query.q.join(" ") : (ctx.query.q || "")),
-        total: total,
-        filtersUsed: filtersUsed,
-        minAno: parseInt((result.aggregations?.MinAno as AggregationsMinAggregate).value_as_string || "") || 0,
-        maxAno: parseInt((result.aggregations?.MaxAno as AggregationsMaxAggregate).value_as_string || "") || Infinity
-    }}
-}
-
-interface SearchInfo{
+interface PesquisaProps extends FormProps{
     searchedArray: string[]
     searchId?: string
     pages: number
-    total: number
-    filtersUsed: Record<string, string[]>
-    minAno: number
-    maxAno: number
 }
 
-export default function Pesquisa(props: SearchInfo){
+export const getServerSideProps = withForm<PesquisaProps>(async (ctx, formProps) => {
+    let searchId = await saveSearch(ctx.resolvedUrl)
+    let searchedArray = await getSearchedArray(Array.isArray(ctx.query.q) ? ctx.query.q.join(" ") : ctx.query.q || "")
+    let pages = Math.ceil(formProps.count / RESULTS_PER_PAGE)
+
+    return {
+        ...formProps,
+        searchedArray,
+        pages,
+        searchId
+    }
+})
+
+export default function Pesquisa(props: PesquisaProps){
     const [results, setResults] = useState<SearchHandlerResponse>()
     const searchParams = useSearchParams()
 
@@ -61,7 +39,7 @@ export default function Pesquisa(props: SearchInfo){
             .then(l => setResults(l))
     }, [searchParams])
 
-    return <GenericPageWithForm count={props.total} filtersUsed={props.filtersUsed} minAno={props.minAno} maxAno={props.maxAno}>
+    return <GenericPageWithForm {...props}>
         <Head>
             <title>Jurisprudência STJ - Pesquisa</title>
             <meta name="description" content="Permite explorar, pesquisar e filtrar os acórdãos publicados pelo Supremo Tribunal de Justiça na DGSI.pt." />
@@ -89,7 +67,7 @@ const onClickShare: MouseEventHandler<HTMLElement> = (event) => {
     }
 }
 
-function ShowResults({results, searchParams, searchInfo}: {results: SearchHandlerResponse, searchParams: ReadonlyURLSearchParams, searchInfo: SearchInfo}){
+function ShowResults({results, searchParams, searchInfo}: {results: SearchHandlerResponse, searchParams: ReadonlyURLSearchParams, searchInfo: PesquisaProps}){
     const sort = searchParams.get("sort") || "des"
     const page = parseInt(searchParams.get("page") || "0")
     return <>
@@ -214,11 +192,5 @@ function NoResults(){
             <li>Verifique os filtros utilizados (tribunais, relator, descritores, data)</li>
             <li>Verifique o termo pesquisado</li>
         </ol>
-    </div>
-}
-
-function Loading(){
-    return <div className="alert alert-info" role="alert">
-        <h4 className="alert-heading">A carregar resultados...</h4>
     </div>
 }

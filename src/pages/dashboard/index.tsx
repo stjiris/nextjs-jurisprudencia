@@ -5,7 +5,7 @@ import Link from "next/link";
 
 export const getServerSideProps: GetServerSideProps<{}> = withAuthentication(async (ctx) => ({props: {}}), "/dashboard")
 
-export default () => {
+export default function IndexPage(){
     return <DashboardGenericPage>
         <div className="row justify-content-sm-center">
             <div className="col-sm-12 col-md-8 col-xl-6">

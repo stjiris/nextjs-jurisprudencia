@@ -1,7 +1,6 @@
 import Head from 'next/head'
 import GenericPage from '@/components/genericPageStructure'
 import Link from 'next/link'
-import Pesquisa, { getServerSideProps as getServerSidePropsPesquisa } from './pesquisa'
 import { GetServerSideProps } from 'next'
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => ({redirect: {destination: "/pesquisa"}, props: {}})

@@ -55,7 +55,7 @@ function SearchResults({id}:{id: string}){
     return <div className="my-2">
         {results ?
         (Object.keys(results).length > 0 ? 
-        <div className="d-flex flex-wrap">
+        <div>
             {Object.keys(results).map(id => <SearchResultHit key={id} id={id} doc={results![id]} />)}
         </div>
         :
@@ -67,10 +67,10 @@ function SearchResults({id}:{id: string}){
 }
 
 function SearchResultHit({id, doc}: {id:string, doc: JurisprudenciaDocument}){
-    return <div className="card m-1 p-1">
-        <div className="card-body">
-            <div className="card-title"><Link href={`/dashboard/doc/${encodeURIComponent(id)}/`}>{doc["ECLI"]}</Link></div>
-            <ul className="list-group list-group-flush">
+    return <div className="card m-1 p-0">
+        <div className="card-body row align-items-center p-1">
+            <div className="card-title col-5"><Link href={`/dashboard/doc/${encodeURIComponent(id)}/`}>{doc["ECLI"]}</Link></div>
+            <ul className="col-7 list-group list-group-flush">
                 <li className="list-group-item">Processo: <b>{doc["Número de Processo"]}</b></li>
                 <li className="list-group-item">Relator: <b>{doc["Relator Nome Profissional"]}</b></li>
                 <li className="list-group-item">Data: <b>{doc["Data"]}</b></li>

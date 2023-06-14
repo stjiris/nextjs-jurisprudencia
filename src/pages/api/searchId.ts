@@ -57,7 +57,7 @@ export default async function datalistHandler(
         after: []
     }
 
-    let {hits: {hits}} = await search(createQueryDslQueryContainer(), sf, 0, {}, 5, {_source: ["Relator Nome Profissional", "Data", "Número de Processo", "ECLI"]});
+    let {hits: {hits}} = await search(createQueryDslQueryContainer(), sf, 0, {}, 5, {_source: ["Relator Nome Profissional", "Data", "Número de Processo", "ECLI","UUID"]});
     let r = {} as {[key: string]: PartialTypedJurisprudenciaDocument}
     for( let hit of hits ){
         r[hit._id] = hit._source!
