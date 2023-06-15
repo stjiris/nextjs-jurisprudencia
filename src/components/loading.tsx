@@ -8,5 +8,5 @@ export function Loading(){
 
 export function SmallSpinner({className, ...props}: DetailedHTMLProps<HTMLAttributes<HTMLDivElement>,HTMLDivElement>){
     let finalProps = {...props, className: `spinner-border spinner-border-sm ${className}`, role: "status"}
-    return <div {...finalProps}/>
+    return <span {...finalProps}/>
 }

@@ -3,6 +3,10 @@ import { getElasticSearchClient } from "@/core/elasticsearch";
 import { withAuthentication } from "@/core/user/authenticate"
 import { JurisprudenciaDocument, JurisprudenciaDocumentKey, JurisprudenciaVersion } from "@stjiris/jurisprudencia-document";
 import { useState, Dispatch, SetStateAction } from "react";
+import { useRouter as useNavRouter } from "next/navigation";
+import { useRouter } from "next/router";
+import { HTMLInput, ReadOnlyInput, UpdateInput } from "@/components/dashboardDoc";
+import { WriteResponseBase } from "@elastic/elasticsearch/lib/api/types";
 
 export const getServerSideProps = withAuthentication<{}>( async (ctx) => {
     return {props: {}}
@@ -11,8 +15,29 @@ export const getServerSideProps = withAuthentication<{}>( async (ctx) => {
 const Sep = () => <div className="m-2 p-0"></div>
 
 export default function Create(){
-    let [updateObj, setUpdateObj] = useState<Record<string, string | string[]>>({})
-    
+    const navRouter = useNavRouter();
+    const router = useRouter();
+    const [updateObj, setUpdateObj] = useState<Record<string, string | string[]>>({})
+
+    const save = async () => {
+        fetch(`${router.basePath}/api/doc/`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(updateObj)
+        }).then(r => r.status === 200 ? r.json() : r.status).then( (r: WriteResponseBase | number)  => {
+            if( typeof r === "number" ){
+                alert(`Não foi possível criar documento. (${r})`)
+            }
+            else{
+                navRouter.push(`/dashboard/doc/${r._id}`);
+            }
+
+        })
+    }
+
+
     return <DashboardGenericPage>
         <div className="row justify-content-sm-center">
             <div className="col-sm-12 col-md-8 col-xl-6">
@@ -59,53 +84,27 @@ export default function Create(){
                         <UpdateInput accessKey="Área Temática" value="" setUpdateObject={setUpdateObj}/>
                         <UpdateInput accessKey="Indicações Eventuais" value="" setUpdateObject={setUpdateObj}/>
                         <Sep/>
-                        <ReadOnlyInput accessKey="Sumário" value=""/>
-                        <ReadOnlyInput accessKey="Texto" value=""/>
+                        <HTMLInput accessKey="Sumário" value="" setUpdateObject={setUpdateObj}/>
+                        <HTMLInput accessKey="Texto" value="" setUpdateObject={setUpdateObj}/>
                     </div>
                     <div className="card-footer">
-                        {JSON.stringify({id: "", create: updateObj})}
+                        <div className="alert alert-info" role="alert">
+                        {Object.keys(updateObj).length > 0 ?
+                            <>
+                                <h3>Será criado um documento com os seguintes campos:</h3>
+                                <ul>
+                                    {Object.keys(updateObj).map((k,i) => <li key={i}>{k}</li>)}
+                                </ul>
+                                <button className="btn btn-warning" onClick={() => {navRouter.refresh()}}>Cancelar</button>
+                                <button className="btn btn-primary" onClick={() => {save()}}>Criar documento</button>
+                            </>
+                            :
+                            <h3>Sem campos preenchidos</h3>
+                        }
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </DashboardGenericPage>
-}
-
-type MaybeKeyOfJurisprudencia = JurisprudenciaDocumentKey | (string & Record<never,never>)
-
-function ReadOnlyInput({accessKey, value}: {accessKey: MaybeKeyOfJurisprudencia, value: string | string[]}){
-    return <div className="input-group">
-        <small className="input-group-text w-25">{accessKey}</small>
-        <input className="form-control" value={value} readOnly/>
-    </div>
-}
-
-function UpdateInput({accessKey, value, setUpdateObject}: {accessKey: MaybeKeyOfJurisprudencia, value: string | string[], setUpdateObject: Dispatch<SetStateAction<Record<string, string | string[]>>>}){
-    let update = (key: string, newValue: string | string[]) => {
-        if( JSON.stringify(newValue) === JSON.stringify(value) ){
-            setUpdateObject(({[key]: _key_to_remove, ...old}) => ({...old}))
-        }
-        else{
-            setUpdateObject((old) => ({...old, [key]: newValue}))
-        }
-    }
-
-    if( typeof value === "string" ){
-        return <div className="input-group">
-            <small className="input-group-text w-25">{accessKey}</small>
-            <input className="form-control" defaultValue={value} onInput={(evt) => update(accessKey, evt.currentTarget.value)}/>
-        </div>
-    }
-    else if(Array.isArray(value)){
-        return <div className="input-group">
-            <small className="input-group-text w-25">{accessKey}</small>
-            <textarea className="form-control" defaultValue={value.join("\n")} rows={value.length} onInput={(evt) => update(accessKey, evt.currentTarget.value.split("\n"))}/>
-        </div>
-    }
-    else{
-        return <div className="input-group">
-            <small className="input-group-text w-25">{accessKey}</small>
-            <textarea className="form-control" readOnly value={JSON.stringify(value, null, "  ")} rows={JSON.stringify(value, null, "   ").split("\n").length}/>
-        </div>
-    }
 }

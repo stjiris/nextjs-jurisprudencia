@@ -1,16 +1,13 @@
 import GenericPage, { DashboardGenericPage } from "@/components/genericPageStructure"
 import { getElasticSearchClient } from "@/core/elasticsearch";
 import { withAuthentication } from "@/core/user/authenticate"
-import { JurisprudenciaDocument, JurisprudenciaDocumentKey, JurisprudenciaVersion } from "@stjiris/jurisprudencia-document";
-import { useState, Dispatch, SetStateAction, useCallback, useEffect } from "react";
-
-import dynamic from 'next/dynamic';
-const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
-import 'react-quill/dist/quill.snow.css';
+import { JurisprudenciaDocument, JurisprudenciaVersion } from "@stjiris/jurisprudencia-document";
+import { useState } from "react";
 
 import Link from "next/link";
 import { useRouter as useNavRouter } from "next/navigation";
 import { useRouter } from "next/router";
+import { ReadOnlyInput, UpdateInput, HTMLInput, UpdateObject } from "@/components/dashboardDoc";
 
 export const getServerSideProps = withAuthentication<UpdateProps>( async (ctx) => {
     let id = Array.isArray(ctx.query.id) ? ctx.query.id[0] : ctx.query.id || "";
@@ -26,7 +23,6 @@ export const getServerSideProps = withAuthentication<UpdateProps>( async (ctx) =
     return `/dashboard/doc/${ctx.params?.id || ""}`
 })
 
-interface UpdateObject extends Record<string, string | string []>{}
 
 interface UpdateProps {
     doc: JurisprudenciaDocument,
@@ -40,15 +36,33 @@ export default function Update({doc, id}: UpdateProps){
     let navRouter = useNavRouter();
     let router = useRouter();
     const save = async () => {
-        fetch(`${router.basePath}/api/doc/${id}/update`)
+        fetch(`${router.basePath}/api/doc/${id}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(updateObj)
+        }).finally(() => {
+            navRouter.refresh()
+        })
     }
+
+    /*const del = async () => {
+        let r = prompt("Tem a certeza que quer eliminar o documento? Insira o Número de Processo:");
+        if( r !== doc["Número de Processo"] ) return;
+        fetch(`${router.basePath}/api/doc/${id}`, {
+            method: "DELETE"
+        }).finally(() => {
+            navRouter.push(`/dashboard/doc`)
+        })
+    }*/
     
     return <DashboardGenericPage>
         <div className="row">
             <div className="col-12 col-md-4 col-xl-6">
                 <div className="card shadow position-sticky top-0">
                     <h4 className="m-0">Original {doc.URL && <>- <Link target="_blank" href={doc.URL}>{doc.Fonte}</Link></>}</h4>
-                    <ShowOriginal original={doc.Original}/>
+                    <ShowOriginal original={doc.Original || {}}/>
                 </div>
             </div>
             <div className="col-12 col-md-8 col-xl-6">
@@ -110,7 +124,11 @@ export default function Update({doc, id}: UpdateProps){
                                 <button className="btn btn-primary" onClick={() => {save()}}>Confirmar alterações</button>
                             </>
                             :
-                            <h3>Sem alterações</h3>
+                            <>
+                                <h3>Sem alterações</h3>
+                                <Link className="btn btn-warning" href=".">Cancelar</Link>
+                                {/* <button className="btn btn-danger" onClick={() => del()}>Eliminar</button>-->*/}
+                            </>
                         }
                         </div>
                     </div>
@@ -118,76 +136,6 @@ export default function Update({doc, id}: UpdateProps){
             </div>
         </div>
     </DashboardGenericPage>
-}
-
-type MaybeKeyOfJurisprudencia = JurisprudenciaDocumentKey | (string & Record<never,never>)
-
-function HTMLInput({accessKey, value, setUpdateObject}: {accessKey: MaybeKeyOfJurisprudencia, value: string, setUpdateObject: Dispatch<SetStateAction<UpdateObject>>}){
-    let [html, setValue] = useState<string>(value);
-    let [edit, setEdit] = useState<boolean>(false);
-
-    useEffect(() => {
-        if( !edit ){
-            // Reset values
-            setValue(value);
-            setUpdateObject(({[accessKey]: _curr, ...old}) => ({...old}))
-        }
-    },[edit])
-
-    let onChange = useCallback((newvalue: string) => {
-        setUpdateObject(old => ({...old, [accessKey]: newvalue}))
-        setValue(newvalue)
-    }, [])
-    
-    return <>
-        <div className="d-flex align-items-baseline my-2">
-            <h4 className="m-0 w-25">{accessKey}{value === html ? "" : "*"}</h4>
-            <button className="btn btn-warning mx-1" onClick={() => setEdit((v) => !v)}>{edit ? "Cancelar" : "Editar"}</button>
-        </div>
-        {edit && <ReactQuill theme="snow" value={html} onChange={onChange}/>}
-    </>
-}
-
-function ReadOnlyInput({accessKey, value}: {accessKey: MaybeKeyOfJurisprudencia, value: string | string[]}){
-    return <div className="input-group">
-        <small className="input-group-text w-25">{accessKey}</small>
-        <input className="form-control" value={value} readOnly/>
-    </div>
-}
-
-function UpdateInput({accessKey, value, setUpdateObject}: {accessKey: MaybeKeyOfJurisprudencia, value: string | string[], setUpdateObject: Dispatch<SetStateAction<UpdateObject>>}){
-    let [toSave, setToSave] = useState<boolean>(false)
-    let update = (key: string, newValue: string | string[]) => {
-        if( JSON.stringify(newValue) === JSON.stringify(value) ){
-            setUpdateObject(({[key]: _key_to_remove, ...old}) => ({...old}))
-            setToSave(false)
-        }
-        else{
-            setUpdateObject((old) => ({...old, [key]: newValue}))
-            setToSave(true)
-        }
-    }
-
-    let toSaveString = toSave ? "*" : "";
-
-    if( typeof value === "string" ){
-        return <div className="input-group">
-            <small className="input-group-text w-25">{accessKey}{toSaveString}</small>
-            <input className="form-control" defaultValue={value} onInput={(evt) => update(accessKey, evt.currentTarget.value)}/>
-        </div>
-    }
-    else if(Array.isArray(value)){
-        return <div className="input-group">
-            <small className="input-group-text w-25">{accessKey}{toSaveString}</small>
-            <textarea className="form-control" defaultValue={value.join("\n")} rows={value.length} onInput={(evt) => update(accessKey, evt.currentTarget.value.split("\n"))}/>
-        </div>
-    }
-    else{
-        return <div className="input-group">
-            <small className="input-group-text w-25">{accessKey}{toSaveString}</small>
-            <textarea className="form-control" readOnly value={JSON.stringify(value, null, "  ")} rows={JSON.stringify(value, null, "   ").split("\n").length}/>
-        </div>
-    }
 }
 
 function ShowOriginal({original}: {original: Record<string, any>}){
