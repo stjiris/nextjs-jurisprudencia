@@ -260,7 +260,7 @@ function TermInfo(props: {term: string}){
 
     useEffect(() => {
         fetch(`${router.basePath}/api/term-info/${encodeURIComponent(props.term)}`).then( r => r.status == 200 ? r.json() : "Sem informação..." ).then(s => s.length > 0 ? setTermInfo(s) : setTermInfo("Sem informação..."))
-    }, [props.term])
+    }, [props.term, router.basePath])
 
     return <>
         {termInfo !== undefined ? 

@@ -71,7 +71,7 @@ export default function TermsInfoPage({term, content: srcContent}: TermsInfoPage
                 <div className="card shadow">
                     <div className="card-body">
                         <div className="card-title d-flex align-items-baseline">
-                            <h4 className="flex-grow-1">Editar nota de "{term}"</h4>
+                            <h4 className="flex-grow-1">Editar nota de &quot;{term}&quot;</h4>
                             <Link href=".">Voltar à lista de campos</Link>
                         </div>
                         <ReactQuill theme="snow" value={content} onChange={(evt) => setContent(evt)} readOnly={requesting}/>

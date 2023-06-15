@@ -19,12 +19,12 @@ export function HTMLInput({ accessKey, value, setUpdateObject }: { accessKey: Ma
             setValue(value);
             setUpdateObject(({ [accessKey]: _curr, ...old }) => ({ ...old }));
         }
-    }, [edit]);
+    }, [edit, accessKey, value, setUpdateObject]);
 
-    let onChange = useCallback((newvalue: string) => {
+    let onChange = (newvalue: string) => {
         setUpdateObject(old => ({ ...old, [accessKey]: newvalue }));
         setValue(newvalue);
-    }, []);
+    }
 
     return <>
         <div className="d-flex align-items-baseline my-2">
