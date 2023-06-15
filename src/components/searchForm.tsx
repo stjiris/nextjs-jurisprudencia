@@ -72,7 +72,7 @@ export default function SearchForm({count, filtersUsed, minAno, maxAno}:{count: 
                 </div>
                 <div className="input-group input-group-sm">
                     <div className="input-group-prepend flex-shrink">
-                        <label htmlFor="data_fim" className="input-group-text rounded-0 p-1">De:</label>
+                        <label htmlFor="data_fim" className="input-group-text rounded-0 p-1">Até:</label>
                     </div>
                     <input id="data_fim" type="number" className="form-control form-control-sm rounded-0 p-1" name="MaxAno" min={minAno} max={maxAno} defaultValue={search.get("MaxAno") || ""} step={1} placeholder={`${maxAno}`}/>
                 </div>
