@@ -1,5 +1,5 @@
 import { AggregationsMaxAggregate, AggregationsMinAggregate, AggregationsStringTermsAggregate, AggregationsTermsAggregation, AggregationsTermsBucketBase, Indices, long, SearchTotalHits } from "@elastic/elasticsearch/lib/api/types";
-import search, { createQueryDslQueryContainer, populateFilters, sortAlphabetically } from "@/core/elasticsearch"
+import search, { createQueryDslQueryContainer, populateFilters, sortAlphabetically, sortBucketsAlphabetically } from "@/core/elasticsearch"
 import { NextApiRequest, NextApiResponse } from "next";
 import { IndicesNewProps, INDICES_OTHERS } from "@/types/indices";
 import { listAggregation } from "@/components/indices-helpers";
@@ -32,6 +32,7 @@ export default async function indicesCsvHandler(
                 subbuckets.forEach(s => groupObj[s.key] = (groupObj[s.key]|| 0) +  s.doc_count)
             }
         })
+        buckets.sort(sortBucketsAlphabetically)
         sortedGroup = Object.entries(groupObj).sort((a,b) => sortAlphabetically( a[0], b[0]))
         sortedGroup.slice(10).forEach( a => othersCount += groupObj[a[0]] )
         sortedGroup.splice(10)
