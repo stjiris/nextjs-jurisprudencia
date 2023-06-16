@@ -4,8 +4,6 @@ import crypto from "node:crypto"
 
 export const getDoc = (docId: string) => getElasticSearchClient().then( c => c.get<JurisprudenciaDocument>({index: JurisprudenciaVersion, id: docId}))
 
-export const updateDoc = (docId: string, doc: PartialJurisprudenciaDocument) =>  getElasticSearchClient().then(c => c.update<JurisprudenciaDocument,PartialJurisprudenciaDocument>({index: JurisprudenciaVersion, id: docId, doc: doc, refresh: "wait_for"}))
-
 let defaultValues: JurisprudenciaDocument = {
     "Número de Processo": "«sem valor»",
     Fonte: "«sem valor»",
@@ -46,6 +44,37 @@ let defaultValues: JurisprudenciaDocument = {
     HASH: {},
     UUID: ""
 }
+
+export const updateDoc = (docId: string, doc: PartialJurisprudenciaDocument) =>  getElasticSearchClient().then(c => {
+    let updatedDoc: PartialJurisprudenciaDocument = {};
+    let key: JurisprudenciaDocumentKey;
+    for( key in doc ){
+        if( Array.isArray(doc[key]) ){
+            let maybeVal = doc[key].filter((v: string) => v.trim().length > 0);
+            if( maybeVal.length > 0 ){
+                updatedDoc[key] = maybeVal;
+            }
+            else{
+                updatedDoc[key] = defaultValues[key]
+            }
+        }
+        else if(typeof doc[key] === "string"){
+            let maybeVal = doc[key].trim();
+            if( maybeVal.length > 0 ){
+                if( Array.isArray(defaultValues[key]) ){
+                    updatedDoc[key] = [maybeVal]
+                }
+                else{
+                    updatedDoc[key] = maybeVal
+                }
+            }
+            else{
+                updatedDoc[key] = defaultValues[key]
+            }
+        }    
+    }
+    return c.update<JurisprudenciaDocument,PartialJurisprudenciaDocument>({index: JurisprudenciaVersion, id: docId, doc: updatedDoc, refresh: "wait_for"})
+})
 
 export const createDoc = (newdoc: PartialJurisprudenciaDocument) => getElasticSearchClient().then(c => {
     let createdDoc: PartialJurisprudenciaDocument = {};
