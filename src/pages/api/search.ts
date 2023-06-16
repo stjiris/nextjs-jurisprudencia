@@ -52,7 +52,7 @@ export default async function searchHandler(
         },
         max_analyzed_offset: 1000000
     }
-    const result = await search(queryObj, sfilters, page, {}, RESULTS_PER_PAGE, {sort, highlight, track_scores: true, _source: [...filterableProps, "Data", "Sumário", "Texto"]})
+    const result = await search(queryObj, sfilters, page, {}, RESULTS_PER_PAGE, {sort, highlight, track_scores: true, _source: [...filterableProps, "Data", "Sumário", "Texto","UUID"]})
     const r: SearchHandlerResponse = [];
     for( let hit of result.hits.hits ){
         const {Texto, "Relator Nome Completo": _completo, HASH: _HASH, ...rest} = hit._source!

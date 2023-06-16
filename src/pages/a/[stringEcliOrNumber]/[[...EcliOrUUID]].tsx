@@ -112,10 +112,8 @@ function DocumentPage(props: {doc: JurisprudenciaDocument}){
                 <div className="col-1"><b>N.º de Processo:</b></div>
                 <div className="col-7">{props.doc["Número de Processo"]}</div>
                 <div className="col-4 text-end">
-                    <small><TargetBlankLink href={`https://jurisprudencia.csm.org.pt/ecli/${props.doc.ECLI!}`} target="_blank" >{props.doc.ECLI}</TargetBlankLink></small>
-                    &nbsp;
-                    <small><TargetBlankLink href={props.doc.URL}>{new URL(props.doc.URL!).host}</TargetBlankLink></small>
-                    &nbsp;
+                    {props.doc.ECLI && props.doc.ECLI.length > 0 && props.doc.ECLI !== "«sem valor»" && <><small><TargetBlankLink href={`https://jurisprudencia.csm.org.pt/ecli/${props.doc.ECLI!}`} target="_blank" >{props.doc.ECLI}</TargetBlankLink></small>&nbsp;</>}
+                    {props.doc.URL && props.doc.URL.length > 0 && props.doc.URL !== "«sem valor»" && <><small><TargetBlankLink href={props.doc.URL}>{new URL(props.doc.URL!).host}</TargetBlankLink></small>&nbsp;</>}
                     <small><b>Fonte:&nbsp;</b><span>{props.doc.Fonte}</span></small>
                 </div>
             </Row>

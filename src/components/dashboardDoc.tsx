@@ -40,7 +40,32 @@ export function ReadOnlyInput({ accessKey, value }: { accessKey: MaybeKeyOfJuris
         <input className="form-control" value={value} readOnly />
     </div>;
 }
-export function UpdateInput({ accessKey, value, setUpdateObject }: { accessKey: MaybeKeyOfJurisprudencia; value: string | string[]; setUpdateObject: Dispatch<SetStateAction<UpdateObject>>; }) {
+
+export function DateInput({accessKey, value, setUpdateObject}: {accessKey: MaybeKeyOfJurisprudencia, value: string, setUpdateObject: Dispatch<SetStateAction<UpdateObject>>}){
+    let defaultValue = value.split("/").reverse().join("-")
+    let [toSave, setToSave] = useState<boolean>(false);
+    let update = (key: string, newValue: string) => {
+        let newValueD = newValue.split("-").reverse().join("/")
+        if (JSON.stringify(newValueD) === JSON.stringify(value)) {
+            setUpdateObject(({ [key]: _key_to_remove, ...old }) => ({ ...old }));
+            setToSave(false);
+        }
+        else {
+            setUpdateObject((old) => ({ ...old, [key]: newValueD }));
+            setToSave(true);
+        }
+    };
+
+    let toSaveString = toSave ? "*" : "";
+
+    
+    return <div className="input-group">
+        <small className="input-group-text w-25">{accessKey}{toSaveString}</small>
+        <input className="form-control" type="date" defaultValue={defaultValue} onInput={(evt) => update(accessKey, evt.currentTarget.value)} />
+    </div>;
+}
+
+export function UpdateInput({ accessKey, value, setUpdateObject }: { accessKey: MaybeKeyOfJurisprudencia, value: string | string[], setUpdateObject: Dispatch<SetStateAction<UpdateObject>> }) {
     let [toSave, setToSave] = useState<boolean>(false);
     let update = (key: string, newValue: string | string[]) => {
         if (JSON.stringify(newValue) === JSON.stringify(value)) {

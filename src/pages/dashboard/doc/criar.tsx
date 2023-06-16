@@ -1,11 +1,11 @@
 import GenericPage, { DashboardGenericPage } from "@/components/genericPageStructure"
 import { getElasticSearchClient } from "@/core/elasticsearch";
 import { withAuthentication } from "@/core/user/authenticate"
-import { JurisprudenciaDocument, JurisprudenciaDocumentKey, JurisprudenciaVersion } from "@stjiris/jurisprudencia-document";
+import { JurisprudenciaDocumentArrayKey, JurisprudenciaDocument, JurisprudenciaDocumentKey, JurisprudenciaVersion, PartialJurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
 import { useState, Dispatch, SetStateAction } from "react";
 import { useRouter as useNavRouter } from "next/navigation";
 import { useRouter } from "next/router";
-import { HTMLInput, ReadOnlyInput, UpdateInput } from "@/components/dashboardDoc";
+import { DateInput, HTMLInput, ReadOnlyInput, UpdateInput } from "@/components/dashboardDoc";
 import { WriteResponseBase } from "@elastic/elasticsearch/lib/api/types";
 
 export const getServerSideProps = withAuthentication<{}>( async (ctx) => {
@@ -14,18 +14,59 @@ export const getServerSideProps = withAuthentication<{}>( async (ctx) => {
 
 const Sep = () => <div className="m-2 p-0"></div>
 
+const defaultValues: JurisprudenciaDocument = {
+    "Número de Processo": "",
+    Fonte: "STJ (Manual)",
+    URL: "",
+    ECLI: "",
+    Data: new Date().toLocaleDateString("pt-PT"),
+    Área: "",
+    "Meio Processual": [""],
+    "Relator Nome Completo": "",
+    "Relator Nome Profissional": "",
+    Secção: "",
+    "Tribunal de Recurso": "",
+    "Tribunal de Recurso - Processo": "",
+    Decisão: [""],
+    "Decisão (textual)": [""],
+    "Votação - Decisão": [""],
+    "Votação - Vencidos": [""],
+    "Votação - Declarações": [""],
+    Descritores: [""],
+    Jurisprudência: ["Simples"],
+    "Jurisprudência Estrangeira": [""],
+    "Jurisprudência Internacional": [""],
+    "Jurisprudência Nacional": [""],
+    "Doutrina": [""],
+    "Legislação Comunitária": [""],
+    "Legislação Estrangeira": [""],
+    "Legislação Nacional": [""],
+    "Referências Internacionais": [""],
+    "Referência de publicação": [""],
+    "Área Temática": [""],
+    "Indicações Eventuais": [""],
+    CONTENT: [],
+    HASH: {},
+    Original: {},
+    UUID: "",
+    Sumário: "",
+    Texto: ""
+}
+
 export default function Create(){
     const navRouter = useNavRouter();
     const router = useRouter();
-    const [updateObj, setUpdateObj] = useState<Record<string, string | string[]>>({})
+    const [updateObj, setUpdateObj] = useState<PartialJurisprudenciaDocument>(defaultValues)
 
+    
     const save = async () => {
+        let object = {...defaultValues, ...updateObj};
         fetch(`${router.basePath}/api/doc/`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify(updateObj)
+            body: JSON.stringify(object)
         }).then(r => r.status === 200 ? r.json() : r.status).then( (r: WriteResponseBase | number)  => {
             if( typeof r === "number" ){
                 alert(`Não foi possível criar documento. (${r})`)
@@ -43,49 +84,50 @@ export default function Create(){
             <div className="col-sm-12 col-md-8 col-xl-6">
                 <div className="card shadow">
                     <div className="card-body">
-                        <ReadOnlyInput accessKey="ID" value={""} />
+                        <ReadOnlyInput accessKey="ID" value="" />
                         <Sep/>
-                        <UpdateInput accessKey="Número de Processo" value="" setUpdateObject={setUpdateObj}/>
-                        <ReadOnlyInput accessKey="Fonte" value="STJ (manual)"/>
-                        <UpdateInput accessKey="URL" value="" setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="ECLI" value="" setUpdateObject={setUpdateObj}/>
+                        <UpdateInput accessKey="Número de Processo" value={defaultValues["Número de Processo"]} setUpdateObject={setUpdateObj}/>
+                        <ReadOnlyInput accessKey="Fonte" value={defaultValues["Fonte"]}/>
+                        <UpdateInput accessKey="URL" value={defaultValues["URL"]} setUpdateObject={setUpdateObj}/>
+                        <UpdateInput accessKey="ECLI" value={defaultValues["ECLI"]} setUpdateObject={setUpdateObj}/>
                         <Sep/>
-                        <UpdateInput accessKey="Data" value="" setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Área" value="" setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Meio Processual" value="" setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Relator Nome Profissional" value="" setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Secção" value="" setUpdateObject={setUpdateObj}/>
+                        <DateInput accessKey="Data" value={defaultValues["Data"]} setUpdateObject={setUpdateObj}/>
+                        <UpdateInput accessKey="Área" value={defaultValues["Área"]} setUpdateObject={setUpdateObj}/>
+                        <UpdateInput accessKey="Meio Processual" value={defaultValues["Meio Processual"]} setUpdateObject={setUpdateObj}/>
+                        <UpdateInput accessKey="Relator Nome Profissional" value={defaultValues["Relator Nome Profissional"]} setUpdateObject={setUpdateObj}/>
+                        <UpdateInput accessKey="Relator Nome Completo" value={defaultValues["Relator Nome Completo"]} setUpdateObject={setUpdateObj}/>
+                        <UpdateInput accessKey="Secção" value={defaultValues["Secção"]} setUpdateObject={setUpdateObj}/>
                         <Sep/>
-                        <UpdateInput accessKey="Tribunal de Recurso" value="" setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Tribunal de Recurso - Processo" value="" setUpdateObject={setUpdateObj}/>
+                        <UpdateInput accessKey="Tribunal de Recurso" value={defaultValues["Tribunal de Recurso"]} setUpdateObject={setUpdateObj}/>
+                        <UpdateInput accessKey="Tribunal de Recurso - Processo" value={defaultValues["Tribunal de Recurso - Processo"]} setUpdateObject={setUpdateObj}/>
                         <Sep/>
-                        <UpdateInput accessKey="Decisão" value="" setUpdateObject={setUpdateObj}/>
+                        <UpdateInput accessKey="Decisão" value={defaultValues.Decisão} setUpdateObject={setUpdateObj}/>
                         <ReadOnlyInput accessKey="Decisão (textual)" value=""/>
-                        <UpdateInput accessKey="Votação - Decisão" value="" setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Votação - Vencidos" value="" setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Votação - Declarações" value="" setUpdateObject={setUpdateObj}/>
+                        <UpdateInput accessKey="Votação - Decisão" value={defaultValues["Votação - Decisão"]} setUpdateObject={setUpdateObj}/>
+                        <UpdateInput accessKey="Votação - Vencidos" value={defaultValues["Votação - Vencidos"]} setUpdateObject={setUpdateObj}/>
+                        <UpdateInput accessKey="Votação - Declarações" value={defaultValues["Votação - Declarações"]} setUpdateObject={setUpdateObj}/>
                         <Sep/>
-                        <UpdateInput accessKey="Descritores" value="" setUpdateObject={setUpdateObj}/>
+                        <UpdateInput accessKey="Descritores" value={defaultValues["Descritores"]} setUpdateObject={setUpdateObj}/>
                         <Sep/>
-                        <UpdateInput accessKey="Jurisprudência" value="" setUpdateObject={setUpdateObj}/>
+                        <UpdateInput accessKey="Jurisprudência" value={defaultValues["Jurisprudência"]} setUpdateObject={setUpdateObj}/>
                         <Sep/>
-                        <UpdateInput accessKey="Jurisprudência Estrangeira" value="" setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Jurisprudência Internacional" value="" setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Jurisprudência Nacional" value="" setUpdateObject={setUpdateObj}/>
+                        <UpdateInput accessKey="Jurisprudência Estrangeira" value={defaultValues["Jurisprudência Estrangeira"]} setUpdateObject={setUpdateObj}/>
+                        <UpdateInput accessKey="Jurisprudência Internacional" value={defaultValues["Jurisprudência Internacional"]} setUpdateObject={setUpdateObj}/>
+                        <UpdateInput accessKey="Jurisprudência Nacional" value={defaultValues["Jurisprudência Nacional"]} setUpdateObject={setUpdateObj}/>
                         <Sep/>
-                        <UpdateInput accessKey="Doutrina" value="" setUpdateObject={setUpdateObj}/>
+                        <UpdateInput accessKey="Doutrina" value={defaultValues["Doutrina"]} setUpdateObject={setUpdateObj}/>
                         <Sep/>
-                        <UpdateInput accessKey="Legislação Comunitária" value="" setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Legislação Estrangeira" value="" setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Legislação Nacional" value="" setUpdateObject={setUpdateObj}/>
+                        <UpdateInput accessKey="Legislação Comunitária" value={defaultValues["Legislação Comunitária"]} setUpdateObject={setUpdateObj}/>
+                        <UpdateInput accessKey="Legislação Estrangeira" value={defaultValues["Legislação Estrangeira"]} setUpdateObject={setUpdateObj}/>
+                        <UpdateInput accessKey="Legislação Nacional" value={defaultValues["Legislação Nacional"]} setUpdateObject={setUpdateObj}/>
                         <Sep/>
-                        <UpdateInput accessKey="Referências Internacionais" value="" setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Referência de publicação" value="" setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Área Temática" value="" setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Indicações Eventuais" value="" setUpdateObject={setUpdateObj}/>
+                        <UpdateInput accessKey="Referências Internacionais" value={defaultValues["Referências Internacionais"]} setUpdateObject={setUpdateObj}/>
+                        <UpdateInput accessKey="Referência de publicação" value={defaultValues["Referência de publicação"]} setUpdateObject={setUpdateObj}/>
+                        <UpdateInput accessKey="Área Temática" value={defaultValues["Área Temática"]} setUpdateObject={setUpdateObj}/>
+                        <UpdateInput accessKey="Indicações Eventuais" value={defaultValues["Indicações Eventuais"]} setUpdateObject={setUpdateObj}/>
                         <Sep/>
-                        <HTMLInput accessKey="Sumário" value="" setUpdateObject={setUpdateObj}/>
-                        <HTMLInput accessKey="Texto" value="" setUpdateObject={setUpdateObj}/>
+                        <HTMLInput accessKey="Sumário" value={defaultValues["Sumário"]} setUpdateObject={setUpdateObj}/>
+                        <HTMLInput accessKey="Texto" value={defaultValues["Texto"]} setUpdateObject={setUpdateObj}/>
                     </div>
                     <div className="card-footer">
                         <div className="alert alert-info" role="alert">

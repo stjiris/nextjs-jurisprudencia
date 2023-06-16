@@ -47,7 +47,7 @@ export default function Update({doc, id}: UpdateProps){
         })
     }
 
-    /*const del = async () => {
+    const del = async () => {
         let r = prompt("Tem a certeza que quer eliminar o documento? Insira o Número de Processo:");
         if( r !== doc["Número de Processo"] ) return;
         fetch(`${router.basePath}/api/doc/${id}`, {
@@ -55,7 +55,7 @@ export default function Update({doc, id}: UpdateProps){
         }).finally(() => {
             navRouter.push(`/dashboard/doc`)
         })
-    }*/
+    }
     
     return <DashboardGenericPage>
         <div className="row">
@@ -79,6 +79,7 @@ export default function Update({doc, id}: UpdateProps){
                         <UpdateInput accessKey="Área" value={doc["Área"]} setUpdateObject={setUpdateObj}/>
                         <UpdateInput accessKey="Meio Processual" value={doc["Meio Processual"]} setUpdateObject={setUpdateObj}/>
                         <UpdateInput accessKey="Relator Nome Profissional" value={doc["Relator Nome Profissional"]} setUpdateObject={setUpdateObj}/>
+                        <UpdateInput accessKey="Relator Nome Completo" value={doc["Relator Nome Completo"]} setUpdateObject={setUpdateObj}/>
                         <UpdateInput accessKey="Secção" value={doc["Secção"]} setUpdateObject={setUpdateObj}/>
                         <Sep/>
                         <UpdateInput accessKey="Tribunal de Recurso" value={doc["Tribunal de Recurso"]} setUpdateObject={setUpdateObj}/>
@@ -127,7 +128,7 @@ export default function Update({doc, id}: UpdateProps){
                             <>
                                 <h3>Sem alterações</h3>
                                 <Link className="btn btn-warning" href=".">Cancelar</Link>
-                                {/* <button className="btn btn-danger" onClick={() => del()}>Eliminar</button>-->*/}
+                                <button className="btn btn-danger" onClick={() => del()}>Eliminar</button>
                             </>
                         }
                         </div>
