@@ -1,8 +1,8 @@
 import { AriaRole, DetailedHTMLProps, HTMLAttributes } from "react"
 
-export function Loading(){
+export function Loading({text}: {text?: string}){
     return <div className="alert alert-info" role="alert">
-        <h4 className="alert-heading align-items-baseline"><SmallSpinner/>&nbsp;A carregar resultados...</h4>
+        <h4 className="alert-heading align-items-baseline"><SmallSpinner/>&nbsp;{text ? text : <>A carregar resultados...</>}</h4>
     </div>
 }
 

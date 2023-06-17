@@ -1,6 +1,6 @@
 import { authenticatedHandler } from "@/core/user/authenticate";
 import { NextApiRequest, NextApiResponse } from "next";
-import { createDoc, deleteDoc, getDoc, updateDoc } from "@/core/doc";
+import { createDoc, deleteDoc, existsDoc, getDoc, updateDoc } from "@/core/doc";
 
 export default async function docApiHandler(
     req: NextApiRequest,
@@ -12,6 +12,10 @@ export default async function docApiHandler(
     }
 
     const id = req.query.doc as string;
+    if( !(await existsDoc(id)) ){
+        return res.status(404).json({})
+    }
+
     if( req.method === "GET" ){
         return res.json(await getDoc(id));
     }
@@ -24,5 +28,5 @@ export default async function docApiHandler(
     if( req.method === "DELETE" ){
         return res.json(await deleteDoc(id))
     }
-    res.status(405).json(getDoc(id))
+    res.status(405).json(await getDoc(id))
 }

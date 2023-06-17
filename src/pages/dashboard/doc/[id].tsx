@@ -1,37 +1,48 @@
-import GenericPage, { DashboardGenericPage } from "@/components/genericPageStructure"
-import { getElasticSearchClient } from "@/core/elasticsearch";
+import { DashboardGenericPage } from "@/components/genericPageStructure"
 import { withAuthentication } from "@/core/user/authenticate"
-import { JurisprudenciaDocument, JurisprudenciaVersion } from "@stjiris/jurisprudencia-document";
-import { useState } from "react";
+import { JurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
+import { useEffect, useState } from "react";
 
 import Link from "next/link";
-import { useRouter as useNavRouter } from "next/navigation";
+import { useParams, useRouter as useNavRouter, useSearchParams } from "next/navigation";
 import { useRouter } from "next/router";
 import { ReadOnlyInput, UpdateInput, HTMLInput, UpdateObject } from "@/components/dashboardDoc";
+import { Loading } from "@/components/loading";
 
-export const getServerSideProps = withAuthentication<UpdateProps>( async (ctx) => {
-    let id = Array.isArray(ctx.query.id) ? ctx.query.id[0] : ctx.query.id || "";
-    if(!id) throw new Error("Invalid request")
-
-    let client = await getElasticSearchClient();
-
-    return client.get<JurisprudenciaDocument>({
-        index: JurisprudenciaVersion,
-        id: id
-    }).then(r => ({props: {doc: r._source!, id: id}}))
-}, (ctx) => {
-    return `/dashboard/doc/${ctx.params?.id || ""}`
-})
-
+export const getServerSideProps = withAuthentication( async (ctx) => ({props: {}}), (ctx) => `/dashboard/doc/${ctx.params?.id || ""}`)
 
 interface UpdateProps {
-    doc: JurisprudenciaDocument,
     id: string
+    doc: JurisprudenciaDocument
 }
 
 const Sep = () => <div className="m-2 p-0"></div>
 
-export default function Update({doc, id}: UpdateProps){
+export default function UpdatePage(){
+    let [error, setError] = useState<string>()
+    let [props, setProps] = useState<UpdateProps>();
+    let searchParams = useSearchParams();
+    let router = useRouter();
+    useEffect(() => {
+        let id = searchParams.get("id");
+        if( id ){
+            fetch(`${router.basePath}/api/doc/${id}`)
+                .then(r => r.status === 200 ?
+                    r.json().then( esr => setProps({doc:esr._source, id: id!}))
+                    :
+                    setError(`Erro ao aceder ao documento. (${r.status} ${r.statusText})`))
+        }
+    },[searchParams])
+    return <DashboardGenericPage>
+        {props && <Update doc={props.doc} id={props.id} />}
+        {!props && !error && <Loading text="A carregar documento"/>}
+        {error && <div className="alert alert-danger">
+            <h3>{error}</h3>
+        </div>}
+    </DashboardGenericPage>
+}
+
+function Update({doc, id}: UpdateProps){
     let [updateObj, setUpdateObj] = useState<UpdateObject>({})
     let navRouter = useNavRouter();
     let router = useRouter();
@@ -57,7 +68,7 @@ export default function Update({doc, id}: UpdateProps){
         })
     }
     
-    return <DashboardGenericPage>
+    return <>
         <div className="row">
             <div className="col-12 col-md-4 col-xl-6">
                 <div className="card shadow position-sticky top-0">
@@ -136,7 +147,7 @@ export default function Update({doc, id}: UpdateProps){
                 </div>
             </div>
         </div>
-    </DashboardGenericPage>
+    </>
 }
 
 function ShowOriginal({original}: {original: Record<string, any>}){

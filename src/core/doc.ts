@@ -2,6 +2,8 @@ import { JurisprudenciaDocument, JurisprudenciaDocumentKey, JurisprudenciaVersio
 import { getElasticSearchClient } from "./elasticsearch";
 import crypto from "node:crypto"
 
+export const existsDoc = (docId: string) => getElasticSearchClient().then(c => c.exists({index: JurisprudenciaVersion, id: docId}))
+
 export const getDoc = (docId: string) => getElasticSearchClient().then( c => c.get<JurisprudenciaDocument>({index: JurisprudenciaVersion, id: docId}))
 
 let defaultValues: JurisprudenciaDocument = {
