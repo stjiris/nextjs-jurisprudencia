@@ -8,7 +8,7 @@ export default async function docApiHandler(
 ){
     const authed = await authenticatedHandler(req);
     if( !authed ){
-        res.status(401).json({});
+        return res.status(401).json({});
     }
 
     const id = req.query.doc as string;
