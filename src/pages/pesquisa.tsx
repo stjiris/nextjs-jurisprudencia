@@ -34,7 +34,7 @@ export default function Pesquisa(props: PesquisaProps){
     const searchParams = useSearchParams()
 
     useEffect(() => {
-        fetch(`./api/search/?${searchParams}`)
+        fetch(`./api/search?${searchParams}`)
             .then( r => r.json())
             .then(l => setResults(l))
     }, [searchParams])
