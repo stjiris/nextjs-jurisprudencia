@@ -28,5 +28,5 @@ export default async function docApiHandler(
     if( req.method === "DELETE" ){
         return res.json(await deleteDoc(id))
     }
-    res.status(405).json(await getDoc(id))
+    return res.status(405).json(await getDoc(id))
 }

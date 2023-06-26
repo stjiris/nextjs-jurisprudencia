@@ -9,7 +9,7 @@ export default async function docApiHandler(
 ){
     const authed = await authenticatedHandler(req);
     if( !authed ){
-        res.status(401).json({});
+        return res.status(401).json({});
     }
 
     if( req.method === "POST"){
@@ -17,5 +17,5 @@ export default async function docApiHandler(
         return res.json(await createDoc(content))
     }
 
-    res.status(405).json({})
+    return res.status(405).json({})
 }
