@@ -27,7 +27,7 @@ export const getServerSideProps = withAuthentication<UpdateProps>(async (ctx) =>
         return {props: {success: success, user: (await readUser(ctx.req.cookies["user"]!))!}}
     }
     return {props: {user: (await readUser(ctx.req.cookies["user"]!))!}}
-}, "/user/update")
+})
 
 type UpdateProps = {
     success?: boolean

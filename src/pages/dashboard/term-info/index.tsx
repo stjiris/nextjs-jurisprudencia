@@ -7,7 +7,7 @@ import React, { useEffect, useState } from "react";
 
 
 
-export const getServerSideProps = withAuthentication<{}>(async () => ({props: {}}), "/dashboard/term-info/")
+export const getServerSideProps = withAuthentication<{}>(async () => ({props: {}}))
 
 export default function TermsInfoIndexPage(){
     return <DashboardGenericPage>

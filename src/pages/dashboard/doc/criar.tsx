@@ -8,9 +8,7 @@ import { useRouter } from "next/router";
 import { DateInput, HTMLInput, ReadOnlyInput, UpdateInput } from "@/components/dashboardDoc";
 import { WriteResponseBase } from "@elastic/elasticsearch/lib/api/types";
 
-export const getServerSideProps = withAuthentication<{}>( async (ctx) => {
-    return {props: {}}
-}, "/dashboard/doc/criar")
+export const getServerSideProps = withAuthentication<{}>( async (ctx) => ({props: {}}))
 
 const Sep = () => <div className="m-2 p-0"></div>
 

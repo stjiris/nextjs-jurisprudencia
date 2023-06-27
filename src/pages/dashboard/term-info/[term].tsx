@@ -25,7 +25,7 @@ export const getServerSideProps = withAuthentication<TermsInfoPageProps>(async c
     
     return ({props: {term, content}})
     
-}, ctx => `/dashboard/term-info/${encodeURIComponent(getQueryTerm(ctx))}`)
+})
 
 
 async function save(router: NextRouter, term: string, content: string) {

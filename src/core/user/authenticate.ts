@@ -31,7 +31,7 @@ export async function authenticate(user: string, password: string) {
 export function withAuthentication<
         Props extends { [key: string]: any } = { [key: string]: any },
         Params extends ParsedUrlQuery = ParsedUrlQuery,
-        Preview extends PreviewData = PreviewData>(sub: GetServerSideProps<Props, Params, Preview>, redirect: string | ((ctx: GetServerSidePropsContext<Params, Preview>) => string) ="/user"): (GetServerSideProps<Props, Params, Preview>) {
+        Preview extends PreviewData = PreviewData>(sub: GetServerSideProps<Props, Params, Preview>): (GetServerSideProps<Props, Params, Preview>) {
     return async (ctx) => {
         let user = ctx.req.cookies["user"];
         let session = ctx.req.cookies["session"];
@@ -40,7 +40,7 @@ export function withAuthentication<
             return await sub(ctx)
         }
         else{
-            return {redirect: {permanent: false, destination: `/user/login?redirect=${encodeURIComponent(typeof redirect === "function" ? redirect(ctx) : redirect)}`}}
+            return {redirect: {permanent: false, destination: `/user/login?redirect=${encodeURIComponent(ctx.resolvedUrl)}`}}
         }
 
     }

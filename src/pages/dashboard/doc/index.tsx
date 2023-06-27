@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useRef, useState } from "react"
 
-export const getServerSideProps: GetServerSideProps<{}> = withAuthentication(async (ctx) => ({props: {}}), "/dashboard/doc/")
+export const getServerSideProps: GetServerSideProps<{}> = withAuthentication(async (ctx) => ({props: {}}))
 
 export default function UpdatePage(){
     return <DashboardGenericPage>

@@ -9,7 +9,7 @@ import { useRouter } from "next/router";
 import { ReadOnlyInput, UpdateInput, HTMLInput, UpdateObject } from "@/components/dashboardDoc";
 import { Loading } from "@/components/loading";
 
-export const getServerSideProps = withAuthentication( async (ctx) => ({props: {}}), (ctx) => `/dashboard/doc/${ctx.params?.id || ""}`)
+export const getServerSideProps = withAuthentication( async (ctx) => ({props: {}}))
 
 interface UpdateProps {
     id: string

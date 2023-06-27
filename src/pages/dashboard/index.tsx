@@ -3,7 +3,7 @@ import { DashboardGenericPage } from "@/components/genericPageStructure"
 import { withAuthentication } from "@/core/user/authenticate";
 import Link from "next/link";
 
-export const getServerSideProps: GetServerSideProps<{}> = withAuthentication(async (ctx) => ({props: {}}), "/dashboard")
+export const getServerSideProps: GetServerSideProps<{}> = withAuthentication(async (ctx) => ({props: {}}))
 
 export default function IndexPage(){
     return <DashboardGenericPage>
@@ -19,14 +19,14 @@ export default function IndexPage(){
                         </div>
                         <div className="card m-1">
                             <div className="card-body">
-                                <div className="card-title"><Link href="/dashboard/indices">Índices</Link></div>
-                                <p>Atualizar valor de índices</p>
+                                <div className="card-title"><Link href="/dashboard/bulk">Índices</Link></div>
+                                <p>Atualizar vários valores de índices ao mesmo tempo</p>
                             </div>
                         </div>
                         <div className="card m-1">
                             <div className="card-body">
-                                <div className="card-title"><Link href="/dashboard/term-info">Notas de campos</Link></div>
-                                <p>Atualizar ou criar notas dos campos</p>
+                                <div className="card-title"><Link href="/dashboard/term-info">Notas de índices</Link></div>
+                                <p>Atualizar ou criar notas dos índices</p>
                             </div>
                         </div>
                         <div className="card m-1">

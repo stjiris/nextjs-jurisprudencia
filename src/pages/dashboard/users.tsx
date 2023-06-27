@@ -10,7 +10,7 @@ interface UsersPageProps {
 export const getServerSideProps: GetServerSideProps<UsersPageProps> = withAuthentication(async (ctx) => {
     let r = await listUsers();
     return {props: {users: r.hits.hits.map(({_id, _source: u}) => ({id: _id, username: u?.username || "", salt: u?.salt || "", hash: u?.hash || ""}))}}
-}, "/dashboard/users")
+})
 
 export default function UsersPage({users}: UsersPageProps){
 
