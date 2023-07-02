@@ -128,7 +128,7 @@ function JurisprudenciaItem({hit, searchId}:{hit: SearchHandlerResponseItem, sea
             <small className="relevancia" style={{color: scoreColor(hit.score!/hit.max_score)}}>
                 {[0.2,0.4,0.6,0.8,1].map((b,i) => <i key={i} className={`bi bi-square${hit.score!/hit.max_score < b ? "" : "-fill"} me-1`}></i>)}
             </small>
-            <Link href={hit._source?.ECLI?.startsWith("ECLI:PT:STJ:") ? `/a/ecli/${hit._source.ECLI}${searchParam}` : `/a/${encodeURIComponent(hit._source?.["Número de Processo"]!)}/${hit._source?.UUID}${searchParam}`} target="_blank">{hit._source?.["Número de Processo"]}</Link>
+            <Link href={hit._source?.ECLI?.startsWith("ECLI:PT:STJ:") ? `/ecli/${hit._source.ECLI}${searchParam}` : `/${encodeURIComponent(hit._source?.["Número de Processo"]!)}/${hit._source?.UUID}${searchParam}`} target="_blank">{hit._source?.["Número de Processo"]}</Link>
             <span>&nbsp;- {hit._source?.Data}</span>
             {hit._source?.Área ? <span>&nbsp;- {hit._source.Área}</span> : ""}
             {hit._source?.["Meio Processual"] ? <span>&nbsp;- {hit._source["Meio Processual"].join(" / ")}</span> : ""}

@@ -7,6 +7,7 @@ import TargetBlankLink from "@/components/link";
 import Head from "next/head";
 import GenericPage from "@/components/genericPageStructure";
 import { trackClickedDocument } from "@/core/track-search";
+import { useRouter } from "next/router";
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
     let {stringEcliOrNumber,EcliOrUUID,search: searchId} = ctx.query;
@@ -85,7 +86,7 @@ function MultipleDocumentPage(props: {docs: JurisprudenciaDocument[]}){
             <h4 className="alert-heading">Escolher documento a abrir...</h4>
             <ol>
                 {props.docs.map((doc, i) => <li key={i}>
-                    <Link href={doc.ECLI ? `/a/ecli/${doc.ECLI}` : `/a/${encodeURIComponent(doc["Número de Processo"]!)}/${doc.UUID}`}>{doc["Número de Processo"]}</Link> ({doc.Data})
+                    <Link href={doc.ECLI?.startsWith("ECLI:PT:STJ:") ? `/ecli/${doc.ECLI}` : `/${encodeURIComponent(doc["Número de Processo"]!)}/${doc.UUID}`} target="_blank">{doc["Número de Processo"]}</Link>
                 </li>)}
             </ol>
         </div>
@@ -94,14 +95,15 @@ function MultipleDocumentPage(props: {docs: JurisprudenciaDocument[]}){
 
 function DocumentPage(props: {doc: JurisprudenciaDocument}){
     const [related, setRelated] = useState<JurisprudenciaDocument[]>([]);
+    const router = useRouter()
 
     let proc = props.doc["Número de Processo"]!;
     let uuid = props.doc["UUID"]!;
     useEffect(() => {
-        fetch(`../../api/related/${encodeURIComponent(proc)}/${uuid}`)
+        fetch(`${router.basePath}/api/related/${encodeURIComponent(proc)}/${uuid}`)
             .then( r => r.json())
             .then(l => setRelated(l))
-    }, [proc, uuid])
+    }, [proc, uuid, router.basePath])
     
     return <>
         <Head>
@@ -121,7 +123,7 @@ function DocumentPage(props: {doc: JurisprudenciaDocument}){
                 <Row style={{background: "#dfdfdf"}}>
                     <div className="col-1"><i className="bi bi-link"></i>Relacionados:</div>
                     <div className="col-11">
-                        {related.flatMap((d,i) => [" / ", <Link key={i} href={`/a/${encodeURIComponent(d["Número de Processo"]!)}/${d.UUID}`}>{d["Número de Processo"]}</Link>, ` (${d.Data})`]).slice(1)}
+                        {related.flatMap((d,i) => [" / ", <Link key={i} href={`/${encodeURIComponent(d["Número de Processo"]!)}/${d.UUID}`}>{d["Número de Processo"]}</Link>, ` (${d.Data})`]).slice(1)}
                     </div>
                 </Row> : 
             <></>}
@@ -160,7 +162,7 @@ function MultipleRow(props: {accessKeys: (JurisprudenciaDocumentArrayKey | Juris
         <div className="col-1"><b>{props.showKeys?.at(0) || props.accessKeys.at(0)}</b></div>
         <div className="col-11">
             <Properties accessKey={props.accessKeys.at(0)!} accessValue={props.doc[props.accessKeys.at(0)!]!}/>
-            {props.accessKeys.slice(1).map((k,i) => <>&nbsp;<span>{props.showKeys?.at(i+1) || k}: <Properties accessKey={k} accessValue={props.doc[k]!}/></span></>)}
+            {props.accessKeys.slice(1).map((k,i) => <React.Fragment key={i}>&nbsp;<span>{props.showKeys?.at(i+1) || k}: <Properties accessKey={k} accessValue={props.doc[k]!}/></span></React.Fragment>)}
         </div>
     </Row>
 }
