@@ -25,10 +25,13 @@ services:
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
     environment:
-      xpack.security.enabled: false
+      xpack.security.enabled: true
+      xpack.security.http.ssl.enabled: false
       discovery.type: single-node
+      ELASTIC_PASSWORD: elasticsearch
+      KIBANA_PASSWORD: elasticsearch
     healthcheck:
-      test: curl --write-out 'HTTP %{http_code}' --fail --silent --output /dev/null http://localhost:9200
+      test: curl --write-out 'HTTP %{http_code}' --fail --silent --output /dev/null http://elastic:elasticsearch@localhost:9200
       interval: 10s
       timeout: 30s
       retries: 15
@@ -42,5 +45,7 @@ services:
     ports:
       - "127.0.0.1:5601:5601"
     environment:
-      ELASTICSEARCH_HOSTS: '["http://elasticsearch:9200"]'
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+      ELASTICSEARCH_USERNAME: kibana_system
+      ELASTICSEARCH_PASSWORD: elasticsearch
     restart: always

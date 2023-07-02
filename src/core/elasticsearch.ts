@@ -43,7 +43,7 @@ export const DEFAULT_AGGS = {
 export const RESULTS_PER_PAGE = 10;
 
 export async function getElasticSearchClient(){
-    return new Client({node: process.env.ES_URL || "http://localhost:9200"})
+    return new Client({node: process.env.ES_URL || "http://localhost:9200", auth: { username: "elastic", password: "elasticsearch"}})
 }
 
 export type SearchFilters = {
