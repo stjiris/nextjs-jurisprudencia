@@ -32,7 +32,7 @@ export default function UpdatePage(){
                     :
                     setError(`Erro ao aceder ao documento. (${r.status} ${r.statusText})`))
         }
-    },[searchParams])
+    },[searchParams, router.basePath])
     return <DashboardGenericPage>
         {props && <Update doc={props.doc} id={props.id} />}
         {!props && !error && <Loading text="A carregar documento"/>}

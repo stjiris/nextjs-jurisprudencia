@@ -1,12 +1,12 @@
 import { AggregationsMaxAggregate, AggregationsMinAggregate, AggregationsStringTermsAggregate, AggregationsTermsAggregation, AggregationsTermsBucketBase, Indices, long, SearchTotalHits } from "@elastic/elasticsearch/lib/api/types";
 import search, { createQueryDslQueryContainer, populateFilters, sortAlphabetically, sortBucketsAlphabetically } from "@/core/elasticsearch"
 import { NextApiRequest, NextApiResponse } from "next";
-import { IndicesNewProps, INDICES_OTHERS } from "@/types/indices";
+import { IndicesProps, INDICES_OTHERS } from "@/types/indices";
 import { listAggregation } from "@/components/indices-helpers";
 
 export default async function indicesCsvHandler(
     req: NextApiRequest,
-    res: NextApiResponse<IndicesNewProps>
+    res: NextApiResponse<IndicesProps>
 ) {
     const term = Array.isArray(req.query.term) ? req.query.term[0] : req.query.term  || "Área";
     let group = "Secção";

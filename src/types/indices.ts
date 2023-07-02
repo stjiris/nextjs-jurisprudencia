@@ -2,7 +2,7 @@ import { AggregationsStringTermsAggregate } from "@elastic/elasticsearch/lib/api
 
 export const INDICES_OTHERS = "[Outros]"
 
-export interface IndicesNewProps{
+export interface IndicesProps{
     termAggregation: AggregationsStringTermsAggregate
     sortedGroup: [string, number][]
 }

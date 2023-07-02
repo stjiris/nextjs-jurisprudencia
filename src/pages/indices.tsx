@@ -7,16 +7,17 @@ import Head from "next/head";
 import Script from "next/script";
 import { FormProps, withForm } from "@/components/pageWithForm";
 import { useRouter } from "next/router";
-import { IndicesNewProps, INDICES_OTHERS } from "@/types/indices";
+import { IndicesProps, INDICES_OTHERS } from "@/types/indices";
 import { Loading, SmallSpinner } from "@/components/loading";
+import { SelectTerm } from "../components/SelectTerm";
 
-interface IndicesProps extends FormProps {
+interface IndicesPageProps extends FormProps {
     term: string
     group: string
     limits: number
 }
 
-export const getServerSideProps = withForm<IndicesProps>(async (ctx, formProps) => {
+export const getServerSideProps = withForm<IndicesPageProps>(async (ctx, formProps) => {
     const limits = Array.isArray(ctx.query.LIMIT_ROWS) ? parseInt(ctx.query.LIMIT_ROWS[0]) : parseInt(ctx.query.LIMIT_ROWS || "5000") || 5000;
     const term = Array.isArray(ctx.query.term) ? ctx.query.term[0] : ctx.query.term  || "Área";
     let group = "Secção";
@@ -33,7 +34,7 @@ export const getServerSideProps = withForm<IndicesProps>(async (ctx, formProps) 
     
 });
 
-export default function Indices(props: IndicesProps){
+export default function Indices(props: IndicesPageProps){
     return <GenericPageWithForm escapeChildren={<HistogramModal />} {...props}>
         <Head>
             <title>Jurisprudência STJ - Índices</title>
@@ -47,16 +48,16 @@ export default function Indices(props: IndicesProps){
     </GenericPageWithForm>
 }
 
-function IndicesTable(props: IndicesProps){
+function IndicesTable(props: IndicesPageProps){
     let router = useRouter()
     let searchParams = useSearchParams();
-    let [state, setTermAggregation] = useState<IndicesNewProps>()
+    let [state, setTermAggregation] = useState<IndicesProps>()
     
     useEffect(() => {
         let abort = new AbortController();
         fetch(`${router.basePath}/api/indices?${searchParams.toString()}`, {signal: abort.signal})
             .then(r => r.status === 200 ?
-                r.json() as Promise<IndicesNewProps> :
+                r.json() as Promise<IndicesProps> :
                 Promise.resolve({sortedGroup: [], termAggregation: {buckets: [], sum_other_doc_count: 0}}))
             .then(setTermAggregation)
         
@@ -124,37 +125,8 @@ function SelectGroup(props: {group: string}){
         <option value="Secção" label="Secção"/>
     </SelectNavigate>
 }
-function SelectTerm(props: {term: string}){
-    return <SelectNavigate name="group" defaultValue={props.term} valueToHref={(v, params) => `?${modifySearchParams(params, "term", v).toString()}`}>
-            <option value="Jurisprudência" label="Jurisprudência"/>
-            <option value="Área" label="Área"/>
-            <option value="Secção" label="Secção"/>
-            <option value="Relator Nome Profissional" label="Relator"/>
-            <option value="Meio Processual" label="Meio Processual"/>
-            <option value="Decisão" label="Decisão"/>
-            <option value="Decisão (textual)" label="Decisão (textual)"/>
-            <option value="Votação - Decisão" label="Votação - Decisão"/>
-            <option value="Votação - Vencidos" label="Votação - Vencidos"/>
-            <option value="Votação - Declarações" label="Votação - Declarações"/>
-            <option value="Descritores" label="Descritores"/>
-            <option value="Tribunal de Recurso" label="Tribunal de Recurso"/>
-            <option value="Tribunal de Recurso - Processo" label="Tribunal de Recurso - Processo"/>
-            <option value="Área Temática" label="Área Temática"/>
-            <option value="Jurisprudência Estrangeira" label="Jurisprudência Estrangeira"/>
-            <option value="Jurisprudência Internacional" label="Jurisprudência Internacional"/>
-            <option value="Doutrina" label="Doutrina"/>
-            <option value="Jurisprudência Nacional" label="Jurisprudência Nacional"/>
-            <option value="Legislação Comunitária" label="Legislação Comunitária"/>
-            <option value="Legislação Estrangeira" label="Legislação Estrangeira"/>
-            <option value="Legislação Nacional" label="Legislação Nacional"/>
-            <option value="Referências Internacionais" label="Referências Internacionais"/>
-            <option value="Referência de publicação" label="Referência de publicação"/>
-            <option value="Indicações Eventuais" label="Indicações Eventuais"/>
-    </SelectNavigate>
-}
-
 function ShowBucketRow(props: {bucket: any, index: number, term: string, group: string, filtersUsed: Record<string, string[]>, searchParams: ReadonlyURLSearchParams, sortedGroup: [string, number][]}){
-    const othersCount = props.bucket.Group.sum_other_doc_count + props.bucket.Group.buckets.reduce((acc:number, b: any) => acc + (props.sortedGroup.find(([s,n]) => s == b.key) != null ? 0 : b.doc_count), 0)
+    const othersCount = props.bucket.Group ? props.bucket.Group.sum_other_doc_count + props.bucket.Group.buckets.reduce((acc:number, b: any) => acc + (props.sortedGroup.find(([s,n]) => s == b.key) != null ? 0 : b.doc_count), 0) : 0;
     return <tr>
         <td className="text-muted">{props.index+1}</td>
         <td className="text-nowrap" style={{width: "0px"}}>{props.term in props.filtersUsed ? props.bucket.key : <Link href={`?${modifySearchParams(props.searchParams, props.term, `"${props.bucket.key}"`)}`}>{props.bucket.key}</Link>}</td>
