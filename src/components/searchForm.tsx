@@ -4,7 +4,8 @@ import { AppRouterInstance } from "next/dist/shared/lib/app-router-context";
 import Link from "next/link";
 import { ReadonlyURLSearchParams, useRouter as useNavRouter, useSearchParams } from "next/navigation";
 import { NextRouter, useRouter } from "next/router";
-import { Dispatch, SetStateAction, useEffect, useRef, useState } from "react";
+import { Dispatch, DragEventHandler, SetStateAction, useEffect, useMemo, useRef, useState } from "react";
+import { useFormOrderedKeys } from "./formKeys";
 import { replaceSearchParams } from "./select-navigate";
 
 function submit(form: HTMLFormElement, router: AppRouterInstance){
@@ -80,30 +81,8 @@ export default function SearchForm({count, filtersUsed, minAno, maxAno}:{count: 
             </div>
             <FilterList filtersUsed={filtersUsed} accessKey="Número de Processo" dontSuggest/>
             <FilterList filtersUsed={filtersUsed} accessKey="ECLI" dontSuggest/>
-            <FilterList filtersUsed={filtersUsed} accessKey="Jurisprudência"/>
-            <FilterList filtersUsed={filtersUsed} accessKey="Área"/>
-            <FilterList filtersUsed={filtersUsed} accessKey="Secção"/>
-            <FilterList filtersUsed={filtersUsed} accessKey="Relator Nome Profissional" showKey="Relator"/>
-            <FilterList filtersUsed={filtersUsed} accessKey="Meio Processual"/>
-            <FilterList filtersUsed={filtersUsed} accessKey="Decisão"/>
-            <FilterList filtersUsed={filtersUsed} accessKey="Decisão (textual)"/>
-            <FilterList filtersUsed={filtersUsed} accessKey="Votação - Decisão"/>
-            <FilterList filtersUsed={filtersUsed} accessKey="Votação - Vencidos"/>
-            <FilterList filtersUsed={filtersUsed} accessKey="Votação - Declarações"/>
-            <FilterList filtersUsed={filtersUsed} accessKey="Tribunal de Recurso"/>
-            <FilterList filtersUsed={filtersUsed} accessKey="Descritores"/>
-            <FilterList filtersUsed={filtersUsed} accessKey="Fonte"/>
-            <FilterList filtersUsed={filtersUsed} accessKey="Área Temática"/>
-            <FilterList filtersUsed={filtersUsed} accessKey="Jurisprudência Estrangeira"/>
-            <FilterList filtersUsed={filtersUsed} accessKey="Jurisprudência Internacional"/>
-            <FilterList filtersUsed={filtersUsed} accessKey="Doutrina"/>
-            <FilterList filtersUsed={filtersUsed} accessKey="Jurisprudência Nacional"/>
-            <FilterList filtersUsed={filtersUsed} accessKey="Legislação Comunitária"/>
-            <FilterList filtersUsed={filtersUsed} accessKey="Legislação Estrangeira"/>
-            <FilterList filtersUsed={filtersUsed} accessKey="Legislação Nacional"/>
-            <FilterList filtersUsed={filtersUsed} accessKey="Referências Internacionais"/>
-            <FilterList filtersUsed={filtersUsed} accessKey="Referência de publicação"/>
-            <FilterList filtersUsed={filtersUsed} accessKey="Indicações Eventuais"/>
+            {/* TODO: allow user to swipe */}
+            <SwapableFilterList filtersUsed={filtersUsed}/>
             {"hasField" in filtersUsed ? <div className="d-flex flex-column my-1 border pb-1">
                 <input type="text" className="form-control form-control-sm border-0 border-bottom rounded-0" name="hasField" autoComplete="off" list="datalist-Campos" placeholder="Tem de ter o campo"/>
                 <UsedFilters filtersUsed={filtersUsed} accessKey="hasField" />
@@ -114,6 +93,52 @@ export default function SearchForm({count, filtersUsed, minAno, maxAno}:{count: 
             </div> : ""}
         </div>
     </form>
+}
+
+function SwapableFilterList({filtersUsed}: {filtersUsed: Record<string, string[]>} ){
+
+    let [sort, swipe] = useFormOrderedKeys();
+    let [target, setTarget] = useState<number>();
+    let [selected, setSelected] = useState<number>();
+    
+
+    let parentRef = useRef<HTMLDivElement>(null);
+
+    let dragEnd: DragEventHandler<HTMLDivElement> = (e) => {
+        let elems = parentRef.current?.querySelectorAll("[data-key]");
+        if( !elems ) return;
+        let mouseY = e.clientY;
+        let swap = null;
+        for(let i = 0; i < elems?.length; i++){
+            let {y, height} = elems[i].getClientRects()[0]
+            if( mouseY > y && mouseY < y+height ){
+                swap = i;
+            }
+        }
+        if( swap === null ) return;
+
+        let newIndForCurrent = swap;
+        let newIndForOther = parseInt(e.currentTarget.dataset.key!);
+        console.log(newIndForCurrent, newIndForOther)
+        swipe(newIndForCurrent, newIndForOther);
+        setSelected(undefined)
+        setTarget(undefined)
+    }
+
+    let dragStart: DragEventHandler<HTMLDivElement> = (e) => {
+        setTarget(parseInt(e.currentTarget.dataset.key!))
+    }
+
+    let dragOver: DragEventHandler<HTMLDivElement> = (e) => {
+        setSelected(parseInt(e.currentTarget.dataset.key!));
+    }
+
+    return <div ref={parentRef}>
+        {sort.map((k,i) => <div data-key={i} key={i} draggable onDragOver={dragOver} onDragStart={dragStart} onDragEnd={dragEnd}  className="d-flex align-items-baseline">
+            <small className={`pe-1 ${target!==i ? "text-muted" : ""} cursor-move`} style={{cursor: "move"}}><i className={target===i || selected === i ? "bi bi-circle-fill" : "bi bi-circle"}></i></small>
+            <FilterList filtersUsed={filtersUsed} accessKey={k.accessKey} showKey={k.showKey}/>
+        </div>)}
+    </div>
 }
 
 function InvertFilter({accessKey, currValue}: {accessKey: string, currValue: string}){
@@ -159,7 +184,7 @@ function FilterList({filtersUsed, accessKey, dontSuggest, showKey}: {filtersUsed
     const router = useRouter()
     const [datalist, setDatalist] = useState<DatalistObj[]>([]);
 
-    return <div className="d-flex flex-column my-1 border pb-1">
+    return <div className="d-flex flex-column my-1 border pb-1 flex-grow-1">
         <datalist id={datalistId}>
             {datalist.map(({key, count}, i) => <option key={i} value={`"${key}"`} label={count ? `Quantidade: ${count}` : ""}/>)}
         </datalist>
