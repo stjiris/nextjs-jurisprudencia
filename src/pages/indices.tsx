@@ -102,7 +102,7 @@ function IndicesTable(props: IndicesPageProps){
                     <th>
                         <SelectTerm term={props.term}/>
                     </th>
-                    <th className="text-end border-end"><Link href={`/pesquisa?${searchParams.toString()}`}>{termAggregation.buckets.reduce((acc, b)=> acc+b.doc_count, 0)}</Link></th>
+                    <th className="text-end border-end" title={`${props.count} resultados com ${termAggregation.buckets.reduce((acc, b)=> acc+b.doc_count, 0)} ocurrências`}>{props.count}* com <Link href={`/pesquisa?${searchParams.toString()}`}>{termAggregation.buckets.reduce((acc, b)=> acc+b.doc_count, 0)}</Link></th>
                     {sortedGroup.map(([name,count], i) => <td key={i} className="text-end border-end"><Link href={`/pesquisa?${modifySearchParams(searchParams, props.group, `"${name}"`)}`}>{count}</Link></td>)}
                     <th></th>
                     <th className="text-start">de ... até</th>
@@ -129,10 +129,10 @@ function ShowBucketRow(props: {bucket: any, index: number, term: string, group: 
     const othersCount = props.bucket.Group ? props.bucket.Group.sum_other_doc_count + props.bucket.Group.buckets.reduce((acc:number, b: any) => acc + (props.sortedGroup.find(([s,n]) => s == b.key) != null ? 0 : b.doc_count), 0) : 0;
     return <tr>
         <td className="text-muted">{props.index+1}</td>
-        <td className="text-nowrap" style={{width: "0px"}}>{props.term in props.filtersUsed ? props.bucket.key : <Link href={`?${modifySearchParams(props.searchParams, props.term, `"${props.bucket.key}"`)}`}>{props.bucket.key}</Link>}</td>
-        <td className="text-end border-end text-nowrap" style={{width: "0px"}}><Link href={`/pesquisa?${modifySearchParams(props.searchParams, props.term, `"${props.bucket.key}"`)}`}>{props.bucket.doc_count}</Link></td>
+        <td className="text-nowrap" style={{width: "0px"}}>{props.term in props.filtersUsed ? (props.filtersUsed[props.term].find( f => f.substring(1,f.length-1) === props.bucket.key) ? <b>{props.bucket.key}</b> : props.bucket.key) : <Link href={`?${modifySearchParams(props.searchParams, props.term, `"${props.bucket.key}"`)}`}>{props.bucket.key}</Link>}</td>
+        <td className="text-end border-end text-nowrap" style={{width: "0px"}}><Link href={`/pesquisa?${addSearchParams(props.searchParams, props.term, `"${props.bucket.key}"`)}`}>{props.bucket.doc_count}</Link></td>
         {props.sortedGroup.map(([groupKey, groupValue], i) => <td key={i} className="text-end border-end text-nowrap">
-            <Link href={`/pesquisa?${modifySearchParams(modifySearchParams(props.searchParams, props.term, `"${props.bucket.key}"`), props.group, `"${groupKey}"`)}`}><HideZero n={groupKey == INDICES_OTHERS ? othersCount : props.bucket.Group.buckets.find((b:any) => b.key === groupKey)?.doc_count || 0}/></Link>
+            <Link href={`/pesquisa?${modifySearchParams(addSearchParams(props.searchParams, props.term, `"${props.bucket.key}"`), props.group, `"${groupKey}"`)}`}><HideZero n={groupKey == INDICES_OTHERS ? othersCount : props.bucket.Group.buckets.find((b:any) => b.key === groupKey)?.doc_count || 0}/></Link>
         </td>)}
         <td></td>
         <td className="text-start text-nowrap">
