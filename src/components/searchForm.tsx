@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ReadonlyURLSearchParams, useRouter as useNavRouter, useSearchParams } from "next/navigation";
 import { NextRouter, useRouter } from "next/router";
 import { Dispatch, DragEventHandler, SetStateAction, useEffect, useMemo, useRef, useState } from "react";
-import { useFormOrderedKeys } from "./formKeys";
+import { ALL_FORM_KEYS, useFormOrderedKeys } from "./formKeys";
 import { replaceSearchParams } from "./select-navigate";
 
 function submit(form: HTMLFormElement, router: AppRouterInstance){
@@ -62,10 +62,12 @@ export default function SearchForm({count, filtersUsed, minAno, maxAno}:{count: 
                         </Link>
                 : ""}
             </div>
-            <div className="d-flex flex-column my-1">
+            <div className="d-flex my-1 pb-1 align-items-baseline">
+                <small className="pe-1 text-white"><i className="bi bi-dash"></i></small>
                 <input type="search" className="form-control form-control-sm rounded-0" name="q" placeholder="Texto Livre" defaultValue={q || ""}/>
             </div>
-            <div className="d-flex my-1">
+            <div className="d-flex my-1 pb-1 align-items-baseline">
+                <small className="pe-1 text-white"><i className="bi bi-dash"></i></small>
                 <div className="input-group input-group-sm">
                     <div className="input-group-prepend flex-shrink">
                         <label htmlFor="data_inicio" className="input-group-text rounded-0 p-1">De:</label>
@@ -79,64 +81,64 @@ export default function SearchForm({count, filtersUsed, minAno, maxAno}:{count: 
                     <input id="data_fim" type="number" className="form-control form-control-sm rounded-0 p-1" name="MaxAno" min={minAno} max={maxAno} defaultValue={search.get("MaxAno") || ""} step={1} placeholder={`${maxAno}`}/>
                 </div>
             </div>
-            <FilterList filtersUsed={filtersUsed} accessKey="Número de Processo" dontSuggest/>
-            <FilterList filtersUsed={filtersUsed} accessKey="ECLI" dontSuggest/>
-            {/* TODO: allow user to swipe */}
+            {"hasField" in filtersUsed ? <div className="d-flex align-items-baseline">
+                <small className="pe-1 text-white"><i className="bi bi-dash"></i></small>
+                <div className="d-flex w-100 flex-column my-1 border pb-1">
+                    <input type="text" className="form-control form-control-sm border-0 border-bottom rounded-0" name="hasField" autoComplete="off" list="datalist-Campos" placeholder="Tem de ter o campo"/>
+                    <UsedFilters filtersUsed={filtersUsed} accessKey="hasField" />
+                </div>
+            </div> : ""}
+            {"notHasField" in filtersUsed ? <div className="d-flex align-items-baseline">
+                <small className="pe-1 text-white"><i className="bi bi-dash"></i></small>
+                <div className="d-flex w-100 flex-column my-1 border pb-1">
+                    <input type="text" className="form-control form-control-sm border-0 border-bottom rounded-0" name="notHasField" autoComplete="off" list="datalist-Campos" placeholder="Não pode ter o campo"/>
+                    <UsedFilters filtersUsed={filtersUsed} accessKey="notHasField" />
+                </div>
+            </div> : ""}
             <SwapableFilterList filtersUsed={filtersUsed}/>
-            {"hasField" in filtersUsed ? <div className="d-flex flex-column my-1 border pb-1">
-                <input type="text" className="form-control form-control-sm border-0 border-bottom rounded-0" name="hasField" autoComplete="off" list="datalist-Campos" placeholder="Tem de ter o campo"/>
-                <UsedFilters filtersUsed={filtersUsed} accessKey="hasField" />
-            </div> : ""}
-            {"notHasField" in filtersUsed ? <div className="d-flex flex-column my-1 border pb-1">
-                <input type="text" className="form-control form-control-sm border-0 border-bottom rounded-0" name="notHasField" autoComplete="off" list="datalist-Campos" placeholder="Tem de ter o campo"/>
-                <UsedFilters filtersUsed={filtersUsed} accessKey="notHasField" />
-            </div> : ""}
         </div>
     </form>
 }
 
 function SwapableFilterList({filtersUsed}: {filtersUsed: Record<string, string[]>} ){
 
-    let [sort, swipe] = useFormOrderedKeys();
+    let [sort, {move, all, hide}] = useFormOrderedKeys();
+    let allused = sort.length === ALL_FORM_KEYS.length;
     let [target, setTarget] = useState<number>();
     let [selected, setSelected] = useState<number>();
-    
-
-    let parentRef = useRef<HTMLDivElement>(null);
 
     let dragEnd: DragEventHandler<HTMLDivElement> = (e) => {
-        let elems = parentRef.current?.querySelectorAll("[data-key]");
-        if( !elems ) return;
-        let mouseY = e.clientY;
-        let swap = null;
-        for(let i = 0; i < elems?.length; i++){
-            let {y, height} = elems[i].getClientRects()[0]
-            if( mouseY > y && mouseY < y+height ){
-                swap = i;
-            }
-        }
-        if( swap === null ) return;
+        // Own element
+        if( selected === undefined || target === undefined ) return;
 
-        let newIndForCurrent = swap;
-        let newIndForOther = parseInt(e.currentTarget.dataset.key!);
-        console.log(newIndForCurrent, newIndForOther)
-        swipe(newIndForCurrent, newIndForOther);
-        setSelected(undefined)
-        setTarget(undefined)
+        if( selected === -1 ) return hide(target);
+        if( selected >= 0 ){
+            move(target, selected)
+            setSelected(undefined)
+            setTarget(selected)
+            setTimeout( () => setTarget(undefined), 1800 )
+        }
     }
 
     let dragStart: DragEventHandler<HTMLDivElement> = (e) => {
+        // Own element
         setTarget(parseInt(e.currentTarget.dataset.key!))
-    }
-
+    };
     let dragOver: DragEventHandler<HTMLDivElement> = (e) => {
+        // Target
         setSelected(parseInt(e.currentTarget.dataset.key!));
     }
 
-    return <div ref={parentRef}>
-        {sort.map((k,i) => <div data-key={i} key={i} draggable onDragOver={dragOver} onDragStart={dragStart} onDragEnd={dragEnd}  className="d-flex align-items-baseline">
-            <small className={`pe-1 ${target!==i ? "text-muted" : ""} cursor-move`} style={{cursor: "move"}}><i className={target===i || selected === i ? "bi bi-circle-fill" : "bi bi-circle"}></i></small>
-            <FilterList filtersUsed={filtersUsed} accessKey={k.accessKey} showKey={k.showKey}/>
+    return <div data-key="-2">
+        <div className="d-flex my-1 pb-1 align-items-baseline">
+            <small className="pe-1 text-white"><i className="bi bi-dash"></i></small>
+            <span id="form-hide-field" className={target ? "": "text-muted"} onDragOver={dragOver} data-key="-1"><i className="bi bi-eye-slash"></i> Esconder...</span>
+            <span className="flex-grow-1"></span>
+            <button id="form-hide-field" role="button" className={`bg-white border-0 ${allused ? "text-muted" : ""}`} disabled={allused} onClick={(e) => {e.preventDefault(); all()}}><i className="bi bi-eye"></i> Mostrar...</button>
+        </div>
+        {sort.map((k,i) => <div data-key={i} key={i} draggable onDragOver={dragOver} onDragStart={dragStart} onDragEnd={dragEnd} className={"d-flex align-items-baseline " +( selected === i || target === i ? "shadow" : "")}>
+            <small className={`pe-1 ${target!==i ? "text-muted" : ""} cursor-move`} style={{cursor: "move"}}><i className="bi bi-arrows-move"></i></small>
+            <FilterList filtersUsed={filtersUsed} accessKey={k.accessKey} showKey={k.showKey} dontSuggest={k.dontSuggest}/>
         </div>)}
     </div>
 }
