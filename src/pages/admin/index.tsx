@@ -13,19 +13,19 @@ export default function IndexPage(){
                     <div className="card-body d-flex flex-wrap">
                         <div className="card m-1">
                             <div className="card-body">
-                                <div className="card-title"><Link href="/dashboard/doc">Documento</Link></div>
+                                <div className="card-title"><Link href="/admin/doc">Documento</Link></div>
                                 <p>Atualizar ou criar acordão</p>
                             </div>
                         </div>
                         <div className="card m-1">
                             <div className="card-body">
-                                <div className="card-title"><Link href="/dashboard/bulk">Índices</Link></div>
+                                <div className="card-title"><Link href="/admin/bulk">Índices</Link></div>
                                 <p>Atualizar vários valores de índices ao mesmo tempo</p>
                             </div>
                         </div>
                         <div className="card m-1">
                             <div className="card-body">
-                                <div className="card-title"><Link href="/dashboard/term-info">Notas de índices</Link></div>
+                                <div className="card-title"><Link href="/admin/term-info">Notas de índices</Link></div>
                                 <p>Atualizar ou criar notas dos índices</p>
                             </div>
                         </div>

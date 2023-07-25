@@ -75,7 +75,7 @@ function IndicesTable(props: IndicesPageProps){
     if( !Array.isArray(termAggregation.buckets) ){
         return <div className="alert alert-danger">Erro: Esperada lista, recebido objeto</div>;
     }
-
+    // Gold no highlight retirar o texto
     return <>
         {(termAggregation.sum_other_doc_count || 0) > 0 && <div className="alert alert-warning" role="alert">
             <h5 className="alert-heading">

@@ -9,14 +9,14 @@ const NAVEGACAO = ["Pesquisa", "Índices", /*"Estatísticas"*/]
 export function DashboardHeader(){
     return <>
         <header className="mb-1 py-2 align-items-center d-flex flex-wrap border-bottom">
-            <Link href="/dashboard" className="align-items-center d-flex flex-wrap text-decoration-none nav-link">
+            <Link href="/admin" className="align-items-center d-flex flex-wrap text-decoration-none nav-link">
                 <Image 
                     src={logoname}
                     alt="Logótipo STJ"
                     height={70}
                     width={180}></Image>
                 <div className="ps-2 d-flex flex-column align-items-center">
-                    <h5 className="m-0 fancy-font">Jurisprudência - Dashboard</h5>
+                    <h5 className="m-0 fancy-font">Jurisprudência - Admin</h5>
                 </div>
             </Link>
             <div className="flex-fill d-none d-lg-block"></div>

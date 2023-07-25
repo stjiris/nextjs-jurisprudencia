@@ -36,7 +36,7 @@ function ListTerms(){
     },[router.basePath])
 
     return <ul>
-        <For each={terms} doit={(t, i) => <li key={i}><Link href={`/dashboard/term-info/${encodeURIComponent(t)}`}>{t}</Link></li>}/>
+        <For each={terms} doit={(t, i) => <li key={i}><Link href={`/admin/term-info/${encodeURIComponent(t)}`}>{t}</Link></li>}/>
     </ul>
 }
 

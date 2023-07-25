@@ -1,6 +1,6 @@
 import { authenticatedHandler } from "@/core/user/authenticate";
 import { NextApiRequest, NextApiResponse } from "next";
-import { createDoc, deleteDoc, existsDoc, getDoc, updateDoc } from "@/core/doc";
+import { createDoc, deleteDoc, existsDoc, getDoc, isDoc, updateDoc } from "@/core/doc";
 
 export default async function docApiHandler(
     req: NextApiRequest,
@@ -22,7 +22,12 @@ export default async function docApiHandler(
 
     if( req.method === "PUT" ){
         const content = req.body;
-        return res.json(await updateDoc(id, content))
+        if( isDoc(content) ){
+            return res.json(await updateDoc(id, content))
+        }
+        else{
+            return res.status(400).json({error: "invalid document"})
+        }
     }
 
     if( req.method === "DELETE" ){

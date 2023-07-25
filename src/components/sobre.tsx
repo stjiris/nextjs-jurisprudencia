@@ -45,7 +45,7 @@ export default function ModalSobre(){
                         &nbsp;
                         <a href="https://docs.google.com/document/d/1jz8CVWifPHAZS1BBm6Vi3YWVb-xS5vJk8UbblsWRz-A/edit?usp=sharing" target="_blank"> Notas Pesquisa</a>
                     </small></div>
-                    <div><small><Link href="/dashboard" target="_blank">Dashboard</Link></small></div>
+                    <div><small><Link href="/admin" target="_blank">Admin</Link></small></div>
                 </div>
                 <button className="btn btn-secondary" type="button" data-bs-dismiss="modal">Fechar</button>
             </div>

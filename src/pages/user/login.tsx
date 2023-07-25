@@ -8,7 +8,7 @@ interface LoginProps {
 }
 
 export const getServerSideProps : GetServerSideProps<LoginProps> = async (ctx) => {
-    let redirect = Array.isArray(ctx.query.redirect) ? ctx.query.redirect[0] : ctx.query.redirect || `/dashboard`
+    let redirect = Array.isArray(ctx.query.redirect) ? ctx.query.redirect[0] : ctx.query.redirect || `/admin`
     if( ctx.req.method === "POST" ){
         let requestPostDataParams = await new Promise<URLSearchParams>((resolve) => {
             let _data = ""

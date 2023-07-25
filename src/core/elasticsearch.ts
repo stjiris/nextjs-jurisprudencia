@@ -1,6 +1,6 @@
 import { Client } from "@elastic/elasticsearch";
 import { AggregationsAggregationContainer, AggregationsStringTermsBucket, AggregationsTermsAggregation, QueryDslQueryContainer, SearchRequest, SortCombinations } from "@elastic/elasticsearch/lib/api/types";
-import { isValidJurisprudenciaDocumentKey, JurisprudenciaDocumentProperties, JurisprudenciaVersion, PartialTypedJurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
+import { isValidJurisprudenciaDocumentArrayKey, isValidJurisprudenciaDocumentKey, isValidJurisprudenciaDocumentStringKey, JurisprudenciaDocumentProperties, JurisprudenciaVersion, PartialTypedJurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
 
 export const filterableProps = Object.entries(JurisprudenciaDocumentProperties).filter(([_, obj]) => obj.type == 'keyword' || ("fields" in obj && obj.fields.keyword)).map( ([name, _]) => name).filter( o => o != "URL" && o != "UUID");
 
@@ -104,9 +104,10 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
             let fieldName = (aggObj[aggField] as AggregationsTermsAggregation).field!;
             let should = filtersUsed[aggName].filter(o => !o.startsWith("not:"))
             let must_not = filtersUsed[aggName].filter(o => o.startsWith("not:")).map(o => o.substring(4))
+            let must_or_should = isValidJurisprudenciaDocumentStringKey(aggName) || body["_should"]?.includes(aggName) ? "should" : "must"  // AND or OR - if a signle value use alawys OR else default OR but flag for AND
             filters[when].push({
                 bool: {
-                    should: should.map( o => (o.startsWith("\"") && o.endsWith("\"") ? {
+                    [must_or_should]: should.map( o => (o.startsWith("\"") && o.endsWith("\"") ? {
                         term: {
                             [fieldName.replace("keyword","raw")]: { value: `${o.slice(1,-1)}` }
                         }

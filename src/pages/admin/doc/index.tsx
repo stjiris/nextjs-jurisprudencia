@@ -27,7 +27,7 @@ function SearchCard(){
     return <div className="card-body">
         <div className="card-title d-flex align-items-baseline justify-content-between">
             <h4 className="card-title">Editar documento</h4>
-            <Link href="/dashboard/doc/criar" className="btn btn-primary">Criar</Link>
+            <Link href="/admin/doc/criar" className="btn btn-primary">Criar</Link>
         </div>
         <div className="input-group">
             <span className="input-group-text">Pesquisar:</span>
@@ -69,7 +69,7 @@ function SearchResults({id}:{id: string}){
 function SearchResultHit({id, doc}: {id:string, doc: JurisprudenciaDocument}){
     return <div className="card m-1 p-0">
         <div className="card-body row align-items-center p-1">
-            <div className="card-title col-5"><Link href={`/dashboard/doc/${encodeURIComponent(id)}/`}>{doc["ECLI"]}</Link></div>
+            <div className="card-title col-5"><Link href={`/admin/doc/${encodeURIComponent(id)}/`}>{doc["ECLI"]}</Link></div>
             <ul className="col-7 list-group list-group-flush">
                 <li className="list-group-item">Processo: <b>{doc["Número de Processo"]}</b></li>
                 <li className="list-group-item">Relator: <b>{doc["Relator Nome Profissional"]}</b></li>
