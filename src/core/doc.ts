@@ -1,4 +1,4 @@
-import { ExactTypedJurisprudenciaDocument, isValidJurisprudenciaDocumentArrayKey, isValidJurisprudenciaDocumentKey, isValidJurisprudenciaDocumentRecordKey, isValidJurisprudenciaDocumentStringKey, JurisprudenciaDocument, JurisprudenciaDocumentKey, JurisprudenciaVersion, PartialJurisprudenciaDocument, PartialTypedJurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
+import { JurisprudenciaDocument, JurisprudenciaDocumentKey, JurisprudenciaVersion, PartialJurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
 import { getElasticSearchClient } from "./elasticsearch";
 import crypto from "node:crypto"
 
@@ -6,57 +6,74 @@ export const existsDoc = (docId: string) => getElasticSearchClient().then(c => c
 
 export const getDoc = (docId: string) => getElasticSearchClient().then( c => c.get<JurisprudenciaDocument>({index: JurisprudenciaVersion, id: docId}))
 
-type NullableTypedJurisprudenciaDocument = {[key in keyof PartialTypedJurisprudenciaDocument]: PartialTypedJurisprudenciaDocument[key] | null}
-
-export const isDoc = (obj: any): obj is NullableTypedJurisprudenciaDocument => {
-    if( typeof obj !== "object" ) return false;
-    
-    let valid = true;
-    for(let key of Object.keys(obj)){
-
-        if( isValidJurisprudenciaDocumentKey(key) && obj[key] === null) continue;
-        else if( isValidJurisprudenciaDocumentStringKey(key) ){
-            valid &&= typeof obj[key] === "string"
-        }
-        else if( isValidJurisprudenciaDocumentArrayKey(key) ){
-            valid &&= typeof obj[key] === "object" && Array.isArray(obj[key]) && obj[key].every((vs: any) => typeof vs === "string")
-        }
-        else if( isValidJurisprudenciaDocumentRecordKey(key) ){
-            valid &&= typeof obj[key] === "object" && Object.entries(obj[key]).every(([ks, vs]) => typeof ks === "string" && typeof vs === "string" )
-        }
-        else{
-            valid = false;
-        }
-    }
-
-    return false
+let defaultValues: JurisprudenciaDocument = {
+    "Número de Processo": "«sem valor»",
+    Fonte: "«sem valor»",
+    URL: "«sem valor»",
+    ECLI: "«sem valor»",
+    Data: "01/01/0001",
+    Área: "«sem valor»",
+    "Meio Processual": ["«sem valor»"],
+    "Relator Nome Completo": "«sem valor»",
+    "Relator Nome Profissional": "«sem valor»",
+    Secção: "«sem valor»",
+    "Tribunal de Recurso": "«sem valor»",
+    "Tribunal de Recurso - Processo": "«sem valor»",
+    Decisão: ["«sem valor»"],
+    "Decisão (textual)": ["«sem valor»"],
+    "Votação - Decisão": ["«sem valor»"],
+    "Votação - Vencidos": ["«sem valor»"],
+    "Votação - Declarações": ["«sem valor»"],
+    Descritores: ["«sem valor»"],
+    Jurisprudência: ["Simples"],
+    "Jurisprudência Estrangeira": ["«sem valor»"],
+    "Jurisprudência Internacional": ["«sem valor»"],
+    "Jurisprudência Nacional": ["«sem valor»"],
+    "Doutrina": ["«sem valor»"],
+    "Legislação Comunitária": ["«sem valor»"],
+    "Legislação Estrangeira": ["«sem valor»"],
+    "Legislação Nacional": ["«sem valor»"],
+    "Referências Internacionais": ["«sem valor»"],
+    "Referência de publicação": ["«sem valor»"],
+    "Área Temática": ["«sem valor»"],
+    "Indicações Eventuais": ["«sem valor»"],
+    CONTENT: [],
+    Original: {
+        "Sem original": "Documento criado por esta aplicação"
+    },
+    Sumário: "",
+    Texto: "",
+    HASH: {},
+    UUID: ""
 }
 
-export const updateDoc = (docId: string, doc: NullableTypedJurisprudenciaDocument) =>  getElasticSearchClient().then(c => {
-    let updatedDoc: PartialTypedJurisprudenciaDocument = {};
-    for( let key in doc ){
-        if( isValidJurisprudenciaDocumentKey(key) && doc[key] === null ){
-            if( isValidJurisprudenciaDocumentStringKey(key) ){
-                updatedDoc[key] = "«sem valor»"
+export const updateDoc = (docId: string, doc: PartialJurisprudenciaDocument) =>  getElasticSearchClient().then(c => {
+    let updatedDoc: PartialJurisprudenciaDocument = {};
+    let key: JurisprudenciaDocumentKey;
+    for( key in doc ){
+        if( Array.isArray(doc[key]) ){
+            let maybeVal = doc[key].filter((v: string) => v.trim().length > 0);
+            if( maybeVal.length > 0 ){
+                updatedDoc[key] = maybeVal;
             }
-            else if(isValidJurisprudenciaDocumentArrayKey(key)){
-                updatedDoc[key] = ["«sem valor»"]
-            }
-            else if( isValidJurisprudenciaDocumentRecordKey(key) ){
-                updatedDoc[key] = {}
-            }
-        }
-        else if(isValidJurisprudenciaDocumentKey(key) && doc[key]){
-            if( isValidJurisprudenciaDocumentStringKey(key) ){
-                updatedDoc[key] = doc[key]!
-            }
-            else if(isValidJurisprudenciaDocumentArrayKey(key)){
-                updatedDoc[key] = doc[key]!
-            }
-            else if( isValidJurisprudenciaDocumentRecordKey(key) ){
-                updatedDoc[key] = doc[key]!
+            else{
+                updatedDoc[key] = defaultValues[key]
             }
         }
+        else if(typeof doc[key] === "string"){
+            let maybeVal = doc[key].trim();
+            if( maybeVal.length > 0 ){
+                if( Array.isArray(defaultValues[key]) ){
+                    updatedDoc[key] = [maybeVal]
+                }
+                else{
+                    updatedDoc[key] = maybeVal
+                }
+            }
+            else{
+                updatedDoc[key] = defaultValues[key]
+            }
+        }    
     }
     return c.update<JurisprudenciaDocument,PartialJurisprudenciaDocument>({index: JurisprudenciaVersion, id: docId, doc: updatedDoc, refresh: "wait_for"})
 })
