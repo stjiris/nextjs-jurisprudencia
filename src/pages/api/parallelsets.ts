@@ -18,7 +18,7 @@ export default async function parallelSetsHandler(
     res: NextApiResponse
   ) {
     const sfilters = { pre: [], after: [] } as SearchFilters;
-    populateFilters(sfilters, req.query);
+    populateFilters(sfilters, req.query,[]);
     const numOfFields = req.query.numOfFields ? parseInt(req.query.numOfFields as string, 10) : 4;
     const numOfAggs = req.query.numOfAggregations ? parseInt(req.query.numOfAggregations as string, 10) : 50;
 

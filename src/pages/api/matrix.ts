@@ -24,7 +24,7 @@ export default async function matrixHandler(
     res: NextApiResponse
   ) {
     const sfilters = { pre: [], after: [] } as SearchFilters;
-    populateFilters(sfilters, req.query);
+    populateFilters(sfilters, req.query, []);
     const term1 = Array.isArray(req.query.termMatrix1) ? req.query.termMatrix1[0] : req.query.termMatrix1 || "Área";
     const term2 = Array.isArray(req.query.termMatrix2) ? req.query.termMatrix2[0] : req.query.termMatrix2 || "Secção"; 
 

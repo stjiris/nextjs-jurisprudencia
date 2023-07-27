@@ -70,7 +70,7 @@ export default async function areachartHandler(
   console.log(req.query);
 
   const sfilters = { pre: [], after: [] } as SearchFilters;
-  populateFilters(sfilters, req.query);
+  populateFilters(sfilters, req.query, []);
   try {
     const client = await getElasticSearchClient();
     const body = await search(createQueryDslQueryContainer(req.query.q), sfilters, 0, areachartAggregation(aggKey), 0);

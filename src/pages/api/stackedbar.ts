@@ -56,7 +56,7 @@ export default async function stackedBarHandler(
     ];
 
     const sfilters = { pre: [], after: [] } as SearchFilters;
-    populateFilters(sfilters, req.query);
+    populateFilters(sfilters, req.query,[]);
 
     try {
       const client = await getElasticSearchClient();
