@@ -1,3 +1,4 @@
+// @ts-nocheck 
 import React, { useEffect, useRef, useState } from 'react';
 import { sankey, sankeyLinkHorizontal } from 'd3-sankey';
 import * as d3 from 'd3';

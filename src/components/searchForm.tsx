@@ -128,7 +128,7 @@ function SwapableFilterList({filtersUsed}: {filtersUsed: Record<string, string[]
         // Own element
         setTarget(parseInt(e.currentTarget.dataset.key!))
     };
-    let dragOver: DragEventHandler<HTMLDivElement> = (e) => {
+    let dragOver: DragEventHandler<HTMLElement> = (e) => {
         // Target
         setSelected(parseInt(e.currentTarget.dataset.key!));
     }
@@ -136,9 +136,7 @@ function SwapableFilterList({filtersUsed}: {filtersUsed: Record<string, string[]
     return <div data-key="-2" className="border-top">
         <div className="d-flex my-1 pb-1 align-items-baseline">
             <small className="pe-1 text-white"><i className="bi bi-dash"></i></small>
-            <span id="form-hide-field" className={"border " + target && selected ? "": "text-muted"} onDragOver={dragOver} data-key="-1"><i className="bi bi-eye-slash"></i> Esconder...</span>
-            <span className="flex-grow-1"></span>
-            <button id="form-hide-field" role="button" className={`bg-white border-0 ${allused ? "text-muted" : ""}`} disabled={allused} onClick={(e) => {e.preventDefault(); all()}}><i className="bi bi-eye"></i> Mostrar...</button>
+            <button role="button" className={"bg-white flex-grow border-0 " + (target !== undefined && selected !== undefined || !allused ? "": "text-muted")} onDragOver={dragOver} onClick={(e) => {e.preventDefault(); !allused ? all() : null;}} data-key="-1"><i className="bi bi-eye"></i> Esconder / Repor ({ALL_FORM_KEYS.length - sort.length})</button>
         </div>
         {sort.map((k,i) => <div data-key={i} key={i} draggable onDragOver={dragOver} onDragStart={dragStart} onDragEnd={dragEnd} className={"d-flex align-items-baseline " +( selected === i || target === i ? "shadow" : "")}>
             <small className={`pe-1 ${target!==i ? "text-muted" : ""} cursor-move`} style={{cursor: "move"}}><i className="bi bi-list"></i></small>

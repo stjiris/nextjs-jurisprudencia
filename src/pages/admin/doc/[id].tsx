@@ -64,7 +64,7 @@ function Update({doc, id}: UpdateProps){
         fetch(`${router.basePath}/api/doc/${id}`, {
             method: "DELETE"
         }).finally(() => {
-            navRouter.push(`/dashboard/doc`)
+            navRouter.push(`/admin/doc`)
         })
     }
     

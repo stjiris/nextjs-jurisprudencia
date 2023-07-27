@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useLayoutEffect } from "react";
 
 import { Responsive, WidthProvider } from 'react-grid-layout';
@@ -19,16 +20,10 @@ import StackedBarChart from "@/components/StackedBar";
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
-interface IndicesPageProps extends FormProps {
-  term: string
-  group: string
-  limits: number
-}
-
-export const getServerSideProps = withForm<IndicesPageProps>(async (ctx, formProps) => {
+export const getServerSideProps = withForm<FormProps>(async (ctx, formProps) => {
   
   return {
-      ...formProps,
+    ...formProps,
   }
   
 });
@@ -116,7 +111,7 @@ const MiniLayoutPreview = ({ layout, getVisualizationColor }) => {
 
 
 
-export default function Dashboard(props: IndicesPageProps){
+export default function Dashboard(props: FormProps){
   const [containerWidth, setContainerWidth] = useState<number>(0);
   const [containerHeight, setContainerHeight] = useState<number>(0);
   const [visualizationInstances, setVisualizationInstances] = useState([]);

@@ -46,7 +46,7 @@ export function useFormOrderedKeys(){
     }
 
     const all = () => {
-        return setSort((currSort) => currSort.concat([...ALL_FORM_KEYS.map((_v, i) => i).filter((i) => !currSort.includes(i))]))
+        return setSort((currSort) => [...ALL_FORM_KEYS.map((_v, i) => i).filter((i) => !currSort.includes(i))].concat(currSort))
     }
     
     return [sort.map((i) => ALL_FORM_KEYS[i]), {move, hide, all}] as const;

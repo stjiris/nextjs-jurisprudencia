@@ -1,10 +1,6 @@
-import search, { aggs, createQueryDslQueryContainer, filterableProps, getElasticSearchClient, parseSort, populateFilters, RESULTS_PER_PAGE, SearchFilters, sortBucketsAlphabetically } from '@/core/elasticsearch';
-import { JurisprudenciaDocument, Properties, Index } from '@/core/jurisprudencia'
-import { DatalistObj, HighlightFragment, SearchHandlerResponse } from '@/types/search';
-import { YearCountMap } from '@/types/vis';
-import { AggregationsAggregationContainer, AggregationsAggregation, SearchHighlight, SearchHit, SearchResponse, SortCombinations, AggregationsTermsAggregationCollectMode, AggregationsStringTermsAggregate, AggregationsBucketAggregationBase, AggregationsMinAggregate, AggregationsMaxAggregate, long, SearchTotalHits } from '@elastic/elasticsearch/lib/api/types';
-import { AggregationsTermsAggregateBase, AggregationsTermsAggregation } from '@elastic/elasticsearch/lib/api/typesWithBodyKey';
-import type { NextApiRequest, NextApiResponse } from 'next'
+import search, { aggs, createQueryDslQueryContainer, getElasticSearchClient, populateFilters, SearchFilters } from '@/core/elasticsearch';
+import { long, SearchTotalHits } from '@elastic/elasticsearch/lib/api/types';
+import type { NextApiRequest, NextApiResponse } from 'next';
 export function areachartAggregation(key: string): Record<string, any> {
   return {
     MinAno: aggs.MinAno,
@@ -29,8 +25,8 @@ export function areachartAggregation(key: string): Record<string, any> {
   };
 }
 
-export function preprocessAreaChartData( aggs: any): { years: number[]; yearCounts: YearCountMap } {
-  const yearCounts: YearCountMap = {};
+export function preprocessAreaChartData( aggs: any): { years: number[]; yearCounts: any } {
+  const yearCounts: any = {};
   aggs.buckets.forEach((bucket: any) => {
     bucket.Anos.buckets.forEach((subBucket: any) => {
       const year = parseInt(subBucket.key_as_string);
@@ -64,7 +60,7 @@ export function preprocessAreaChartData( aggs: any): { years: number[]; yearCoun
 
 export default async function areachartHandler(
   req: NextApiRequest,
-  res: NextApiResponse<YearCountMap>
+  res: NextApiResponse<any>
 ) {
   const aggKey = Array.isArray(req.query.termAreaChart) ? req.query.termAreaChart[0] : req.query.termAreaChart || "Área";
   if (!(aggKey in aggs)) {

@@ -70,7 +70,7 @@ export default function Create(){
                 alert(`Não foi possível criar documento. (${r})`)
             }
             else{
-                navRouter.push(`/dashboard/doc/${r._id}`);
+                navRouter.push(`/admin/doc/${r._id}`);
             }
 
         })

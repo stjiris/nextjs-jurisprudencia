@@ -1,7 +1,7 @@
-import search, { aggs, createQueryDslQueryContainer, filterableProps, getElasticSearchClient, parseSort, populateFilters, RESULTS_PER_PAGE, SearchFilters, sortBucketsAlphabetically } from '@/core/elasticsearch';
-import type { NextApiRequest, NextApiResponse } from 'next'
+import search, { createQueryDslQueryContainer, getElasticSearchClient, populateFilters, SearchFilters } from '@/core/elasticsearch';
+import type { NextApiRequest, NextApiResponse } from 'next';
 
-export function parallelSetsAggregation(terms: string[], numAggs: int): Record<string, any> {
+export function parallelSetsAggregation(terms: string[], numAggs: number): Record<string, any> {
     const aggregation = {
         aggs: {
             multi_terms: {
@@ -21,9 +21,8 @@ export default async function parallelSetsHandler(
     populateFilters(sfilters, req.query);
     const numOfFields = req.query.numOfFields ? parseInt(req.query.numOfFields as string, 10) : 4;
     const numOfAggs = req.query.numOfAggregations ? parseInt(req.query.numOfAggregations as string, 10) : 50;
-    const listOfFilters: number[] = req.query._f?.split('-').map(num => parseInt(num, 10));
 
-    const terms = req.query.terms ? req.query.terms.split(',').slice(0, numOfFields) : [];
+    const terms = req.query.terms && !Array.isArray(req.query.terms) ? req.query.terms.split(',').slice(0, numOfFields) : [];
 
     try {
         const client = await getElasticSearchClient();

@@ -31,7 +31,7 @@ export default function IndexPage(){
                         </div>
                         <div className="card m-1">
                             <div className="card-body">
-                                <div className="card-title"><Link href="/dashboard/users">Utilizadores</Link></div>
+                                <div className="card-title"><Link href="/admin/users">Utilizadores</Link></div>
                                 <p>Atualizar, modificar ou criar utilizadores</p>
                             </div>
                         </div>

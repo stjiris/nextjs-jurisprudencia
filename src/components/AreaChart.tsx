@@ -1,7 +1,6 @@
-
+// @ts-nocheck 
 import React, { useRef, useState } from 'react';
 import * as d3 from 'd3';
-import type { YearCountMap } from '@/types/vis';
 
 /*interface AreaChartProps {
   data: YearCountMap;
@@ -10,7 +9,7 @@ import type { YearCountMap } from '@/types/vis';
   containerHeight: number;
 }*/
 
-export default function AreaChart({ data, containerWidth, containerHeight, onSelect }) {
+export default function AreaChart({ data, containerWidth, containerHeight, onSelect }: any) {
   const areachartContainerRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const [selectedArea, setSelectedArea] = useState<string | null>(null);

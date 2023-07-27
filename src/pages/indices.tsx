@@ -102,7 +102,7 @@ function IndicesTable(props: IndicesPageProps){
                     <th>
                         <SelectTerm term={props.term}/>
                     </th>
-                    <th className="text-end border-end" title={`${props.count} resultados com ${termAggregation.buckets.reduce((acc, b)=> acc+b.doc_count, 0)} ocurrências`}>{props.count}* com <Link href={`/pesquisa?${searchParams.toString()}`}>{termAggregation.buckets.reduce((acc, b)=> acc+b.doc_count, 0)}</Link></th>
+                    <th className="text-end border-end"><Link href={`/pesquisa?${searchParams.toString()}`}>{termAggregation.buckets.reduce((acc, b)=> acc+b.doc_count, 0)}</Link></th>
                     {sortedGroup.map(([name,count], i) => <td key={i} className="text-end border-end"><Link href={`/pesquisa?${modifySearchParams(searchParams, props.group, `"${name}"`)}`}>{count}</Link></td>)}
                     <th></th>
                     <th className="text-start">de ... até</th>

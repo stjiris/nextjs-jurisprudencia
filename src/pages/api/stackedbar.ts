@@ -1,5 +1,6 @@
-import search, { aggs, createQueryDslQueryContainer, filterableProps, getElasticSearchClient, parseSort, populateFilters, RESULTS_PER_PAGE, SearchFilters, sortBucketsAlphabetically } from '@/core/elasticsearch';
-import type { NextApiRequest, NextApiResponse } from 'next'
+import search, { createQueryDslQueryContainer, getElasticSearchClient, populateFilters, SearchFilters } from '@/core/elasticsearch';
+import { long, SearchTotalHits } from '@elastic/elasticsearch/lib/api/types';
+import type { NextApiRequest, NextApiResponse } from 'next';
 //import '@/styles/vis.css'
 export function barChartAggregation(termsList: string[], termAreaChart: string | string[] | undefined, selectedArea?: string | string[] | undefined): Record<string, any> {
     const aggs: Record<string, any> = {};
