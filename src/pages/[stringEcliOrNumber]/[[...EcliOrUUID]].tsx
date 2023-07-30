@@ -180,9 +180,6 @@ function Row(props: {children: ReactNode, style?: CSSProperties}){
     return <div className="row border-bottom" style={props.style}>{props.children}</div>
 }
 
-// TODO: Estou a fazer umas alterações no novo branch para usar uma nova estrutura da bd
-// Isto porque não tinha a certeza do quão simples era mudar, mas acabou por ser muito simples, tive de mudar umas pequenas coisas aqui e ali do dashboard 
-
 function Properties({accessKey, accessValue, noLink}: {accessKey: string, accessValue: JurisprudenciaDocument[JurisprudenciaDocumentKey], noLink?: boolean}){
     if( !accessValue ) return <>«sem valor»</>
     if( typeof accessValue === "string"  ){
