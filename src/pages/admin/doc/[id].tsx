@@ -1,3 +1,4 @@
+//@ts-nocheck
 import { DashboardGenericPage } from "@/components/genericPageStructure"
 import { withAuthentication } from "@/core/user/authenticate"
 import { JurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
@@ -34,6 +35,7 @@ export default function UpdatePage(){
         }
     },[searchParams, router.basePath])
     return <DashboardGenericPage>
+        <div className="alert alert-danger">New version doesn support edditing yet</div>
         {props && <Update doc={props.doc} id={props.id} />}
         {!props && !error && <Loading text="A carregar documento"/>}
         {error && <div className="alert alert-danger">

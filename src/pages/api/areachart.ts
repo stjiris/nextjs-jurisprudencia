@@ -7,7 +7,7 @@ export function areachartAggregation(key: string): Record<string, any> {
     MaxAno: aggs.MaxAno,
     [key]: {
       terms: {
-        field: aggs[key].terms?.field?.replace("keyword", "raw"),
+        field: aggs[key].terms?.field?.replace("keyword","raw"),
         size: 20
       },
       aggs: {
@@ -66,13 +66,10 @@ export default async function areachartHandler(
   if (!(aggKey in aggs)) {
     return res.status(400).json({});
   }
-  console.log("req.query");
-  console.log(req.query);
 
   const sfilters = { pre: [], after: [] } as SearchFilters;
   populateFilters(sfilters, req.query, []);
   try {
-    const client = await getElasticSearchClient();
     const body = await search(createQueryDslQueryContainer(req.query.q), sfilters, 0, areachartAggregation(aggKey), 0);
     const aggs = body?.aggregations?.[aggKey];
     let total = 0;
@@ -84,7 +81,7 @@ export default async function areachartHandler(
             total = (body.hits.total as SearchTotalHits).value;
         }
     }
-    console.log("total", total);
+    
     if (!aggs) {
       return res.status(400).json({});
     }

@@ -1,3 +1,4 @@
+//@ts-nocheck
 import { JurisprudenciaDocument, JurisprudenciaDocumentKey, JurisprudenciaVersion, PartialJurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
 import { getElasticSearchClient } from "./elasticsearch";
 import crypto from "node:crypto"
@@ -7,91 +8,62 @@ export const existsDoc = (docId: string) => getElasticSearchClient().then(c => c
 export const getDoc = (docId: string) => getElasticSearchClient().then( c => c.get<JurisprudenciaDocument>({index: JurisprudenciaVersion, id: docId}))
 
 let defaultValues: JurisprudenciaDocument = {
-    "Número de Processo": "«sem valor»",
-    Fonte: "«sem valor»",
-    URL: "«sem valor»",
-    ECLI: "«sem valor»",
+    "Número de Processo": null,
+    Fonte: null,
+    URL: null,
+    ECLI: null,
     Data: "01/01/0001",
-    Área: "«sem valor»",
-    "Meio Processual": ["«sem valor»"],
-    "Relator Nome Completo": "«sem valor»",
-    "Relator Nome Profissional": "«sem valor»",
-    Secção: "«sem valor»",
-    "Tribunal de Recurso": "«sem valor»",
-    "Tribunal de Recurso - Processo": "«sem valor»",
-    Decisão: ["«sem valor»"],
-    "Decisão (textual)": ["«sem valor»"],
-    "Votação - Decisão": ["«sem valor»"],
-    "Votação - Vencidos": ["«sem valor»"],
-    "Votação - Declarações": ["«sem valor»"],
-    Descritores: ["«sem valor»"],
-    Jurisprudência: ["Simples"],
-    "Jurisprudência Estrangeira": ["«sem valor»"],
-    "Jurisprudência Internacional": ["«sem valor»"],
-    "Jurisprudência Nacional": ["«sem valor»"],
-    "Doutrina": ["«sem valor»"],
-    "Legislação Comunitária": ["«sem valor»"],
-    "Legislação Estrangeira": ["«sem valor»"],
-    "Legislação Nacional": ["«sem valor»"],
-    "Referências Internacionais": ["«sem valor»"],
-    "Referência de publicação": ["«sem valor»"],
-    "Área Temática": ["«sem valor»"],
-    "Indicações Eventuais": ["«sem valor»"],
+    Área: null,
+    "Meio Processual": null,
+    "Relator Nome Completo": null,
+    "Relator Nome Profissional": null,
+    Secção: null,
+    "Tribunal de Recurso": null,
+    "Tribunal de Recurso - Processo": null,
+    Decisão: null,
+    "Decisão (textual)": null,
+    "Votação - Decisão": null,
+    "Votação - Vencidos": null,
+    "Votação - Declarações": null,
+    Descritores: null,
+    Jurisprudência: null,
+    "Jurisprudência Estrangeira": null,
+    "Jurisprudência Internacional": null,
+    "Jurisprudência Nacional": null,
+    "Doutrina": null,
+    "Legislação Comunitária": null,
+    "Legislação Estrangeira": null,
+    "Legislação Nacional": null,
+    "Referências Internacionais": null,
+    "Referência de publicação": null,
+    "Área Temática": null,
+    "Indicações Eventuais": null,
     CONTENT: [],
     Original: {
         "Sem original": "Documento criado por esta aplicação"
     },
     Sumário: "",
     Texto: "",
-    HASH: {},
+    HASH: null,
     UUID: ""
 }
 
 export const updateDoc = (docId: string, doc: PartialJurisprudenciaDocument) =>  getElasticSearchClient().then(c => {
-    let updatedDoc: PartialJurisprudenciaDocument = {};
-    let key: JurisprudenciaDocumentKey;
-    for( key in doc ){
-        if( Array.isArray(doc[key]) ){
-            let maybeVal = doc[key].filter((v: string) => v.trim().length > 0);
-            if( maybeVal.length > 0 ){
-                updatedDoc[key] = maybeVal;
-            }
-            else{
-                updatedDoc[key] = defaultValues[key]
-            }
-        }
-        else if(typeof doc[key] === "string"){
-            let maybeVal = doc[key].trim();
-            if( maybeVal.length > 0 ){
-                if( Array.isArray(defaultValues[key]) ){
-                    updatedDoc[key] = [maybeVal]
-                }
-                else{
-                    updatedDoc[key] = maybeVal
-                }
-            }
-            else{
-                updatedDoc[key] = defaultValues[key]
-            }
-        }    
-    }
-    return c.update<JurisprudenciaDocument,PartialJurisprudenciaDocument>({index: JurisprudenciaVersion, id: docId, doc: updatedDoc, refresh: "wait_for"})
+    throw new Error("TODO: Unimplemented")
+    return c.update<JurisprudenciaDocument,PartialJurisprudenciaDocument>({index: JurisprudenciaVersion, id: docId, doc, refresh: "wait_for"})
 })
 
 export const createDoc = (newdoc: PartialJurisprudenciaDocument) => getElasticSearchClient().then(c => {
+    throw new Error("TODO: Unimplemented");
     let createdDoc: PartialJurisprudenciaDocument = {};
     let CONTENT: string[] = [];
     let key: JurisprudenciaDocumentKey;
     for( key in defaultValues ){
-        if( Array.isArray(newdoc[key]) ){
-            let maybeVal = newdoc[key].filter((v: string) => v.trim().length > 0);
-            if( maybeVal.length > 0 ){
-                createdDoc[key] = maybeVal;
-                CONTENT.push(...maybeVal);
-            }
-            else{
-                createdDoc[key] = defaultValues[key]
-            }
+        if( !newdoc[key] ) continue;
+        if( typeof newdoc[key] === "string" ){
+            let v = newdoc[key] as string;
+            CONTENT.push(v);
+            continue;
         }
         else if(typeof newdoc[key] === "string"){
             let maybeVal = newdoc[key].trim();
@@ -113,14 +85,13 @@ export const createDoc = (newdoc: PartialJurisprudenciaDocument) => getElasticSe
         "Sem Original": "Documento criado nesta aplicação"
     }
     createdDoc["HASH"] = {
+        "Original": calculateUUID(createDoc,["Original"]),
         "Sumário": calculateUUID(createdDoc,["Sumário"]),
         "Texto": calculateUUID(createdDoc,["Texto"]),
         "Processo": calculateUUID(createdDoc, ["Número de Processo"])
-
     },
     createdDoc["UUID"] = calculateUUID(createdDoc["HASH"],["Sumário","Texto","Processo"])
     createdDoc["CONTENT"] = CONTENT
-    console.log(createdDoc["UUID"])
     return c.index<JurisprudenciaDocument>({index: JurisprudenciaVersion, document: createdDoc as JurisprudenciaDocument, refresh: "wait_for"})
 })
 

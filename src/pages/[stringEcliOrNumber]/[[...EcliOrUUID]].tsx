@@ -1,6 +1,6 @@
 import { GetServerSideProps } from "next";
 import search from "@/core/elasticsearch"
-import { JurisprudenciaDocumentArrayKey, JurisprudenciaDocumentKey, JurisprudenciaDocumentStringKey, PartialTypedJurisprudenciaDocument as JurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
+import { GenericField, JurisprudenciaDocument, JurisprudenciaDocumentKey } from "@stjiris/jurisprudencia-document";
 import React, { CSSProperties, HTMLAttributes, ReactNode, useEffect, useState } from "react";
 import Link from "next/link";
 import TargetBlankLink from "@/components/link";
@@ -33,7 +33,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
         }
     }
 
-    let r = await search({bool: {must}}, {pre:[], after:[]}, 0, {}, 100, {_source: {excludes: ["Original","HASH"]}});
+    let r = await search({bool: {must}}, {pre:[], after:[]}, 0, {}, 100, {_source: {excludes: ["Original","HASH","Content"]}});
     if( r.hits.hits.length <= 0 ){
         ctx.res.statusCode = 404;
         return {props: {}}
@@ -157,7 +157,7 @@ function DocumentPage(props: {doc: JurisprudenciaDocument}){
     </>
 }
 
-function MultipleRow(props: {accessKeys: (JurisprudenciaDocumentArrayKey | JurisprudenciaDocumentStringKey)[], doc: JurisprudenciaDocument, showKeys?: string[]}){
+function MultipleRow(props: {accessKeys: JurisprudenciaDocumentKey[], doc: JurisprudenciaDocument, showKeys?: string[]}){
     return <Row>
         <div className="col-1"><b>{props.showKeys?.at(0) || props.accessKeys.at(0)}</b></div>
         <div className="col-11">
@@ -167,14 +167,11 @@ function MultipleRow(props: {accessKeys: (JurisprudenciaDocumentArrayKey | Juris
     </Row>
 }
 
-function DefaultRow(props: {accessKey: JurisprudenciaDocumentArrayKey | JurisprudenciaDocumentStringKey, showkey?: string, doc: JurisprudenciaDocument, style?: CSSProperties, noLink?: boolean}){
+function DefaultRow(props: {accessKey: JurisprudenciaDocumentKey, showkey?: string, doc: JurisprudenciaDocument, style?: CSSProperties, noLink?: boolean}){
     return <Row style={props.style}>
         <div className="col-1"><b>{props.showkey ? props.showkey : props.accessKey}:</b></div>
         <div className="col-11">
-            {props.noLink ?
-                <>{props.doc[props.accessKey]}</>:
-                <Properties accessKey={props.accessKey} accessValue={props.doc[props.accessKey]!} />
-            } 
+            <Properties accessKey={props.accessKey} accessValue={props.doc[props.accessKey]} noLink={props.noLink}/>
         </div>
     </Row>
 }
@@ -183,14 +180,20 @@ function Row(props: {children: ReactNode, style?: CSSProperties}){
     return <div className="row border-bottom" style={props.style}>{props.children}</div>
 }
 
-function Properties(props: {accessKey: string, accessValue: string | string[]}){
-    if( Array.isArray(props.accessValue) ){
-        return <>
-            {props.accessValue.flatMap((v,i) => [" / ",<Link key={i} href={`/pesquisa?${props.accessKey}=${encodeURIComponent(v)}`}>{v}</Link>]).slice(1)}
-        </>
-    }
-    else{
-        return (<Link href={`/pesquisa?${props.accessKey}=${encodeURIComponent(props.accessValue)}`}>{props.accessValue}</Link>)
-    }
+// TODO: Estou a fazer umas alterações no novo branch para usar uma nova estrutura da bd
+// Isto porque não tinha a certeza do quão simples era mudar, mas acabou por ser muito simples, tive de mudar umas pequenas coisas aqui e ali do dashboard 
 
+function Properties({accessKey, accessValue, noLink}: {accessKey: string, accessValue: JurisprudenciaDocument[JurisprudenciaDocumentKey], noLink?: boolean}){
+    if( !accessValue ) return <>«sem valor»</>
+    if( typeof accessValue === "string"  ){
+        return noLink ? <>accessValue</> : <Link href={`/pesquisa?${accessKey}=${encodeURIComponent(accessValue)}`}>{accessValue}</Link>
+    }
+    if( "Index" in accessValue && "Show" in accessValue && "Original" in accessValue){
+        let v = accessValue;
+        return <>{Array.isArray(v.Show) ? v.Show.flatMap((v, i) => [" / ", noLink ? v : <Link key={i} href={`/pesquisa?${accessKey}=${encodeURIComponent(v)}`}>{v}</Link>]).slice(1) : v.Show}</>
+    }
+    return <details>
+        <summary>{accessKey}</summary>
+        <pre>{JSON.stringify(accessValue)}</pre>
+    </details>
 }

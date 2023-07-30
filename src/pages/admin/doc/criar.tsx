@@ -1,3 +1,4 @@
+//@ts-nocheck
 import GenericPage, { DashboardGenericPage } from "@/components/genericPageStructure"
 import { getElasticSearchClient } from "@/core/elasticsearch";
 import { withAuthentication } from "@/core/user/authenticate"
@@ -78,7 +79,9 @@ export default function Create(){
 
 
     return <DashboardGenericPage>
-        <div className="row justify-content-sm-center">
+        <div className="alert alert-danger">New version doesn support edditing yet</div>
+    </DashboardGenericPage>
+    /*    <div className="row justify-content-sm-center">
             <div className="col-sm-12 col-md-8 col-xl-6">
                 <div className="card shadow">
                     <div className="card-body">
@@ -146,5 +149,5 @@ export default function Create(){
                 </div>
             </div>
         </div>
-    </DashboardGenericPage>
+    </DashboardGenericPage>*/
 }

@@ -1,10 +1,14 @@
 import { Client } from "@elastic/elasticsearch";
 import { AggregationsAggregationContainer, AggregationsStringTermsBucket, AggregationsTermsAggregation, QueryDslQueryContainer, SearchRequest, SortCombinations } from "@elastic/elasticsearch/lib/api/types";
-import { isValidJurisprudenciaDocumentArrayKey, isValidJurisprudenciaDocumentKey, isValidJurisprudenciaDocumentStringKey, JurisprudenciaDocumentProperties, JurisprudenciaVersion, PartialTypedJurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
+import { isJurisprudenciaDocumentGenericKeys, isValidJurisprudenciaDocumentKey, JurisprudenciaDocument, JurisprudenciaDocumentDateKeys, JurisprudenciaDocumentKeys, JurisprudenciaDocumentProperties, JurisprudenciaVersion } from "@stjiris/jurisprudencia-document";
 
-export const filterableProps = Object.entries(JurisprudenciaDocumentProperties).filter(([_, obj]) => obj.type == 'keyword' || ("fields" in obj && obj.fields.keyword)).map( ([name, _]) => name).filter( o => o != "URL" && o != "UUID");
+export const filterableProps = JurisprudenciaDocumentKeys.filter(key => {
+    let propertyMapping = JurisprudenciaDocumentProperties[key];
+    if( "type" in propertyMapping && (propertyMapping.type === "object" || propertyMapping.type === "string" || propertyMapping.type === "date") ) return false;
+    return true;
+});
 
-const DATA_FIELD = "Data";
+const DATA_FIELD: JurisprudenciaDocumentDateKeys = "Data";
 
 export const aggs = {
     MinAno: {
@@ -22,8 +26,8 @@ export const aggs = {
 } as Record<string, AggregationsAggregationContainer>;
 filterableProps.forEach(name => {
     let key = name
-    if( isValidJurisprudenciaDocumentKey(name) && "fields" in JurisprudenciaDocumentProperties[name] ){
-        key += ".keyword"
+    if( "properties" in JurisprudenciaDocumentProperties[name] ){
+        key += ".Index.keyword"
     }
     aggs[name] = {
         terms: {
@@ -58,7 +62,7 @@ export default function search(
     saggs: Record<string, AggregationsAggregationContainer>=DEFAULT_AGGS,
     rpp=RESULTS_PER_PAGE,
     extras: Partial<SearchRequest>={}){
-    return getElasticSearchClient().then(client => client.search<PartialTypedJurisprudenciaDocument>({
+    return getElasticSearchClient().then(client => client.search<JurisprudenciaDocument>({
         index: JurisprudenciaVersion,
         query: {
             bool: {
@@ -104,7 +108,7 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
             let fieldName = (aggObj[aggField] as AggregationsTermsAggregation).field!;
             let should = filtersUsed[aggName].filter(o => !o.startsWith("not:"))
             let must_not = filtersUsed[aggName].filter(o => o.startsWith("not:")).map(o => o.substring(4))
-            let must_or_should = isValidJurisprudenciaDocumentStringKey(aggName) || body["_should"]?.includes(aggName) ? "should" : "must"  // AND or OR - if a signle value use alawys OR else default OR but flag for AND
+            let must_or_should = !isJurisprudenciaDocumentGenericKeys(aggName) || body["_should"]?.includes(aggName) ? "should" : "must"  // AND or OR - if a signle value use alawys OR else default OR but flag for AND
             filters[when].push({
                 bool: {
                     [must_or_should]: should.map( o => (o.startsWith("\"") && o.endsWith("\"") ? {

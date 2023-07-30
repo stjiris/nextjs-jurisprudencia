@@ -16,7 +16,7 @@ export default async function searchHandler(
     const queryObj = createQueryDslQueryContainer(req.query.q);
     const highlight: SearchHighlight = {
         fields: {
-            "Descritores": {
+            "Descritores.Show": {
                 type: "unified",
                 highlight_query: {
                     bool: {
@@ -58,7 +58,7 @@ export default async function searchHandler(
         const {Texto, "Relator Nome Completo": _completo, HASH: _HASH, ...rest} = hit._source!
         if(hit.highlight){
             let highlight: Record<string, (string | HighlightFragment)[]> = {
-                Descritores: hit.highlight.Descritores,
+                Descritores: hit.highlight["Descritores.Show"],
                 Sumário: hit.highlight.Sumário
             };
             let SumárioMarks = undefined;

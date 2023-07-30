@@ -1,11 +1,11 @@
-import search, { createQueryDslQueryContainer, getElasticSearchClient, populateFilters, SearchFilters } from '@/core/elasticsearch';
+import search, { aggs, createQueryDslQueryContainer, getElasticSearchClient, populateFilters, SearchFilters } from '@/core/elasticsearch';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 export function parallelSetsAggregation(terms: string[], numAggs: number): Record<string, any> {
     const aggregation = {
         aggs: {
             multi_terms: {
-              terms: terms.map(term => ({ field: `${term.replace('keyword', 'raw')}.keyword`})),
+              terms: terms.map(term => ({ field: aggs[term].terms?.field?.replace("keyword","raw")})),
               size: numAggs
             }
         }
@@ -25,7 +25,6 @@ export default async function parallelSetsHandler(
     const terms = req.query.terms && !Array.isArray(req.query.terms) ? req.query.terms.split(',').slice(0, numOfFields) : [];
 
     try {
-        const client = await getElasticSearchClient();
         const body = await search(createQueryDslQueryContainer(req.query.q), sfilters, 0, parallelSetsAggregation(terms, numOfAggs), 0);
         const aggs = body?.aggregations;
 

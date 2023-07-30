@@ -5,13 +5,13 @@ export function matrixAggregation(term1: string, term2: string): Record<string, 
   return {
     matrix: {
       terms: {
-        field: aggs[term1].terms?.field?.replace("keyword", "raw"),
+        field: aggs[term1].terms?.field?.replace("keyword","raw"),
         size: 15,
       },
       aggs: {
         matrix: {
           terms: {
-            field: aggs[term2].terms?.field?.replace("keyword", "raw"),
+            field: aggs[term2].terms?.field?.replace("keyword","raw"),
           },
         },
       },
@@ -29,7 +29,6 @@ export default async function matrixHandler(
     const term2 = Array.isArray(req.query.termMatrix2) ? req.query.termMatrix2[0] : req.query.termMatrix2 || "Secção"; 
 
     try {
-      const client = await getElasticSearchClient();
       const body = await search(createQueryDslQueryContainer(req.query.q), sfilters, 0, matrixAggregation(term1, term2), 0); 
       const aggs = body?.aggregations;
 

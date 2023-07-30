@@ -72,7 +72,7 @@ function SearchResultHit({id, doc}: {id:string, doc: JurisprudenciaDocument}){
             <div className="card-title col-5"><Link href={`/admin/doc/${encodeURIComponent(id)}/`}>{doc["ECLI"]}</Link></div>
             <ul className="col-7 list-group list-group-flush">
                 <li className="list-group-item">Processo: <b>{doc["Número de Processo"]}</b></li>
-                <li className="list-group-item">Relator: <b>{doc["Relator Nome Profissional"]}</b></li>
+                <li className="list-group-item">Relator: <b>{doc["Relator Nome Profissional"]?.Show}</b></li>
                 <li className="list-group-item">Data: <b>{doc["Data"]}</b></li>
             </ul>
         </div>

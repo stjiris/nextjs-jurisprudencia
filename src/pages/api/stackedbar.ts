@@ -1,22 +1,21 @@
-import search, { createQueryDslQueryContainer, getElasticSearchClient, populateFilters, SearchFilters } from '@/core/elasticsearch';
+import search, { aggs, createQueryDslQueryContainer, getElasticSearchClient, populateFilters, SearchFilters } from '@/core/elasticsearch';
 import { long, SearchTotalHits } from '@elastic/elasticsearch/lib/api/types';
 import type { NextApiRequest, NextApiResponse } from 'next';
 //import '@/styles/vis.css'
 export function barChartAggregation(termsList: string[], termAreaChart: string | string[] | undefined, selectedArea?: string | string[] | undefined): Record<string, any> {
-    const aggs: Record<string, any> = {};
-  
+    const currAggs: Record<string, any> = {};
     termsList.forEach((term) => {
-      aggs[term] = {
+      currAggs[term] = {
         terms: {
-          field: `${term.replace('keyword', 'raw')}.keyword`,
-          size: 1000,
+          field: aggs[term].terms?.field?.replace("keyword","raw"),
+          size: 500, // This value was causing a "too_many_buckets_exception" I halfed it
         }
       }
     });
     // Sort the aggs object based on the order of optionLabels
     const sortedAggs: Record<string, any> = {};
     termsList.forEach((label) => {
-      if (aggs.hasOwnProperty(label)) {
+      if (currAggs.hasOwnProperty(label)) {
         sortedAggs[label] = aggs[label];
       }
     });
@@ -59,7 +58,6 @@ export default async function stackedBarHandler(
     populateFilters(sfilters, req.query,[]);
 
     try {
-      const client = await getElasticSearchClient();
       const body = await search(createQueryDslQueryContainer(req.query.q), sfilters, 0, barChartAggregation(optionLabels, req.query.termAreaChart, req.query.area), 0);
   
       const aggs = body?.aggregations;

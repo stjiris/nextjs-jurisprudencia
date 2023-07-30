@@ -130,19 +130,19 @@ function JurisprudenciaItem({hit, searchId}:{hit: SearchHandlerResponseItem, sea
             </small>
             <Link href={hit._source?.ECLI?.startsWith("ECLI:PT:STJ:") ? `/ecli/${hit._source.ECLI}${searchParam}` : `/${encodeURIComponent(hit._source?.["Número de Processo"]!)}/${hit._source?.UUID}${searchParam}`} target="_blank">{hit._source?.["Número de Processo"]}</Link>
             <span>&nbsp;- {hit._source?.Data}</span>
-            {hit._source?.Área ? <span>&nbsp;- {hit._source.Área}</span> : ""}
-            {hit._source?.["Meio Processual"] ? <span>&nbsp;- {hit._source["Meio Processual"].join(" / ")}</span> : ""}
-            <span>&nbsp;- {hit._source?.["Relator Nome Profissional"]}</span>
-            <span>&nbsp;- {hit._source?.Secção}</span>
+            {hit._source?.Área && <span>&nbsp;- {hit._source.Área.Show}</span>}
+            {hit._source?.["Meio Processual"] && <span>&nbsp;- {hit._source["Meio Processual"].Show.join(" / ")}</span>}
+            <span>&nbsp;- {hit._source?.["Relator Nome Profissional"]?.Show}</span>
+            <span>&nbsp;- {hit._source?.Secção?.Show}</span>
         </div>
         <div className="col-12 d-flex flex-wrap">
-            {hit._source?.["Votação - Decisão"]? <div className="mx-1"><b>Votação:&nbsp;</b><span>{hit._source?.["Votação - Decisão"]}</span></div> : ""}
-            {hit._source?.["Decisão"]? <div className="mx-1"><b>Votação:&nbsp;</b><span>{hit._source?.["Decisão"].join(" / ")}</span></div> : ""}
+            {hit._source?.["Votação - Decisão"] && <div className="mx-1"><b>Votação:&nbsp;</b><span>{hit._source?.["Votação - Decisão"].Show.join(" / ")}</span></div>}
+            {hit._source?.["Decisão"] && <div className="mx-1"><b>Votação:&nbsp;</b><span>{hit._source?.["Decisão"].Show.join(" / ")}</span></div>}
         </div>
-        {Array.isArray(hit._source?.Descritores) ? <div className="col-12">
+        {hit._source?.Descritores ? <div className="col-12">
             <div className="mx-1">
                 <b>Descritores:&nbsp;</b>
-                {hit._source?.Descritores.flatMap(d => [" / ",hit.highlight?.Descritores && hit.highlight.Descritores.find(h => (h as string).includes(d))?<mark>{d}</mark>:d]).slice(1)}
+                {hit._source?.Descritores.Show.flatMap(d => [" / ",hit.highlight?.Descritores && hit.highlight.Descritores.find(h => (h as string).includes(d))?<mark>{d}</mark>:d]).slice(1)}
             </div>
         </div>: ""}
         {hit._source?.Sumário? <details className="col-12">

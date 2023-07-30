@@ -1,11 +1,11 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 import search from '@/core/elasticsearch';
-import { PartialTypedJurisprudenciaDocument } from '@stjiris/jurisprudencia-document'
+import { PartialJurisprudenciaDocument } from '@stjiris/jurisprudencia-document'
 import type { NextApiRequest, NextApiResponse } from 'next'
 
 export default function handler(
   req: NextApiRequest,
-  res: NextApiResponse<PartialTypedJurisprudenciaDocument[]>
+  res: NextApiResponse<PartialJurisprudenciaDocument[]>
 ) {
     let {proc, quuid} = req.query;
     if( !proc || Array.isArray(proc)) throw new Error("Invalid request")
