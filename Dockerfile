@@ -1,6 +1,6 @@
 FROM node:lts
 
-RUN apt get install -y pandoc
+RUN apt update && apt install -y pandoc
 
 WORKDIR /usr/src/app
 
