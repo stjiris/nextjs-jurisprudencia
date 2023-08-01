@@ -84,7 +84,7 @@ export default function search(
     }))
 }
 
-const padZero = (num: number | string, size: number=4) => {
+export const padZero = (num: number | string, size: number=4) => {
     let s = num.toString();
     while( s.length < size ){
         s = "0" + s;
