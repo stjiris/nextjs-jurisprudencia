@@ -1,6 +1,6 @@
 FROM node:lts
 
-RUN apt update && apt install -y pandoc
+RUN apt update && apt install -y pandoc texlive-xetex
 
 WORKDIR /usr/src/app
 
