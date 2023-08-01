@@ -1,7 +1,7 @@
 import search, { getElasticSearchClient, padZero } from '@/core/elasticsearch';
 import { SearchTotalHits } from '@elastic/elasticsearch/lib/api/types';
 import { PartialJurisprudenciaDocument } from '@stjiris/jurisprudencia-document';
-import { spawn } from 'child_process';
+import { ChildProcessWithoutNullStreams, spawn } from 'child_process';
 import type { NextApiRequest, NextApiResponse } from 'next'
 
 export default async function datalistHandler(
@@ -14,23 +14,10 @@ export default async function datalistHandler(
     let [area="Área Social", year=currentYear, month=currentMonth, format="pdf"] = Array.isArray(req.query.filters) ? req.query.filters : req.query.filters ? [req.query.filters] : [];
     let title = `Sumários de Acórdãos - ${area} - ${month}/${year}`
 
-    let pandoc = spawn("pandoc", ["-t",format,"-o","-","--standalone","--pdf-engine","xelatex","--template","pdf-template.tex"], {});
+    let [pandoc, wls] = convert(title, format);
     pandoc.stderr.pipe(process.stderr)
     pandoc.stdout.pipe(res);
-    let wls = (...args: string[]) => pandoc.stdin.write(args.join("\n")+"\n");
     getElasticSearchClient().then(async client => {
-        wls(`---`)
-        wls(`title: ${title}`)
-        wls(`output:`)
-        wls(`   beamer_presentation:`)
-        wls(`       keep_tex: true`)
-        wls(`header-includes:`)
-        wls(` - \\usepackage{fancyhdr}`)
-        wls(` - \\pagestyle{fancy}`)
-        wls(` - \\fancyhead{}`)
-        wls(` - \\fancyhead[L]{${title}}`)
-        wls(`---`)
-        wls(``)
         let r = await client.search<PartialJurisprudenciaDocument>({
             query: {
                 bool: {
@@ -83,3 +70,28 @@ export default async function datalistHandler(
     return await new Promise(resolve => pandoc.stdout.on("end", resolve))
 }
 
+function convert(title: string, format: string){
+    let proc: ChildProcessWithoutNullStreams;
+    if( format === "pdf" ){
+        proc = spawn("pandoc", ["-t",format,"-o","-","--standalone","--pdf-engine","xelatex","--template","pdf-template.tex"], {});
+    }
+    else{
+        proc = spawn("pandoc", ["-t",format,"-o","-","--standalone","--pdf-engine","xelatex"], {});
+    }
+
+    let wls = (...args: string[]) => proc.stdin.write(args.join("\n")+"\n");
+
+    wls(`---`)
+    wls(`title: ${title}`)
+    wls(`output:`)
+    wls(`   beamer_presentation:`)
+    wls(`       keep_tex: true`)
+    wls(`header-includes:`)
+    wls(` - \\usepackage{fancyhdr}`)
+    wls(` - \\pagestyle{fancy}`)
+    wls(` - \\fancyhead{}`)
+    wls(` - \\fancyhead[L]{${title}}`)
+    wls(`---\n`)
+
+    return [proc, wls] as const;
+}
