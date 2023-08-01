@@ -13,7 +13,7 @@ export default async function datalistHandler(
     let currentYear = `${date.getFullYear()}`;
     let [area="Área Social", year=currentYear, month=currentMonth, format="pdf"] = Array.isArray(req.query.filters) ? req.query.filters : req.query.filters ? [req.query.filters] : [];
 
-    let pandoc = spawn("pandoc", ["-f","html","-t","pdf","-o","-","--standalone"], {});
+    let pandoc = spawn("pandoc", ["-f","html","-t","pdf","-o","-","--standalone","--pdf-engine","xelatex"], {});
     pandoc.stderr.pipe(process.stderr)
     pandoc.stdout.pipe(res);
     let wls = (...args: string[]) => pandoc.stdin.write(args.join("\n")+"\n");

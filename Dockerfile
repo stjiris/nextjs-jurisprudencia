@@ -1,6 +1,6 @@
 FROM node:lts
 
-RUN apt update && apt install -y pandoc pdflatex
+RUN apt update && apt install -y pandoc
 
 WORKDIR /usr/src/app
 
