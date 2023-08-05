@@ -187,7 +187,7 @@ async function allIndices(client: Client, keys: JurisprudenciaDocumentKey[], cb:
         cb(i / (typeof r.hits.total === "object" ? r.hits.total.value : r.hits.total || 1 ))
         for( let key of keys ){
             if( isJurisprudenciaDocumentGenericKeys(key) ){
-                utils.sheet_add_aoa(shs[key], r.hits.hits.flatMap(hit => allGenericColumns(hit, key as typeof JurisprudenciaDocumentGenericKeys[number])))
+                utils.sheet_add_aoa(shs[key], r.hits.hits.flatMap(hit => allGenericColumns(hit, key as typeof JurisprudenciaDocumentGenericKeys[number])), {origin: -1})
             }
             else {
                 utils.sheet_add_aoa(shs[key], r.hits.hits.map(hit => ([hit._source![key] || "", hit._id])), {origin: -1})
