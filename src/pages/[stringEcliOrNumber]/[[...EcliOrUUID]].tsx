@@ -183,7 +183,7 @@ function Row(props: {children: ReactNode, style?: CSSProperties}){
 function Properties({accessKey, accessValue, noLink}: {accessKey: string, accessValue: JurisprudenciaDocument[JurisprudenciaDocumentKey], noLink?: boolean}){
     if( !accessValue ) return <>«sem valor»</>
     if( typeof accessValue === "string"  ){
-        return noLink ? <>accessValue</> : <Link href={`/pesquisa?${accessKey}=${encodeURIComponent(accessValue)}`}>{accessValue}</Link>
+        return noLink ? <>{accessValue}</> : <Link href={`/pesquisa?${accessKey}=${encodeURIComponent(accessValue)}`}>{accessValue}</Link>
     }
     if( "Index" in accessValue && "Show" in accessValue && "Original" in accessValue){
         let v = accessValue;
