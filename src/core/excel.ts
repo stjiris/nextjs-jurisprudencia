@@ -7,6 +7,7 @@ import { getElasticSearchClient } from "./elasticsearch";
 import { stream } from "exceljs";
 import { SearchHit, AggregationsTermsAggregateBase, SearchPointInTimeReference, AggregationsCardinalityAggregate, AggregationsSumAggregate } from "@elastic/elasticsearch/lib/api/types";
 import { Client } from "@elastic/elasticsearch";
+import { exportableKeys } from "@/components/exportable-keys";
 const WorkbookWriter = stream.xlsx.WorkbookWriter;
 
 
@@ -37,12 +38,7 @@ function busy(){
 export function startBuilder(excludeKeys: string[]=[], all: boolean=true){
     if( busy() ) return;
 
-    let keys = JurisprudenciaDocumentKeys.filter(k => {
-        let property = JurisprudenciaDocumentProperties[k]
-        return (!("type" in property) || (property.type !== "object" && property.type !== "text" )) && !excludeKeys.includes(k);
-    })
-
-    console.log(keys)
+    let keys = exportableKeys().filter(k => !excludeKeys.includes(k));
     
     let start = new Date();
     let nameId = (+start).toString()
