@@ -14,7 +14,6 @@ export default function ExcelPage(){
     const [lastUpdate, setlastUpdate] = useState<Date>(new Date(0));
     const progress = useFetch<ExcelState>(`/api/excel/status`, [lastUpdate])
     const files = useFetch<ExcelFile[]>(`/api/excel/files`, [lastUpdate])
-    const progressValue = progress?.export || progress?.import || 0
     const router = useRouter();
 
     useEffect(() => {
@@ -30,7 +29,13 @@ export default function ExcelPage(){
                         <div className="row">
                             <div className="col-8">
                                 <div className="progress">
-                                    <div className="progress-bar" role="progressbar" style={{width: `${progressValue*100}%`}} aria-valuenow={(progressValue*100)} aria-valuemin={0} aria-valuemax={100}></div>
+                                    <div className="progress-bar" role="progressbar" style={{width: `${(progress?.import || 0)*100}%`}} aria-valuenow={((progress?.import || 0)*100)} aria-valuemin={0} aria-valuemax={100}></div>
+                                </div>
+                                <div className="progress">
+                                    <div className="progress-bar" role="progressbar" style={{width: `${(progress?.export_agg || 0)*100}%`}} aria-valuenow={((progress?.export_agg || 0)*100)} aria-valuemin={0} aria-valuemax={100}></div>
+                                </div>
+                                <div className="progress">
+                                    <div className="progress-bar" role="progressbar" style={{width: `${(progress?.export_all || 0)*100}%`}} aria-valuenow={((progress?.export_all || 0)*100)} aria-valuemin={0} aria-valuemax={100}></div>
                                 </div>
                             </div>
                             <div className="col-4 text-end">
@@ -46,7 +51,7 @@ export default function ExcelPage(){
                                 <button className="btn btn-primary" disabled={true || progress?.import!== null}><i className="bi bi-play"></i> WIP (Atualizar)</button>
                             </div>
                             <div className="col-6">
-                                <button className="btn btn-primary" disabled={progress?.export !== null} onClick={() => fetch(router.basePath+`/api/excel/run`, {method:"POST"}).then(r => setlastUpdate(new Date()))}><i className="bi bi-play"></i> Nova exportação</button>
+                                <button className="btn btn-primary" disabled={progress?.export_agg !== null || progress?.export_all !== null} onClick={() => fetch(router.basePath+`/api/excel/run`, {method:"POST"}).then(r => setlastUpdate(new Date()))}><i className="bi bi-play"></i> Nova exportação</button>
                             </div>
                         </div>
                         <hr/>

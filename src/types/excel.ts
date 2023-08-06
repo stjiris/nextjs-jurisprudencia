@@ -14,5 +14,6 @@ export type ExcelFile = {
 
 export type ExcelState = {
     import: null | number // null not busy // number progress
-    export: null | number
+    export_agg: null | number
+    export_all: null | number
 }
