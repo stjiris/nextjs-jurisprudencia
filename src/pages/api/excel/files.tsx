@@ -9,8 +9,6 @@ export default async function excelStatusHandler(
     req: NextApiRequest,
     res: NextApiResponse<ExcelFile[]>
 ){
-    if( !await authenticatedHandler(req) ) return res.status(401).json([]);
-
     return listExcelFiles().then(res.json)
 }
 

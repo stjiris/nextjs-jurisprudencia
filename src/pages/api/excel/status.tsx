@@ -7,10 +7,5 @@ export default async function excelStatusHandler(
     req: NextApiRequest,
     res: NextApiResponse<ExcelState>
 ){
-    if( await authenticatedHandler(req) ){
-        return res.json(EXCEL_STATE)
-    }
-    else{
-        return res.status(401).json({export_agg: 1, export_all: 1, import: 1});
-    }
+    return res.json(EXCEL_STATE)
 }
