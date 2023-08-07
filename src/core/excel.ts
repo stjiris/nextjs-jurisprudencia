@@ -174,6 +174,7 @@ async function updateIds(worksheetData: CellValue[][], client: Client, idIndex: 
     let ops = [];
     while( worksheetData.length > 0 ){
         EXCEL_STATE.import = (total-worksheetData.length) / total;
+        console.log(worksheetData.length, total, (total-worksheetData.length) / total,"%")
 
         let currId = worksheetData[0][idIndex]?.toString();
         if( !currId ){ break; }
@@ -465,9 +466,7 @@ function allGenericColumns(hit: SearchHit<JurisprudenciaDocument>, key: typeof J
 }
 
 function hash(s: string){
-    const md5 = createHash("md5");
-    md5.update(s);
-    return md5.digest("base64url");
+    return Buffer.from(s).toString('base64url');
 }
 
 function addHash(row: string[]){
