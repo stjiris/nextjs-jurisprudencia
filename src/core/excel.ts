@@ -6,7 +6,7 @@ import { isJurisprudenciaDocumentGenericKeys, JurisprudenciaDocument, Jurisprude
 import { CellValue, stream } from "exceljs";
 import { mkdirSync } from "fs";
 import { rename } from "fs/promises";
-import { join } from "path";
+import { join, resolve } from "path";
 import { getElasticSearchClient } from "./elasticsearch";
 const WorkbookWriter = stream.xlsx.WorkbookWriter;
 
@@ -178,7 +178,10 @@ async function updateIds(worksheetData: CellValue[][], client: Client, idIndex: 
         if( !currId ){ break; }
         let targetRows = worksheetData.filter(row => row[idIndex] === currId);
         worksheetData = worksheetData.filter(row => row[idIndex] !== currId);
-        if( !targetRows.some( row => rowUpdated(row as string[]) )) continue;
+        if( !targetRows.some( row => rowUpdated(row as string[]) )){
+            await new Promise(resolve => setImmediate(resolve)) // prevent blocking event loop?
+            continue;
+        };
 
         let update: Record<string,string | Record<string, string[]>> = {}
         if( isJurisprudenciaDocumentGenericKeys(actualField) ){
