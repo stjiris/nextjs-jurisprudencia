@@ -464,15 +464,18 @@ function allGenericColumns(hit: SearchHit<JurisprudenciaDocument>, key: typeof J
     return data
 }
 
-const sha1 = createHash("sha1");
+function hash(s: string){
+    const md5 = createHash("md5");
+    md5.update(s);
+    return md5.digest("base64url");
+}
+
 function addHash(row: string[]){
-    sha1.update(row.join(""));
-    return [...row, sha1.digest("base64")]
+    return [...row, hash(row.join(""))]
 }
 
 function rowUpdated(row: string[]){
-    let content = row.slice(0,row.length-1);
-    let hash = row[row.length-1];
-    let _row = addHash(content);
-    return _row[_row.length-1] !== hash;
+    let rowHash = row[row.length-1];
+    let rowContentHash = hash(row.slice(0,row.length-1).join(""))
+    return rowHash !== rowContentHash;
 }
