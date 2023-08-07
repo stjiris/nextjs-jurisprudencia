@@ -4,12 +4,11 @@ import { mkdirSync } from "fs";
 import { rename } from "fs/promises";
 import { join } from "path";
 import { getElasticSearchClient } from "./elasticsearch";
-import { stream } from "exceljs";
+import { CellValue, stream, Worksheet } from "exceljs";
 import { SearchHit, AggregationsTermsAggregateBase, SearchPointInTimeReference, AggregationsCardinalityAggregate, AggregationsSumAggregate } from "@elastic/elasticsearch/lib/api/types";
 import { Client } from "@elastic/elasticsearch";
 import { exportableKeys } from "@/components/exportable-keys";
 const WorkbookWriter = stream.xlsx.WorkbookWriter;
-
 
 const EXCEL_SECTION_SIZE = 1000;
 
@@ -35,12 +34,198 @@ function busy(){
     return EXCEL_STATE.import !== null || EXCEL_STATE.export_agg !== null || EXCEL_STATE.export_all !== null;
 }
 
-export function startBuilder(excludeKeys: string[]=[], all: boolean=true){
+export function startParser(start: Date, excludeKeys: string[]=[]){
+    if( busy() ) return;
+
+    let importFile = join(EXCEL_IMP_PATH, `${+start}.xlsx`);
+
+    let rd = new stream.xlsx.WorkbookReader(importFile, {});
+
+    return readWorkbook(rd).then((logs) => {
+        EXCEL_STATE.import = null;
+        return startBuilder(start, excludeKeys, false, logs)
+    }).finally(() => {
+        EXCEL_STATE.import = null
+    })
+}
+
+async function readWorkbook(wb: stream.xlsx.WorkbookReader){
+    let logs: string[][] = [];
+    let client = await getElasticSearchClient();
+    for await (const worksheetReader of wb ) {
+        let worksheetData = await readWorksheet(worksheetReader)
+        let header = worksheetData.splice(0,1)[0];
+        
+        let idIndex = header.indexOf("id");
+        let correcaoIndex = header.indexOf("correção");
+        if( correcaoIndex !== -1 ){
+            // correcao fieldToUpdate # groupingField
+            let fieldToUpdate = header[correcaoIndex+1]?.toString();
+            let groupingField = header[correcaoIndex+3]?.toString();
+            if( !fieldToUpdate ) continue;
+
+            logs.push(...await updateAggs(worksheetData, client, correcaoIndex, fieldToUpdate, groupingField) as unknown as string[][])
+        }
+        else if(idIndex !== -1){
+            // Field | Fields | id
+            let fields = header.map(h => h?.toString()).filter(h => h && h !== "id") as string[];
+            let indexes = header.map((h, i) => [h,i]).filter(([h,i]) => h && h !== "id").map(([h,i]) => i as number);
+            logs.push(...await updateIds(worksheetData, client, idIndex, fields, indexes))
+
+        }
+        else{
+            logs.push(["invalid header", ...header as string[]])
+        }
+    }
+    return logs;
+}
+
+async function readWorksheet(ws: stream.xlsx.WorksheetReader){
+    let data = []
+    for await(const row of ws){
+        data.push(row.values as CellValue[])
+    }
+    return data;
+}
+
+async function updateAggs(data: CellValue[][], client: Client, correcaoIndex: number, fieldToUpdate: string, groupingField?: string ){
+    let logs = []
+    for(let i=0; i < data.length; i++){
+        EXCEL_STATE.import = i / data.length;
+        let row = data[i];
+        let newValue = row[correcaoIndex]?.toString();
+        let oldValue = row[correcaoIndex+1]?.toString()
+        let grpValue = row[correcaoIndex+3]?.toString();
+        if( !newValue || !oldValue) continue;
+
+        let must = [{
+            term: {
+                [fieldToUpdate]: oldValue
+            }
+        }];
+        if( groupingField && grpValue ){
+            must.push({
+                term: {
+                    [groupingField]: grpValue
+                }
+            })
+        }
+
+        if( isJurisprudenciaDocumentGenericField(fieldToUpdate) ){
+            let r = await client.updateByQuery({
+                index: JurisprudenciaVersion,
+                query: {bool: {must}},
+                script: {
+                    source: `
+                        int oldValueIndex = ctx._source[params.fieldToUpdate][params.subPath].indexOf(params.oldValue);
+                        ctx._source[params.fieldToUpdate][params.subPath][oldValueIndex] = params.newValue;`,
+                    params: {
+                        fieldToUpdate: fieldToUpdate.replace(/\..*/g,""),
+                        subPath: fieldToUpdate.replace(/[^.]*\./,"").replace(".raw",""),
+                        newValue,
+                        oldValue
+                    }
+                    
+                },
+                refresh: true
+            }, {
+                requestTimeout: "5m"
+            })
+            logs.push([fieldToUpdate, oldValue, newValue, r.took, r.updated])
+        }
+        else{
+            let r = await client.updateByQuery({
+                index: JurisprudenciaVersion,
+                query: {bool: {must}},
+                script: {
+                    source: `ctx._source[params.fieldToUpdate] = params.newValue;`,
+                    params: {
+                        fieldToUpdate,
+                        newValue
+                    }
+                    
+                },
+                refresh: true
+            }, {
+                requestTimeout: "5m"
+            })
+            logs.push([fieldToUpdate, oldValue, newValue, r.took, r.updated])
+        }
+    }
+
+    return logs;
+}
+
+async function updateIds(worksheetData: CellValue[][], client: Client, idIndex: number, fieldsName: string[], fieldsIndex: number[]) {
+    let logs: string[][] = []
+    let actualField = fieldsName[0].replace(" - Original","").replace(" - Mostrar","").replace(" - Indice","");
+    if( fieldsName.some(fn => fn.indexOf(actualField) === -1) ) return [["invalid header", ...fieldsName]];
+    let indexFieldMap: Record<string, number | undefined> = {};
+    if( isJurisprudenciaDocumentGenericKeys(actualField) ){
+        indexFieldMap = {
+            Original: fieldsIndex[fieldsName.indexOf(`${actualField} - Original`)],
+            Show: fieldsIndex[fieldsName.indexOf(`${actualField} - Mostrar`)],
+            Index: fieldsIndex[fieldsName.indexOf(`${actualField} - Indice`)]
+        }
+    }
+
+    let total = worksheetData.length;
+    let ops = [];
+    while( worksheetData.length > 0 ){
+        EXCEL_STATE.import = (total-worksheetData.length) / total;
+
+        let currId = worksheetData[0][idIndex]?.toString();
+        if( !currId ){ break; }
+        let targetRows = worksheetData.filter(row => row[idIndex] === currId);
+        worksheetData = worksheetData.filter(row => row[idIndex] !== currId);
+
+        let update: Record<string,string | Record<string, string[]>> = {}
+        if( isJurisprudenciaDocumentGenericKeys(actualField) ){
+            update[actualField] = {};
+            for(let key in indexFieldMap){
+                if( indexFieldMap[key] ){
+                    //@ts-ignore TODO: why typescrip
+                    update[actualField][key] = targetRows.map( r => r[indexFieldMap[key]!]?.toString().trim() || "").filter( s => s.length > 0 )
+                }
+            }
+        }
+        else{
+            update[actualField] = targetRows.at(-1)![fieldsIndex[0]]!.toString().trim();
+        }
+        ops.push(...[{
+            update: {
+                _id: currId
+            }
+        },{
+            doc: update
+        }]);
+        if( ops.length > 500 ){
+            await client.bulk({
+                index: JurisprudenciaVersion,
+                operations: ops
+            }).then(r => {
+                logs.push(["update", actualField, r.took.toString(), "ms",r.items.length.toString(),r.errors ? "errors" : "no errors", ...r.items.map(i => i.update?.error?.reason || "")])
+            })
+            ops = [];
+        }
+    }
+    if( ops.length > 0 ){
+        await client.bulk({
+            index: JurisprudenciaVersion,
+            operations: ops
+        }).then(r => {
+            logs.push(["update", actualField, r.took.toString(), "ms",r.items.length.toString(),r.errors ? "errors" : "no errors", ...r.items.map(i => i.update?.error?.reason || "")])
+        })
+    }
+    return logs;
+}
+
+
+export function startBuilder(start: Date, excludeKeys: string[]=[], all: boolean=true, importLogs?: string[][]){
     if( busy() ) return;
 
     let keys = exportableKeys().filter(k => !excludeKeys.includes(k));
     
-    let start = new Date();
     let nameId = (+start).toString()
 
     return getElasticSearchClient().then(async client => {
@@ -67,6 +252,13 @@ export function startBuilder(excludeKeys: string[]=[], all: boolean=true){
             aggSh.addRow(["Resultado", aggDate])
             allSh.addRow(["Resultado", allDate])
 
+            if( importLogs ){
+                let impSh = workbook.addWorksheet("Importação");
+                for( let row of importLogs ){
+                    impSh.addRow(row);
+                }
+            }
+
             await workbook.commit()
 
         }).finally(() => {
@@ -75,8 +267,15 @@ export function startBuilder(excludeKeys: string[]=[], all: boolean=true){
     });
 }
 
+function isJurisprudenciaDocumentGenericField(s: string){
+    return  (s.endsWith(".Original") ||
+            s.endsWith(".Show") ||
+            s.endsWith(".Index.raw")) && isJurisprudenciaDocumentGenericKeys(s.replace(/\.[^.]*/g,""));
+}
+
 async function createAggExcel(id: string, client: Client, pit: SearchPointInTimeReference, keys: JurisprudenciaDocumentKey[]): Promise<Date>{
     if(EXCEL_STATE.export_agg !== null) throw new Error("Server busy.")
+    EXCEL_STATE.export_agg = 0;
     let tmpAgg = join(EXCEL_AGG_PATH, `.${id}.xlsx`)
     let finAgg = join(EXCEL_AGG_PATH, `${id}.xlsx`)
     
@@ -105,6 +304,7 @@ async function createAggExcel(id: string, client: Client, pit: SearchPointInTime
 
 async function createAllExcel(id: string, client: Client, pit: SearchPointInTimeReference, keys: JurisprudenciaDocumentKey[]): Promise<Date>{
     if(EXCEL_STATE.export_all !== null) throw new Error("Server busy.")
+    EXCEL_STATE.export_all = 0;
     let tmpAll = join(EXCEL_ALL_PATH, `.${id}.xlsx`)
     let finAll = join(EXCEL_ALL_PATH, `${id}.xlsx`)
 
@@ -248,7 +448,7 @@ async function getAllIndices(client: Client, pit: SearchPointInTimeReference, ke
         i+= r.hits.hits.length
         r = await client.search({pit: pit, _source: keys, track_total_hits: true, sort: [{"Data": "asc"}], search_after: r.hits.hits.at(-1)?.sort});
     }
-
+    console.log(data)
     return data;
 }
 
