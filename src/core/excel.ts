@@ -3,6 +3,7 @@ import { ExcelState } from "@/types/excel";
 import { Client } from "@elastic/elasticsearch";
 import { AggregationsCardinalityAggregate, AggregationsSumAggregate, AggregationsTermsAggregateBase, SearchHit, SearchPointInTimeReference } from "@elastic/elasticsearch/lib/api/types";
 import { isJurisprudenciaDocumentGenericKeys, JurisprudenciaDocument, JurisprudenciaDocumentGenericKeys, JurisprudenciaDocumentKey, JurisprudenciaVersion } from "@stjiris/jurisprudencia-document";
+import { createHash } from "crypto";
 import { CellValue, stream } from "exceljs";
 import { mkdirSync } from "fs";
 import { rename } from "fs/promises";
@@ -467,7 +468,9 @@ function allGenericColumns(hit: SearchHit<JurisprudenciaDocument>, key: typeof J
 }
 
 function hash(s: string){
-    return Buffer.from(s).toString('base64url');
+    const md5 = createHash("md5");
+    md5.update(s);
+    return md5.digest('base64url');
 }
 
 function addHash(row: string[]){
@@ -475,7 +478,8 @@ function addHash(row: string[]){
 }
 
 function rowUpdated(row: string[]){
+    let actualRow = row.slice(1, row.length-1);
     let rowHash = row[row.length-1];
-    let rowContentHash = hash(row.slice(0,row.length-1).join(""))
+    let rowContentHash = hash(actualRow.join(""))
     return rowHash !== rowContentHash;
 }
