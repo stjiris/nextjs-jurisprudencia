@@ -53,8 +53,6 @@ export default function ExcelPage(){
         fd.set("doImport", "")
         fd.set("import", importFile)
         fetch(`${router.basePath}/api/excel/run?${params.toString()}`, {method:"POST", body: fd}).then(r => setlastUpdate(new Date()))
-        
-
     }
 
     const checkboxes = () => Array.from(keysParentRef.current?.querySelectorAll<HTMLInputElement>("input[type='checkbox']") || []);
@@ -131,10 +129,10 @@ export default function ExcelPage(){
                                 <div className="form-check"><input className="form-check-input" id="input-all" type="checkbox" defaultChecked/><label htmlFor="input-all" className="form-check-label">Exportar conteúdo</label></div>
                             </div>
                             <div className="col-8">
-                                <button className="btn btn-primary" disabled={progress?.import!== null || !importFile} onClick={runImportRequest}><i className="bi bi-play"></i> Atualizar</button>
+                                <button className="btn btn-primary" disabled={progress?.import!== null || progress?.export_agg !== null || progress?.export_all !== null || !importFile} onClick={runImportRequest}><i className="bi bi-play"></i> Atualizar</button>
                             </div>
                             <div className="col-4">
-                                <button className="btn btn-primary" disabled={progress?.export_agg !== null || progress?.export_all !== null} onClick={runExportRequest}><i className="bi bi-play"></i> Nova exportação</button>
+                                <button className="btn btn-primary" disabled={progress?.import!== null || progress?.export_agg !== null || progress?.export_all !== null} onClick={runExportRequest}><i className="bi bi-play"></i> Nova exportação</button>
                             </div>
                         </div>
                         <hr/>

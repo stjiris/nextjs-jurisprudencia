@@ -107,7 +107,7 @@ function DocumentPage(props: {doc: JurisprudenciaDocument}){
     
     return <>
         <Head>
-            <title>{proc} - Jurisprudência - STJ</title>
+            <title>{`${proc} - Jurisprudência - STJ`}</title>
         </Head>
         <div className="border border-dark container-fluid">
             <Row>
