@@ -1,6 +1,7 @@
 version: '3.9'
 volumes:
   elasticsearch_data: {}
+  excel_data: {}
 
 services:
   server:
@@ -11,6 +12,8 @@ services:
       ES_URL: http://elasticsearch:9200
     ports:
       - "80:3000"
+    volumes:
+      - excel_data:/usr/src/app/files
     depends_on:
       elasticsearch:
         condition: service_healthy

@@ -70,7 +70,7 @@ async function readWorkbook(wb: stream.xlsx.WorkbookReader){
         else if(idIndex !== -1){
             // Field | Fields | id
             let fields = header.map(h => h?.toString()).filter(h => h && h !== "id") as string[];
-            let indexes = header.map((h, i) => [h,i]).filter(([h,i]) => h && h !== "id").map(([h,i]) => i as number);
+            let indexes = header.map((h, i) => [h,i]).filter(([h,i]) => h && h !== "id" && h !== "hash").map(([h,i]) => i as number);
             logs.push(...await updateIds(worksheetData, client, idIndex, fields, indexes))
 
         }
