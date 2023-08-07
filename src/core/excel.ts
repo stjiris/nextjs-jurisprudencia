@@ -471,7 +471,7 @@ function addHash(row: string[]){
 }
 
 function rowUpdated(row: string[]){
-    let content = row.slice(0,row.length-2);
+    let content = row.slice(0,row.length-1);
     let hash = row[row.length-1];
     let _row = addHash(content);
     return _row[_row.length-1] !== hash;
