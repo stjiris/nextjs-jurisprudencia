@@ -419,7 +419,7 @@ async function aggregateField(client: Client, pit: SearchPointInTimeReference, f
         });
         let bucks = r.aggregations![field].buckets;
         if( !Array.isArray(bucks) ) throw new Error("Invalid buckets type, expected array.")
-        bucks.forEach(b => data.push(["", b.key_as_string || b.key, b.doc_count, groupingField ? ("key_as_string" in b.group.buckets[0] ? b.group.buckets[0].key_as_string : b.group.buckets[0].key) : "*"]))
+        bucks.forEach((b: any) => data.push(["", b.key_as_string || b.key, b.doc_count, groupingField ? ("key_as_string" in b.group.buckets[0] ? b.group.buckets[0].key_as_string : b.group.buckets[0].key) : "*"]))
     }
     data.unshift(header as any) 
     return data
