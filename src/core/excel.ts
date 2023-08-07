@@ -464,10 +464,10 @@ function allGenericColumns(hit: SearchHit<JurisprudenciaDocument>, key: typeof J
     return data
 }
 
+const sha1 = createHash("sha1");
 function addHash(row: string[]){
-    let hash = createHash("sha1");
-    hash.update(row.join(""));
-    return [...row, hash.digest("base64")]
+    sha1.update(row.join(""));
+    return [...row, sha1.digest("base64")]
 }
 
 function rowUpdated(row: string[]){
