@@ -3,7 +3,6 @@ import { ExcelState } from "@/types/excel";
 import { Client } from "@elastic/elasticsearch";
 import { AggregationsCardinalityAggregate, AggregationsSumAggregate, AggregationsTermsAggregateBase, SearchHit, SearchPointInTimeReference } from "@elastic/elasticsearch/lib/api/types";
 import { isJurisprudenciaDocumentGenericKeys, JurisprudenciaDocument, JurisprudenciaDocumentGenericKeys, JurisprudenciaDocumentKey, JurisprudenciaVersion } from "@stjiris/jurisprudencia-document";
-import { createHash } from "crypto";
 import { CellValue, stream } from "exceljs";
 import { mkdirSync } from "fs";
 import { rename } from "fs/promises";
@@ -174,7 +173,6 @@ async function updateIds(worksheetData: CellValue[][], client: Client, idIndex: 
     let ops = [];
     while( worksheetData.length > 0 ){
         EXCEL_STATE.import = (total-worksheetData.length) / total;
-        console.log(worksheetData.length, total, (total-worksheetData.length) / total,"%")
 
         let currId = worksheetData[0][idIndex]?.toString();
         if( !currId ){ break; }
