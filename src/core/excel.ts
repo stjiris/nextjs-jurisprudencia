@@ -448,7 +448,6 @@ async function getAllIndices(client: Client, pit: SearchPointInTimeReference, ke
         i+= r.hits.hits.length
         r = await client.search({pit: pit, _source: keys, track_total_hits: true, sort: [{"Data": "asc"}], search_after: r.hits.hits.at(-1)?.sort});
     }
-    console.log(data)
     return data;
 }
 
