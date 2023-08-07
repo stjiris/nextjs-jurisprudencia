@@ -98,20 +98,26 @@ export default function ExcelPage(){
                             <div className="col-8">
                                 <div className="row">
                                     <div className="col-2">Importação:</div>
-                                    <div className="progress col-10">
-                                        <div className="progress-bar" role="progressbar" style={{width: `${(progress?.import || 0)*100}%`}} aria-valuenow={((progress?.import || 0)*100)} aria-valuemin={0} aria-valuemax={100}></div>
+                                    <div className="col-10">
+                                        <div className="progress">
+                                            <div className="progress-bar" role="progressbar" style={{width: `${(progress?.import || 0)*100}%`}} aria-valuenow={((progress?.import || 0)*100)} aria-valuemin={0} aria-valuemax={100}></div>
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="row">
                                     <div className="col-2" >Agregações:</div>
-                                    <div className="progress col-10">
-                                        <div className="progress-bar" role="progressbar" style={{width: `${(progress?.export_agg || 0)*100}%`}} aria-valuenow={((progress?.export_agg || 0)*100)} aria-valuemin={0} aria-valuemax={100}></div>
+                                    <div className="col-10">
+                                        <div className="progress">
+                                            <div className="progress-bar" role="progressbar" style={{width: `${(progress?.export_agg || 0)*100}%`}} aria-valuenow={((progress?.export_agg || 0)*100)} aria-valuemin={0} aria-valuemax={100}></div>
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="row">
                                     <div className="col-2" >Conteudos:</div>
-                                    <div className="progress col-10">
-                                        <div className="progress-bar" role="progressbar" style={{width: `${(progress?.export_all || 0)*100}%`}} aria-valuenow={((progress?.export_all || 0)*100)} aria-valuemin={0} aria-valuemax={100}></div>
+                                    <div className="col-10">
+                                        <div className="progress">
+                                            <div className="progress-bar" role="progressbar" style={{width: `${(progress?.export_all || 0)*100}%`}} aria-valuenow={((progress?.export_all || 0)*100)} aria-valuemin={0} aria-valuemax={100}></div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
