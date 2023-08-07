@@ -3,6 +3,7 @@ import { ExcelState } from "@/types/excel";
 import { Client } from "@elastic/elasticsearch";
 import { AggregationsCardinalityAggregate, AggregationsSumAggregate, AggregationsTermsAggregateBase, SearchHit, SearchPointInTimeReference } from "@elastic/elasticsearch/lib/api/types";
 import { isJurisprudenciaDocumentGenericKeys, JurisprudenciaDocument, JurisprudenciaDocumentGenericKeys, JurisprudenciaDocumentKey, JurisprudenciaVersion } from "@stjiris/jurisprudencia-document";
+import { createHash } from "crypto";
 import { CellValue, stream } from "exceljs";
 import { mkdirSync } from "fs";
 import { rename } from "fs/promises";
@@ -178,6 +179,7 @@ async function updateIds(worksheetData: CellValue[][], client: Client, idIndex: 
         if( !currId ){ break; }
         let targetRows = worksheetData.filter(row => row[idIndex] === currId);
         worksheetData = worksheetData.filter(row => row[idIndex] !== currId);
+        if( !targetRows.some( row => rowUpdated(row as string[]) )) continue;
 
         let update: Record<string,string | Record<string, string[]>> = {}
         if( isJurisprudenciaDocumentGenericKeys(actualField) ){
@@ -432,7 +434,7 @@ async function getAllIndices(client: Client, pit: SearchPointInTimeReference, ke
         track_total_hits: true,
         sort: [{"Data": "asc"}]
     });
-    let data: string[][][] = keys.map((k) => [isJurisprudenciaDocumentGenericKeys(k) ? [`${k} - Original`,`${k} - Mostrar`,`${k} - Indice`,"id"] : [k,"id"]]);
+    let data: string[][][] = keys.map((k) => [isJurisprudenciaDocumentGenericKeys(k) ? [`${k} - Original`,`${k} - Mostrar`,`${k} - Indice`,"id","hash"] : [k,"id","hash"]]);
 
     let i = 0;
     while( r.hits.hits.length > 0 ){
@@ -442,7 +444,7 @@ async function getAllIndices(client: Client, pit: SearchPointInTimeReference, ke
                 data[i].push(...r.hits.hits.flatMap(hit => allGenericColumns(hit, key as typeof JurisprudenciaDocumentGenericKeys[number])))
             }
             else{
-                data[i].push(...r.hits.hits.flatMap(hit => [[hit._source![key] as any || "", hit._id]]))
+                data[i].push(...r.hits.hits.flatMap(hit => [addHash([hit._source![key] as any || "", hit._id])]))
             }
         })
         i+= r.hits.hits.length
@@ -457,7 +459,20 @@ function allGenericColumns(hit: SearchHit<JurisprudenciaDocument>, key: typeof J
     let shw = hit._source![key]?.Show || [];
     let ind = hit._source![key]?.Index || [];
     for( let i = 0; i < Math.max(ori?.length,shw?.length, ind?.length); i++){
-        data.push([ori[i] || "", shw[i] || "", ind[i] || "", hit._id])
+        data.push(addHash([ori[i] || "", shw[i] || "", ind[i] || "", hit._id]))
     }
     return data
+}
+
+function addHash(row: string[]){
+    let hash = createHash("sha1");
+    hash.update(row.join(""));
+    return [...row, hash.digest("base64")]
+}
+
+function rowUpdated(row: string[]){
+    let content = row.slice(0,row.length-2);
+    let hash = row[row.length-1];
+    let _row = addHash(content);
+    return _row[_row.length-1] !== hash;
 }
