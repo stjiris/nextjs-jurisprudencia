@@ -32,7 +32,8 @@ services:
       xpack.security.http.ssl.enabled: false
       discovery.type: single-node
       ELASTIC_PASSWORD: elasticsearch
-      KIBANA_PASSWORD: elasticsearch
+      # to use kibana set the kibana_system password to elasticsearch with:
+      # $ elasticsearch-reset-password -u kibana_system -i
     healthcheck:
       test: curl --write-out 'HTTP %{http_code}' --fail --silent --output /dev/null http://elastic:elasticsearch@localhost:9200
       interval: 10s
