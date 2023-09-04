@@ -136,8 +136,8 @@ function JurisprudenciaItem({hit, searchId}:{hit: SearchHandlerResponseItem, sea
             <span>&nbsp;- {hit._source?.Secção?.Show}</span>
         </div>
         <div className="col-12 d-flex flex-wrap">
-            {hit._source?.["Votação - Decisão"] && <div className="mx-1"><b>Votação:&nbsp;</b><span>{hit._source?.["Votação - Decisão"].Show.join(" / ")}</span></div>}
-            {hit._source?.["Decisão"] && <div className="mx-1"><b>Votação:&nbsp;</b><span>{hit._source?.["Decisão"].Show.join(" / ")}</span></div>}
+            {hit._source?.["Votação"] && <div className="mx-1"><b>Votação:&nbsp;</b><span>{hit._source?.["Votação"].Show.join(" / ")}</span></div>}
+            {hit._source?.["Decisão"] && <div className="mx-1"><b>Decisão:&nbsp;</b><span>{hit._source?.["Decisão"].Show.join(" / ")}</span></div>}
         </div>
         {hit._source?.Descritores ? <div className="col-12">
             <div className="mx-1">

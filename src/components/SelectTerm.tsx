@@ -14,10 +14,7 @@ export function Terms(){
         <option value="Relator Nome Profissional" label="Relator" />
         <option value="Meio Processual" label="Meio Processual" />
         <option value="Decisão" label="Decisão" />
-        <option value="Decisão (textual)" label="Decisão (textual)" />
-        <option value="Votação - Decisão" label="Votação - Decisão" />
-        <option value="Votação - Vencidos" label="Votação - Vencidos" />
-        <option value="Votação - Declarações" label="Votação - Declarações" />
+        <option value="Votação" label="Votação" />
         <option value="Descritores" label="Descritores" />
         <option value="Tribunal de Recurso" label="Tribunal de Recurso" />
         <option value="Tribunal de Recurso - Processo" label="Tribunal de Recurso - Processo" />

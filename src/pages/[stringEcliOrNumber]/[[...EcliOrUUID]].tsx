@@ -135,8 +135,7 @@ function DocumentPage(props: {doc: JurisprudenciaDocument}){
             <DefaultRow doc={props.doc} accessKey="Secção"/>
             <MultipleRow doc={props.doc} accessKeys={["Tribunal de Recurso","Tribunal de Recurso - Processo"]} showKeys={["T. de Recurso","Processo"]}/>
             <DefaultRow doc={props.doc} accessKey="Decisão"/>
-            <DefaultRow doc={props.doc} accessKey="Decisão (textual)"/>
-            <MultipleRow doc={props.doc} accessKeys={["Votação - Decisão","Votação - Vencidos","Votação - Declarações"]} showKeys={["Votação","Vencidos","Declarações"]}/>
+            <DefaultRow doc={props.doc} accessKey="Votação"/>
             <DefaultRow doc={props.doc} accessKey="Descritores"/>
             <DefaultRow doc={props.doc} accessKey="Jurisprudência Estrangeira"/>
             <DefaultRow doc={props.doc} accessKey="Jurisprudência Internacional"/>

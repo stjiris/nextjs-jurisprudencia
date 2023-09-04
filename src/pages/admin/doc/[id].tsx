@@ -99,10 +99,7 @@ function Update({doc, id}: UpdateProps){
                         <UpdateInput accessKey="Tribunal de Recurso - Processo" value={doc["Tribunal de Recurso - Processo"]} setUpdateObject={setUpdateObj}/>
                         <Sep/>
                         <UpdateInput accessKey="Decisão" value={doc["Decisão"]} setUpdateObject={setUpdateObj}/>
-                        <ReadOnlyInput accessKey="Decisão (textual)" value={doc["Decisão (textual)"]} />
-                        <UpdateInput accessKey="Votação - Decisão" value={doc["Votação - Decisão"]} setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Votação - Vencidos" value={doc["Votação - Vencidos"]} setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Votação - Declarações" value={doc["Votação - Declarações"]} setUpdateObject={setUpdateObj}/>
+                        <UpdateInput accessKey="Votação" value={doc["Votação"]} setUpdateObject={setUpdateObj}/>
                         <Sep/>
                         <UpdateInput accessKey="Descritores" value={doc["Descritores"]} setUpdateObject={setUpdateObj}/>
                         <Sep/>

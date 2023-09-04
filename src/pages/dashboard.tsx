@@ -346,7 +346,7 @@ function ParallelSets(props: IndicesPageProps){
     let [parallelSetsData, setParallelSetsData] = useState([]); 
     const [numOfFields, setNumOfFields] = useState(3);
     const [numOfAggregations, setNumOfAggregations] = useState(50); 
-    const [selectedTerms, setSelectedTerms] = useState(["Área", "Secção", "Meio Processual", "Decisão", "Votação - Decisão", "Votação - Vencidos", "Relator Nome Profissional", "Tribunal de Recurso", "Descritores", "Área Temática"]);
+    const [selectedTerms, setSelectedTerms] = useState(["Área", "Secção", "Meio Processual", "Decisão", "Votação", "Relator Nome Profissional", "Tribunal de Recurso", "Descritores", "Área Temática"]);
 
 
     useEffect(() => {
