@@ -1,4 +1,6 @@
 import Link from "next/link";
+import banner from '../../public/images/stjiris-banner.png'
+import Image from "next/image";
 
 export default function ModalSobre(){
     return <div className="modal fade" id="modal-about" tabIndex={-1} role="dialog" aria-labelledby="modal-label" aria-hidden="true">
@@ -39,6 +41,12 @@ export default function ModalSobre(){
             </div>
             <div className="modal-footer">
                 <div className="flex-grow-1">
+                    <div>
+                        <Image 
+                            src={banner}
+                            alt="Banner cofinanciamento, STJ e INESC-ID" className="w-100 h-auto"></Image>
+                        <hr/>
+                    </div>
                     <div><small><sup>1</sup> Ver todas os operadores de pesquisa suportados <a href="https://www.elastic.co/guide/en/elasticsearch/reference/8.4/query-dsl-simple-query-string-query.html#simple-query-string-syntax" target="_blank">aqui</a></small></div>
                     <div><small>Documentos Google Drive:&nbsp;
                         <a href="https://docs.google.com/document/d/1WSDh_b0Y4XtMVoMuDiaVfWmFsW5ktbTaUI2CGHMdcys/edit?usp=sharing" target="_blank"> Notas Jurisprudência</a>
@@ -46,6 +54,7 @@ export default function ModalSobre(){
                         <a href="https://docs.google.com/document/d/1jz8CVWifPHAZS1BBm6Vi3YWVb-xS5vJk8UbblsWRz-A/edit?usp=sharing" target="_blank"> Notas Pesquisa</a>
                     </small></div>
                     <div><small><Link href="/admin" target="_blank">Admin</Link></small></div>
+                    <div><small><Link href="https://www.github.com/stjiris/jurisprudencia" target="_blank"><i className="bi bi-github"></i> @stjiris/jurisprudencia</Link></small></div>
                 </div>
                 <button className="btn btn-secondary" type="button" data-bs-dismiss="modal">Fechar</button>
             </div>
