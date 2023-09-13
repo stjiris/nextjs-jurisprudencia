@@ -27,6 +27,9 @@ export default function IndexPage(){
                         <LinkEntry link="/admin/excel" title="Importar/Exportar">
                                 <p>Importar ou exportar excel para atualização dos dados</p>
                         </LinkEntry>
+                        <LinkEntry link="/admin/filters" title="Filtros">
+                                <p>Gerir filtros escondidos ou removidos</p>
+                        </LinkEntry>
                     </div>
                 </div>
             </div>

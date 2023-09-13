@@ -2,15 +2,21 @@ import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/router";
 import { useState } from "react";
 import { modifySearchParams } from "./select-navigate";
+import { JurisprudenciaDocumentKey, JurisprudenciaDocumentKeys } from "@stjiris/jurisprudencia-document";
 
 export const FORM_KEY = "_f";
 export const FORM_SPL = "-"
 
-export const ALL_FORM_KEYS = [{accessKey: "Número de Processo", dontSuggest: true},{accessKey: "ECLI", dontSuggest: true},{accessKey:"Jurisprudência"},{accessKey:"Área"},{accessKey:"Secção"},{accessKey: "Relator Nome Profissional", showKey: "Relator"},{accessKey: "Meio Processual"},{accessKey:"Decisão"},{accessKey:"Votação"},{accessKey:"Tribunal de Recurso"},{accessKey:"Descritores"},{accessKey:"Fonte"},{accessKey:"Área Temática"},{accessKey:"Jurisprudência Estrangeira"},{accessKey:"Jurisprudência Internacional"},{accessKey:"Doutrina"},{accessKey:"Jurisprudência Nacional"},{accessKey:"Legislação Comunitária"},{accessKey:"Legislação Estrangeira"},{accessKey:"Legislação Nacional"},{accessKey:"Referências Internacionais"},{accessKey:"Referência de publicação"},{accessKey:"Indicações Eventuais"}];
-
+export const RENAME: Partial<Record<JurisprudenciaDocumentKey,string>> = {
+    "Relator Nome Profissional": "Relator"
+}
+export const REMOVE: JurisprudenciaDocumentKey[] = ["Original","CONTENT","HASH"];
+export const DONT_SUGGEST: JurisprudenciaDocumentKey[] = ["ECLI","Número de Processo"];
+export const ALL_FORM_KEYS: {accessKey: JurisprudenciaDocumentKey, dontSuggest?: boolean, showKey?: string}[] = JurisprudenciaDocumentKeys.map( o => ({accessKey: o, dontSuggest: DONT_SUGGEST.includes(o), showKey: RENAME[o] ? RENAME[o] : o}))
 export function defaultKeys(){
     // In case we want a different set of default keys
-    return ALL_FORM_KEYS.filter(() => true).map((_v,i) => i);
+    let USE: JurisprudenciaDocumentKey[] = ["Número de Processo","Indicações Eventuais","Sumário","Texto","URL","UUID","ECLI","Fonte","Referência de publicação","Secção","Data","Relator Nome Profissional","Meio Processual","Descritores","Votação","Decisão"]
+    return ALL_FORM_KEYS.filter((key) => USE.includes(key.accessKey)).map((_v,i) => i);
 }
 
 export function useFormOrderedKeys(){

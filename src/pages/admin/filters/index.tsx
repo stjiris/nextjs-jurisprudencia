@@ -1,0 +1,91 @@
+import { DashboardGenericPage } from "@/components/genericPageStructure";
+import { useFetch } from "@/components/useFetch";
+import { getAllKeys } from "@/core/keys";
+import { withAuthentication } from "@/core/user/authenticate";
+import { JurisprudenciaKey, canBeActive } from "@/types/keys";
+import { JurisprudenciaDocumentKey, isJurisprudenciaDocumentContentKey, isJurisprudenciaDocumentDateKeys, isJurisprudenciaDocumentHashKeys, isJurisprudenciaDocumentObjectKeys, isJurisprudenciaDocumentTextKeys } from "@stjiris/jurisprudencia-document";
+import dynamic from "next/dynamic";
+import { NextRouter, useRouter } from "next/router";
+import { CSSProperties, useEffect, useState } from "react";
+const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
+import 'react-quill/dist/quill.snow.css';
+
+export const getServerSideProps = withAuthentication<{}>(async ctx => ({props: {keys: await getAllKeys()}}))
+
+export default function ExcelPage({keys}: {keys: JurisprudenciaKey[]}){
+    return <DashboardGenericPage>
+                <div className="card shadow">
+                    <div className="card-body">
+                        <table className="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th className="text-center" colSpan={2}>Sistema</th>
+                                    <th className="text-center" colSpan={2}>Acessibilidade</th>
+                                    <th className="text-center" colSpan={2}>Filtros</th>
+                                    <th className="text-center" colSpan={2}>Indices</th>
+                                    <th className="text-center" colSpan={1}>Documento</th>
+                                </tr>
+                                <tr>
+                                    <th>Campo</th>
+                                    <th className="text-center">Ativo</th>
+
+                                    <th>Nome</th>
+                                    <th>Descrição</th>
+                                    
+                                    <th className="text-center">Primário</th>
+                                    <th className="text-center">Sugestões</th>
+
+                                    <th className="text-center">Agrupa</th>
+                                    <th className="text-center">Agrupa colunas</th>
+
+                                    <th className="text-center">Mostrar</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {keys.map((k) => <ShowFilterRow key={k.key} innitialKey={k}/>)}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+    </DashboardGenericPage>
+}
+
+function ShowFilterRow({innitialKey}: {innitialKey: JurisprudenciaKey}){
+    let [jurisprudenciaKey, setJurisprudenciaKey] = useState(innitialKey);
+    let [edit, setEdit] = useState(false);
+    let [desc, setDesc] = useState(innitialKey.description);
+    let router = useRouter();
+
+    let update = async (attr: keyof JurisprudenciaKey, value: string | boolean) => {
+        let r = await fetch(`${router.basePath}/api/keys/${encodeURIComponent(innitialKey.key)}/${encodeURIComponent(attr)}`,{
+            method: "PUT",
+            body: JSON.stringify(value)
+        });
+        if( r.status !== 200 ) alert("Algo correu mal a atualizar definições, por favor atualize a página ou tente mais tarde.");
+
+        let values = (await r.json()) as JurisprudenciaKey | null;
+
+        if( values ) setJurisprudenciaKey(values);
+    }
+
+    let disableKey = !canBeActive(jurisprudenciaKey.key);
+    let BooleanInput = ({attr}: {attr: keyof JurisprudenciaKey}) =><input onChange={e => update(attr, e.currentTarget.checked)} className="form-check-input" type="checkbox" checked={jurisprudenciaKey[attr] as boolean}/>
+    let DisabledBooleanInput = ({attr}: {attr: keyof JurisprudenciaKey}) => disableKey ? <></> : <BooleanInput attr={attr} />
+
+    return <>
+        <tr className="align-middle">
+            <th><label className="form-label p-0 m-0">{jurisprudenciaKey.key}</label></th>
+            <td className="text-center"><DisabledBooleanInput attr="active" /></td>
+            <td><input onChange={e => update("name", e.currentTarget.checked)} className="form-control p-0 m-0" type="text" value={jurisprudenciaKey.name}/></td>
+            <td>{!edit ? <button className="btn btn-primary py-0 m-0" onClick={() => setEdit(e => !e)}>Editar</button> : <><button className="btn btn-danger py-0 m-0" onClick={() => {setEdit(false); setDesc(jurisprudenciaKey.description) }}>Cancelar</button><button className="btn btn-primary py-0 m-0" onClick={() => {setEdit(false); update("description", desc)}}>Guardar</button></> }</td>
+            <td className="text-center"><DisabledBooleanInput attr="filtersShow" /></td>
+            <td className="text-center"><DisabledBooleanInput attr="filtersSuggest" /></td>
+            <td className="text-center"><DisabledBooleanInput attr="indicesList" /></td>
+            <td className="text-center table-secondary"><DisabledBooleanInput attr="indicesGroup" /></td>
+            <td className="text-center"><BooleanInput attr="documentShow" /></td>
+        </tr>
+        {edit && <tr style={{"--bs-table-accent-bg": "initial"} as CSSProperties}>
+            <td colSpan={9}><ReactQuill theme="snow" value={desc} onChange={setDesc}/></td>
+        </tr>}
+    </>
+}
