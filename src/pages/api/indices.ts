@@ -16,8 +16,8 @@ export default async function indicesCsvHandler(
     }
 
     let keys = await getAllKeys();
-    let canGroup = keys.find(k => k.name === group)?.indicesGroup;
-    let canAggre = keys.find(k => k.name === term)?.indicesList;
+    let canGroup = keys.find(k => k.key === group)?.indicesGroup;
+    let canAggre = keys.find(k => k.key === term)?.indicesList;
     if(!canGroup){
         group="";
     }

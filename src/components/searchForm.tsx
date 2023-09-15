@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ReadonlyURLSearchParams, useRouter as useNavRouter, useSearchParams } from "next/navigation";
 import { NextRouter, useRouter } from "next/router";
 import { Dispatch, DragEventHandler, SetStateAction, useEffect, useMemo, useRef, useState } from "react";
-import { useFormOrderedKeys } from "./formKeys";
+import { FORM_KEY, useFormOrderedKeys } from "./formKeys";
 import { replaceSearchParams } from "./select-navigate";
 
 function submit(form: HTMLFormElement, router: AppRouterInstance){
@@ -17,6 +17,10 @@ function submit(form: HTMLFormElement, router: AppRouterInstance){
         for( let v of values ){
             searchParams.append(key, v as string)
         }
+    }
+    let keysOrder = new URLSearchParams(window.location.search).get(FORM_KEY);
+    if(keysOrder){
+        searchParams.set(FORM_KEY, keysOrder);
     }
     router.push(`?${searchParams.toString()}`);
 }

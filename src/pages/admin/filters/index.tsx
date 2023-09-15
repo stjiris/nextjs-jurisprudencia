@@ -87,7 +87,7 @@ function ShowFilterRow({innitialKey, update: updateOrder}: {innitialKey: Jurispr
             </td>
             <th><label className="form-label p-0 m-0">{jurisprudenciaKey.key}</label></th>
             <td className="text-center"><DisabledBooleanInput attr="active" /></td>
-            <td><input onChange={e => update("name", e.currentTarget.checked)} className="form-control p-0 m-0" type="text" value={jurisprudenciaKey.name}/></td>
+            <td><input onChange={e => update("name", e.currentTarget.value)} className="form-control p-0 m-0" type="text" value={jurisprudenciaKey.name}/></td>
             <td>{!edit ? <button className="btn btn-primary py-0 m-0" onClick={() => setEdit(e => !e)}>Editar</button> : <><button className="btn btn-danger py-0 m-0" onClick={() => {setEdit(false); setDesc(jurisprudenciaKey.description) }}>Cancelar</button><button className="btn btn-primary py-0 m-0" onClick={() => {setEdit(false); update("description", desc)}}>Guardar</button></> }</td>
             <td className="text-center"><DisabledBooleanInput attr="filtersShow" /></td>
             <td className="text-center"><DisabledBooleanInput attr="filtersSuggest" /></td>
