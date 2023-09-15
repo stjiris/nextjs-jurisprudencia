@@ -9,7 +9,7 @@ import { FormProps, withForm } from "@/components/pageWithForm";
 import { useRouter } from "next/router";
 import { IndicesProps, INDICES_OTHERS } from "@/types/indices";
 import { Loading, SmallSpinner } from "@/components/loading";
-import { SelectTerm } from "../components/SelectTerm";
+import { useKeys } from "@/components/formKeys";
 
 interface IndicesPageProps extends FormProps {
     term: string
@@ -119,12 +119,20 @@ function IndicesTable(props: IndicesPageProps){
 }
 
 function SelectGroup(props: {group: string}){
+    let values = useKeys()?.filter(k => k.indicesGroup) || [{key: props.group, name: props.group}];
     return <SelectNavigate name="group" defaultValue={props.group} valueToHref={(v, params) => `?${modifySearchParams(params, "group", v).toString()}`}>
         <option value="" label="(total)"/>
-        <option value="Área" label="Área"/>
-        <option value="Secção" label="Secção"/>
+        {values.map(k => <option key={k.key} label={k.name} value={k.key}/>)}
     </SelectNavigate>
 }
+
+function SelectTerm(props: {term: string}){
+    let values = useKeys()?.filter(k => k.indicesList) || [{key: props.term, name: props.term}];
+    return <SelectNavigate name="group" defaultValue={props.term} valueToHref={(v, params) => `?${modifySearchParams(params, "term", v).toString()}`}>
+        {values?.map(k => <option key={k.key} label={k.name} value={k.key}/>)}
+    </SelectNavigate>    
+}
+
 function ShowBucketRow(props: {bucket: any, index: number, term: string, group: string, filtersUsed: Record<string, string[]>, searchParams: ReadonlyURLSearchParams, sortedGroup: [string, number][]}){
     const othersCount = props.bucket.Group ? props.bucket.Group.sum_other_doc_count + props.bucket.Group.buckets.reduce((acc:number, b: any) => acc + (props.sortedGroup.find(([s,n]) => s == b.key) != null ? 0 : b.doc_count), 0) : 0;
     return <tr>

@@ -1,5 +1,6 @@
 import { modifySearchParams, SelectNavigate } from "@/components/select-navigate";
 
+// TODO: deprecated useKeys and check 
 export function SelectTerm(props: { term: string; }) {
     return <SelectNavigate name="group" defaultValue={props.term} valueToHref={(v, params) => `?${modifySearchParams(params, "term", v).toString()}`}>
         <Terms/>

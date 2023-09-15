@@ -3,6 +3,7 @@ import search, { createQueryDslQueryContainer, populateFilters, sortAlphabetical
 import { NextApiRequest, NextApiResponse } from "next";
 import { IndicesProps, INDICES_OTHERS } from "@/types/indices";
 import { listAggregation } from "@/components/indices-helpers";
+import { getAllKeys } from "@/core/keys";
 
 export default async function indicesCsvHandler(
     req: NextApiRequest,
@@ -12,6 +13,16 @@ export default async function indicesCsvHandler(
     let group = "Secção";
     if( "group" in req.query ){
         group = Array.isArray(req.query.group) ? req.query.group[0] : req.query.group!;
+    }
+
+    let keys = await getAllKeys();
+    let canGroup = keys.find(k => k.name === group)?.indicesGroup;
+    let canAggre = keys.find(k => k.name === term)?.indicesList;
+    if(!canGroup){
+        group="";
+    }
+    if(!canAggre){
+        return res.json({termAggregation: {buckets:[]}, sortedGroup: []})
     }
 
     const sfilters = {pre: [], after: []};
