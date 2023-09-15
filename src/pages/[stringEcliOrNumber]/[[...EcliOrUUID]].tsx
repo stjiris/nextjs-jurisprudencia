@@ -129,7 +129,7 @@ function DocumentPage(props: {doc: JurisprudenciaDocument, keys: JurisprudenciaK
                     </div>
                 </Row> : 
             <></>}
-            {props.keys.filter(k => k.documentShow && !MUST_HAVE.includes(k.key)).map( k => <DefaultRow doc={props.doc} accessKey={k.key} noLink={!k.indicesList} />)}
+            {props.keys.filter(k => k.documentShow && !MUST_HAVE.includes(k.key)).map( k => <DefaultRow key={k.key} doc={props.doc} accessKey={k.key} noLink={!k.indicesList} />)}
         </div>
         <h6 className="border-top border-2 mt-2"><b>Sumário</b></h6>
         <div className="p-2" dangerouslySetInnerHTML={{__html: props.doc.Sumário!}}></div>
