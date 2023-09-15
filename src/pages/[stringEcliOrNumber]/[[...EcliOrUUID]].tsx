@@ -8,6 +8,11 @@ import Head from "next/head";
 import GenericPage from "@/components/genericPageStructure";
 import { trackClickedDocument } from "@/core/track-search";
 import { useRouter } from "next/router";
+import { getAllKeys } from "@/core/keys";
+import { JurisprudenciaKey } from "@/types/keys";
+import { useFetch } from "@/components/useFetch";
+
+const MUST_HAVE = ["UUID","Número de Processo","Fonte","ECLI","URL","Sumário","Texto"]
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
     let {stringEcliOrNumber,EcliOrUUID,search: searchId} = ctx.query;
@@ -33,18 +38,22 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
         }
     }
 
-    let r = await search({bool: {must}}, {pre:[], after:[]}, 0, {}, 100, {_source: {excludes: ["Original","HASH","Content"]}});
+    let keys = await getAllKeys();
+    let includes = keys.filter(k => k.documentShow || MUST_HAVE.includes(k.key)).map(k => k.key);
+    let excludes = keys.filter(k => !k.documentShow && !MUST_HAVE.includes(k.key)).map(k => k.key);
+
+    let r = await search({bool: {must}}, {pre:[], after:[]}, 0, {}, 100, {_source: {includes, excludes}});
     if( r.hits.hits.length <= 0 ){
         ctx.res.statusCode = 404;
         return {props: {}}
     }
     if( r.hits.hits.length == 1 ){
-        return {props: {doc: r.hits.hits[0]._source}}
+        return {props: {doc: r.hits.hits[0]._source, keys}}
     }
     return {props: {doc: r.hits.hits.map( o => o._source )}}
 }
 
-export default function MaybeDocumentPage(props: {doc?: JurisprudenciaDocument | JurisprudenciaDocument[]}){
+export default function MaybeDocumentPage(props: {doc?: JurisprudenciaDocument | JurisprudenciaDocument[], keys: JurisprudenciaKey[]}){
     let Comp;
     if( !props.doc ){
         Comp = <NoDocumentPage />
@@ -53,7 +62,7 @@ export default function MaybeDocumentPage(props: {doc?: JurisprudenciaDocument |
         Comp = <MultipleDocumentPage docs={props.doc} />
     }
     else{
-        Comp = <DocumentPage doc={props.doc}/>
+        Comp = <DocumentPage doc={props.doc} keys={props.keys}/>
     }
 
 
@@ -93,17 +102,10 @@ function MultipleDocumentPage(props: {docs: JurisprudenciaDocument[]}){
     </>
 }
 
-function DocumentPage(props: {doc: JurisprudenciaDocument}){
-    const [related, setRelated] = useState<JurisprudenciaDocument[]>([]);
-    const router = useRouter()
-
+function DocumentPage(props: {doc: JurisprudenciaDocument, keys: JurisprudenciaKey[]}){
     let proc = props.doc["Número de Processo"]!;
     let uuid = props.doc["UUID"]!;
-    useEffect(() => {
-        fetch(`${router.basePath}/api/related/${encodeURIComponent(proc)}/${uuid}`)
-            .then( r => r.json())
-            .then(l => setRelated(l))
-    }, [proc, uuid, router.basePath])
+    let related = useFetch<JurisprudenciaDocument[]>(`/api/related/${encodeURIComponent(proc)}/${uuid}`, []) || []
     
     return <>
         <Head>
@@ -127,27 +129,7 @@ function DocumentPage(props: {doc: JurisprudenciaDocument}){
                     </div>
                 </Row> : 
             <></>}
-            <DefaultRow doc={props.doc} accessKey="Data" noLink={true} />
-            <DefaultRow doc={props.doc} accessKey="Área" />
-            <DefaultRow doc={props.doc} accessKey="Meio Processual" />
-            <DefaultRow doc={props.doc} accessKey="Relator Nome Profissional" showkey="Relator"/>
-            
-            <DefaultRow doc={props.doc} accessKey="Secção"/>
-            <MultipleRow doc={props.doc} accessKeys={["Tribunal de Recurso","Tribunal de Recurso - Processo"]} showKeys={["T. de Recurso","Processo"]}/>
-            <DefaultRow doc={props.doc} accessKey="Decisão"/>
-            <DefaultRow doc={props.doc} accessKey="Votação"/>
-            <DefaultRow doc={props.doc} accessKey="Descritores"/>
-            <DefaultRow doc={props.doc} accessKey="Jurisprudência Estrangeira"/>
-            <DefaultRow doc={props.doc} accessKey="Jurisprudência Internacional"/>
-            <DefaultRow doc={props.doc} accessKey="Jurisprudência Nacional"/>
-            <DefaultRow doc={props.doc} accessKey="Doutrina"/>
-            <DefaultRow doc={props.doc} accessKey="Legislação Comunitária"/>
-            <DefaultRow doc={props.doc} accessKey="Legislação Estrangeira"/>
-            <DefaultRow doc={props.doc} accessKey="Legislação Nacional"/>
-            <DefaultRow doc={props.doc} accessKey="Referências Internacionais"/>
-            <DefaultRow doc={props.doc} accessKey="Referência de publicação" showkey="R. de publicação"/>
-            <DefaultRow doc={props.doc} accessKey="Área Temática"/>
-            <DefaultRow doc={props.doc} accessKey="Indicações Eventuais"/>
+            {props.keys.filter(k => k.documentShow && !MUST_HAVE.includes(k.key)).map( k => <DefaultRow doc={props.doc} accessKey={k.key} noLink={!k.indicesList} />)}
         </div>
         <h6 className="border-top border-2 mt-2"><b>Sumário</b></h6>
         <div className="p-2" dangerouslySetInnerHTML={{__html: props.doc.Sumário!}}></div>
