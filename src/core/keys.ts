@@ -19,9 +19,9 @@ async function getClient(){
         });
         await client.bulk<JurisprudenciaKey,JurisprudenciaKey>({
             index: KEYS_INFO_INDEX_VERSION,
-            operations: JurisprudenciaDocumentKeys.flatMap(key => [
+            operations: JurisprudenciaDocumentKeys.flatMap((key,i) => [
                 {create: {}},
-                {key: key, name: key, description: "Sem descrição", active: false, filtersSuggest: false, filtersShow: false, indicesList: false, indicesGroup: false}
+                {key: key, name: key, description: "Sem descrição", active: false, filtersSuggest: false, filtersShow: false, filtersOrder: i+1, indicesList: false, indicesGroup: false}
             ])
         })
     }
@@ -33,15 +33,13 @@ export async function getAllKeys(){
     let r = await client.search<JurisprudenciaKey>({
         index: KEYS_INFO_INDEX_VERSION,
         size: JurisprudenciaDocumentKeys.length,
-        sort: {
-            "key": {order:"asc"}
-        }
+        sort: [{
+            "filtersOrder": "asc"
+        },{
+            "key": "asc"
+        }]
     })
     return r.hits.hits.map(h => h._source!);
-}
-
-export function getActiveKeys(){
-    return getAllKeys().then(ks => ks.filter(k => k.active))
 }
 
 export function getKey(k: JurisprudenciaDocumentKey){
@@ -62,9 +60,9 @@ export async function updateKey(key: JurisprudenciaDocumentKey, update: Partial<
     let hit = r.hits.hits[0];
     if(!hit) return;
 
-    if( update.filtersSuggest ) update.filtersShow = true; // if update a boolean that it's dependent of other update it
+    // if update a boolean that it's dependent of other update it
     if( update.indicesGroup ) update.indicesList = true;
-    if( update.filtersShow || update.indicesList ) update.active = true;
+    if( update.filtersSuggest || update.filtersShow || update.indicesList ) update.active = true;
 
     // Can never update internal key
     update = makeValidValue({...hit._source!, ...update, key: key})

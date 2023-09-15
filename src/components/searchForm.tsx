@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ReadonlyURLSearchParams, useRouter as useNavRouter, useSearchParams } from "next/navigation";
 import { NextRouter, useRouter } from "next/router";
 import { Dispatch, DragEventHandler, SetStateAction, useEffect, useMemo, useRef, useState } from "react";
-import { ALL_FORM_KEYS, useFormOrderedKeys } from "./formKeys";
+import { useFormOrderedKeys } from "./formKeys";
 import { replaceSearchParams } from "./select-navigate";
 
 function submit(form: HTMLFormElement, router: AppRouterInstance){
@@ -102,8 +102,7 @@ export default function SearchForm({count, filtersUsed, minAno, maxAno}:{count: 
 
 function SwapableFilterList({filtersUsed}: {filtersUsed: Record<string, string[]>} ){
 
-    let [sort, {move, all, hide}] = useFormOrderedKeys();
-    let allused = sort.length === ALL_FORM_KEYS.length;
+    let [sort, {move, all, hide}, rest] = useFormOrderedKeys();
     let [target, setTarget] = useState<number>();
     let [selected, setSelected] = useState<number>();
 
@@ -136,11 +135,11 @@ function SwapableFilterList({filtersUsed}: {filtersUsed: Record<string, string[]
     return <div data-key="-2" className="border-top">
         <div className="d-flex my-1 pb-1 align-items-baseline">
             <small className="pe-1 text-white"><i className="bi bi-dash"></i></small>
-            <button role="button" className={"bg-white flex-grow border-0 " + (target !== undefined && selected !== undefined || !allused ? "": "text-muted")} onDragOver={dragOver} onClick={(e) => {e.preventDefault(); !allused ? all() : null;}} data-key="-1"><i className="bi bi-eye"></i> Esconder / Repor ({ALL_FORM_KEYS.length - sort.length})</button>
+            <button role="button" className={"bg-white flex-grow border-0 " + (target !== undefined && selected !== undefined || rest!==0 ? "": "text-muted")} onDragOver={dragOver} onClick={(e) => {e.preventDefault(); rest!==0 ? all() : null;}} data-key="-1"><i className="bi bi-eye"></i> Esconder / Repor ({rest})</button>
         </div>
-        {sort.map((k,i) => <div data-key={i} key={i} draggable onDragOver={dragOver} onDragStart={dragStart} onDragEnd={dragEnd} className={"d-flex align-items-baseline " +( selected === i || target === i ? "shadow" : "")}>
+        {sort.map((k,i) => k && <div data-key={i} key={i} draggable onDragOver={dragOver} onDragStart={dragStart} onDragEnd={dragEnd} className={"d-flex align-items-baseline " +( selected === i || target === i ? "shadow" : "")}>
             <small className={`pe-1 ${target!==i ? "text-muted" : ""} cursor-move`} style={{cursor: "move"}}><i className="bi bi-list"></i></small>
-            <FilterList filtersUsed={filtersUsed} accessKey={k.accessKey} showKey={k.showKey} dontSuggest={k.dontSuggest}/>
+            <FilterList filtersUsed={filtersUsed} accessKey={k.key} showKey={k.name} dontSuggest={!k.filtersSuggest}/>
         </div>)}
     </div>
 }

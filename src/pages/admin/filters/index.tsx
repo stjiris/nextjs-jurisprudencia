@@ -1,3 +1,4 @@
+import { useKeys } from "@/components/formKeys";
 import { DashboardGenericPage } from "@/components/genericPageStructure";
 import { useFetch } from "@/components/useFetch";
 import { getAllKeys } from "@/core/keys";
@@ -10,15 +11,19 @@ import { CSSProperties, useEffect, useState } from "react";
 const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
 import 'react-quill/dist/quill.snow.css';
 
-export const getServerSideProps = withAuthentication<{}>(async ctx => ({props: {keys: await getAllKeys()}}))
+export const getServerSideProps = withAuthentication<{}>(async ctx => ({props: {}}))
 
-export default function ExcelPage({keys}: {keys: JurisprudenciaKey[]}){
+export default function ExcelPage(){
+    let [bell, setBell] = useState(0);
+    let update = () => setBell(b => b+1)
+    let keys = useKeys([bell]) || [];
     return <DashboardGenericPage>
                 <div className="card shadow">
                     <div className="card-body">
                         <table className="table table-hover">
                             <thead>
                                 <tr>
+                                    <th className="text-center table-secondary" colSpan={1}></th>
                                     <th className="text-center" colSpan={2}>Sistema</th>
                                     <th className="text-center" colSpan={2}>Acessibilidade</th>
                                     <th className="text-center" colSpan={2}>Filtros</th>
@@ -26,6 +31,7 @@ export default function ExcelPage({keys}: {keys: JurisprudenciaKey[]}){
                                     <th className="text-center" colSpan={1}>Documento</th>
                                 </tr>
                                 <tr>
+                                    <th className="text-center table-secondary">#</th>
                                     <th>Campo</th>
                                     <th className="text-center">Ativo</th>
 
@@ -42,7 +48,7 @@ export default function ExcelPage({keys}: {keys: JurisprudenciaKey[]}){
                                 </tr>
                             </thead>
                             <tbody>
-                                {keys.map((k) => <ShowFilterRow key={k.key} innitialKey={k}/>)}
+                                {keys.map((k) => <ShowFilterRow key={k.key} innitialKey={k} update={update}/>)}
                             </tbody>
                         </table>
                     </div>
@@ -50,13 +56,13 @@ export default function ExcelPage({keys}: {keys: JurisprudenciaKey[]}){
     </DashboardGenericPage>
 }
 
-function ShowFilterRow({innitialKey}: {innitialKey: JurisprudenciaKey}){
+function ShowFilterRow({innitialKey, update: updateOrder}: {innitialKey: JurisprudenciaKey, update: () => void}){
     let [jurisprudenciaKey, setJurisprudenciaKey] = useState(innitialKey);
     let [edit, setEdit] = useState(false);
     let [desc, setDesc] = useState(innitialKey.description);
     let router = useRouter();
 
-    let update = async (attr: keyof JurisprudenciaKey, value: string | boolean) => {
+    let update = async (attr: keyof JurisprudenciaKey, value: any) => {
         let r = await fetch(`${router.basePath}/api/keys/${encodeURIComponent(innitialKey.key)}/${encodeURIComponent(attr)}`,{
             method: "PUT",
             body: JSON.stringify(value)
@@ -74,6 +80,11 @@ function ShowFilterRow({innitialKey}: {innitialKey: JurisprudenciaKey}){
 
     return <>
         <tr className="align-middle">
+            <td className="text-center table-secondary">
+                <button className="btn p-0 m-0" onClick={e => update("filtersOrder", jurisprudenciaKey.filtersOrder-1).then(updateOrder)}><i className="bi bi-arrow-up"></i></button>
+                <label className="mx-1">{jurisprudenciaKey.filtersOrder}</label>
+                <button className="btn p-0 m-0" onClick={e => update("filtersOrder", jurisprudenciaKey.filtersOrder+1).then(updateOrder)}><i className="bi bi-arrow-down"></i></button>
+            </td>
             <th><label className="form-label p-0 m-0">{jurisprudenciaKey.key}</label></th>
             <td className="text-center"><DisabledBooleanInput attr="active" /></td>
             <td><input onChange={e => update("name", e.currentTarget.checked)} className="form-control p-0 m-0" type="text" value={jurisprudenciaKey.name}/></td>
@@ -81,7 +92,7 @@ function ShowFilterRow({innitialKey}: {innitialKey: JurisprudenciaKey}){
             <td className="text-center"><DisabledBooleanInput attr="filtersShow" /></td>
             <td className="text-center"><DisabledBooleanInput attr="filtersSuggest" /></td>
             <td className="text-center"><DisabledBooleanInput attr="indicesList" /></td>
-            <td className="text-center table-secondary"><DisabledBooleanInput attr="indicesGroup" /></td>
+            <td className="text-center"><DisabledBooleanInput attr="indicesGroup" /></td>
             <td className="text-center"><BooleanInput attr="documentShow" /></td>
         </tr>
         {edit && <tr style={{"--bs-table-accent-bg": "initial"} as CSSProperties}>

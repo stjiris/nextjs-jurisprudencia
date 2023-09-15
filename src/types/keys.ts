@@ -9,6 +9,7 @@ export type JurisprudenciaKey = {
     active: boolean
     filtersSuggest: boolean
     filtersShow: boolean
+    filtersOrder: number 
     indicesList: boolean
     indicesGroup: boolean
     documentShow: boolean
@@ -23,6 +24,7 @@ export const KEYS_INFO_PROPERTIES: Record<keyof JurisprudenciaKey, MappingProper
     active: {type: "boolean"},
     filtersSuggest: {type: "boolean"},
     filtersShow: {type: "boolean"},
+    filtersOrder: {type: "float"},
     indicesList: {type: "boolean"},
     indicesGroup: {type: "boolean"},
     documentShow: {type: "boolean"}
@@ -42,9 +44,8 @@ export function makeValidValue(jurisprudenciaKey: JurisprudenciaKey): Jurisprude
     if( !obj.active ) {
         obj.filtersShow = false;
         obj.indicesList = false;
+        obj.filtersSuggest = false;
     }
-    if( !obj.filtersShow ) obj.filtersSuggest = false;
     if( !obj.indicesList ) obj.indicesGroup = false;
-
     return obj;
 }
