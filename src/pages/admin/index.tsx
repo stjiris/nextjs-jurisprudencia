@@ -18,9 +18,6 @@ export default function IndexPage(){
                         <LinkEntry link="/admin/bulk" title="Índices">
                                 <p>Atualizar vários valores de índices ao mesmo tempo</p>
                         </LinkEntry>
-                        <LinkEntry link="/admin/term-info" title="Notas de índices">
-                                <p>Atualizar ou criar notas dos índices</p>
-                        </LinkEntry>
                         <LinkEntry link="/admin/users" title="Utilizadores">
                                 <p>Atualizar, modificar ou criar utilizadores</p>
                         </LinkEntry>
