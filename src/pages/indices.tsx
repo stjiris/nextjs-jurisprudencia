@@ -10,6 +10,8 @@ import { useRouter } from "next/router";
 import { IndicesProps, INDICES_OTHERS } from "@/types/indices";
 import { Loading, SmallSpinner } from "@/components/loading";
 import { useKeys } from "@/components/formKeys";
+import { useFetch } from "@/components/useFetch";
+import { JurisprudenciaKey } from "@/types/keys";
 
 interface IndicesPageProps extends FormProps {
     term: string
@@ -235,16 +237,11 @@ function HistogramModal(){
 }
 
 function TermInfo(props: {term: string}){
-    let router = useRouter();
-    let [termInfo, setTermInfo] = useState<string>();
-
-    useEffect(() => {
-        fetch(`${router.basePath}/api/term-info/${encodeURIComponent(props.term)}`).then( r => r.status == 200 ? r.json() : "Sem informação..." ).then(s => s.length > 0 ? setTermInfo(s) : setTermInfo("Sem informação..."))
-    }, [props.term, router.basePath])
+    let termInfo = useFetch<JurisprudenciaKey>(`/api/keys/${encodeURIComponent(props.term)}`, [])
 
     return <>
         {termInfo !== undefined ? 
-            <div className="alert alert-info m-1 p-1" role="alert" dangerouslySetInnerHTML={{__html: termInfo}}></div>
+            <div className="alert alert-info m-1 p-1" role="alert" dangerouslySetInnerHTML={{__html: termInfo.description}}></div>
             :
             <div className="alert alert-info m-1 p-1" role="alert">
                 <p className="m-0">
