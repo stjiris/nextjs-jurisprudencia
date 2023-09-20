@@ -2,6 +2,8 @@ import search, { aggs, createQueryDslQueryContainer, getElasticSearchClient, pop
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 export function parallelSetsAggregation(terms: string[], numAggs: number): Record<string, any> {
+
+  
     const aggregation = {
         aggs: {
             multi_terms: {

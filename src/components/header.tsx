@@ -4,7 +4,7 @@ import ModalSobre from "./sobre";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation"
 import logoname from '../../public/images/PT-logoLogo-STJ.png'
 
-const NAVEGACAO = ["Pesquisa", "Índices", /*"Estatísticas"*/]
+const NAVEGACAO = ["Pesquisa", "Índices", /* "Dashboard"*/]
 
 export function DashboardHeader(){
     return <>

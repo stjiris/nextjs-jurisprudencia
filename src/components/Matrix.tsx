@@ -1,129 +1,126 @@
-// @ts-nocheck 
-import React, { useEffect, useRef, useState } from 'react';
-import * as d3 from 'd3';
+ import React, { useEffect, useRef, useState } from 'react';
+import { scaleSequential } from 'd3-scale';
+import { select, selectAll } from 'd3-selection'
+import { max } from 'd3-array'
+import { interpolateReds } from 'd3-scale-chromatic';
 
-const adjacencyMatrix = () => {
-    let w = 1, h = 1, value = 1;
-  
-    function layout(sourceNodes: string | any[], targetNodes: string | any[], sourceMatrix: any[][]) {
-      const rowCount = sourceNodes.length;
-      const colCount = targetNodes.length;
-      const cellSize = 20; //Math.max(w / colCount , w / rowCount);
-      //console.log(cellSize);
-      const resultMatrix = [];
-      for (let s = 0; s < rowCount; s++) {
-        for (let t = 0; t < colCount; t++) {
-          const v = sourceMatrix[s][t];
-          
-          const rect = {
-            x: t * cellSize,
-            y: s * cellSize,
-            w: cellSize,
-            h: cellSize
-          };
-          if (v > 0) {
-            const source = sourceNodes[s];
-            const target = targetNodes[t];
-            const edge = { source, target, value: v };
-            resultMatrix.push(Object.assign(edge, rect));
-          } else {
-            resultMatrix.push(Object.assign({}, rect));
-          }
-        }
+interface CellData {
+  source: string;
+  target: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  value?: number
+}
+const cellSize: number = 40;
+
+type MatrixLayoutFn = {
+  (sourceNodes: string[], targetNodes: string[], sourceMatrix: number[][]): any[];
+};  
+const layout: MatrixLayoutFn = (sourceNodes, targetNodes, sourceMatrix) => {
+  const rowCount = sourceNodes.length;
+  const colCount = targetNodes.length;
+  const resultMatrix = [];
+  for (let s = 0; s < rowCount; s++) {
+    for (let t = 0; t < colCount; t++) {
+      const v = sourceMatrix[s][t];
+      const rect = {
+        x: t * cellSize,
+        y: s * cellSize,
+        w: cellSize,
+        h: cellSize
+      };
+      if (v > 0) {
+        const source = sourceNodes[s];
+        const target = targetNodes[t];
+        const edge = { source, target, value: v, ...rect};
+        resultMatrix.push(Object.assign(edge));
+      } else {
+        resultMatrix.push(Object.assign(rect));
       }
-      return resultMatrix;
     }
-  
-    layout.size = function (array: (string | number)[]) {
-      return arguments.length ? (w = +array[0], h = +array[1], layout) : [w, h];
-    }
-    //layout.size = function (array) {
-    //  return arguments.length ? (w = h = Math.min(+array[0], +array[1]), layout) : [w, h];
-    //}
-  
-    return layout;
+  }
+  return resultMatrix;
 }
 
-const highlight = (d: { target: { __data__: any; }; }) => {
+const highlight = (d: { target: { __data__: CellData; }; }) => {
     const data = d.target.__data__;
-    d3.selectAll('.cell').filter(k => !(k.x === data.x || k.y === data.y)).style("opacity", .3);
-  //d3.selectAll('.cell').filter(k => k.x === data.x || k.y === data.y).style("stroke", "black").style("stroke-width", 0.5);
-  // Highlight source text
-  d3.selectAll('text.source')
+    selectAll<SVGElement, CellData>('.cell')
+    .filter(function(k) {
+      const cellData = select(this).datum() as CellData;
+      return !(cellData.x === data.x || cellData.y === data.y);
+    })
+      .style("opacity", .3);
+
+  selectAll('text.source')
     .style("fill", function(_, i) {
-      const text = d3.select(this).text();
+      const text = select(this).text();
       return text === data.source ? "black" : "grey";
     });
 
   // Highlight target text
-  d3.selectAll('text.target')
+  selectAll('text.target')
     .style("fill", function(_, i) {
-      const text = d3.select(this).text();
+      const text = select(this).text();
       return text === data.target ? "black" : "grey";
     });
   };
   
 
 const fade = (d: any) => {
-    d3.selectAll(".cell, text.source, text.target").style("opacity", 1).style("font-weight", "normal").style("font-size", "100%").style("fill", "black").style("stroke-width", 0);
-    d3.select('.tooltip').style("opacity", 0);
+    selectAll(".cell, text.source, text.target").style("opacity", 1).style("font-weight", "normal").style("font-size", "100%").style("fill", "black").style("stroke-width", 0);
+    select('.tooltip').style("opacity", 0);
 }
 
-const MatrixChart = ({ data }) => {
+const MatrixChart = ( { data, onDataSelect }: { data: any,  onDataSelect: any } ) => {
   const svgRef = useRef(null);
   const chartRef = useRef(null);
-  const rowCount = data.matrix.buckets.length;
-  const colCount = data.matrix.buckets[0].matrix.buckets.length;
-  const cellSize = 30;
-  const [chartWidth, setChartWidth] = useState(colCount * cellSize);
-  const [chartHeight, setChartHeight] = useState(rowCount * cellSize);
-  const reorderMatrixByCount = (matrixData: any[]) => {
+  const reorderMatrixByCount = (matrixData: MatrixAggregationBucket[]) => {
     if (!matrixData || matrixData.length === 0) {
       return [[], [], []]; 
     }
     
     const terms1 = matrixData
-      .map((bucket: { key: any; matrix: { doc_count: any; }; }) => ({ key: bucket.key, count: bucket.matrix.doc_count }))
-      .sort((a: { count: number; }, b: { count: number; }) => b.count - a.count)
-      .map((bucket: { key: any; }) => bucket.key);
+      .map((bucket) => ({ key: bucket.key, count: bucket.doc_count }))
+      .sort((a, b) => b.count - a.count)
+      .map((bucket) => bucket.key);
   
-    const allBuckets = matrixData.flatMap((bucket: { matrix: { buckets: any; }; }) => bucket.matrix.buckets);
+    const allBuckets = matrixData.flatMap((bucket) => bucket.matrix.buckets);
   
-    const terms2 = Array.from(new Set(allBuckets.map((bucket: { key: any; }) => bucket.key)))
+    const terms2 = Array.from(new Set(allBuckets.map((bucket) => bucket.key)))
       .sort((a, b) => {
-        const countA = allBuckets.filter((bucket: { key: unknown; }) => bucket.key === a)[0].doc_count;
-        const countB = allBuckets.filter((bucket: { key: unknown; }) => bucket.key === b)[0].doc_count;
+        const countA = allBuckets.find((bucket) => bucket.key === a)?.doc_count || 0;
+        const countB = allBuckets.find((bucket) => bucket.key === b)?.doc_count || 0;
         return countB - countA;
       });
   
-    const x: any[][] = [];
-    terms1.forEach((term1: any) => {
-      const row: any[] = [];
+    const x: number[][] = [];
+    terms1.forEach((term1) => {
+      const row: number[] = [];
   
       terms2.forEach((term2) => {
         const bucket = matrixData.find(
-          (b: { key: any; matrix: { buckets: any[]; }; }) => b.key === term1 && b.matrix.buckets.find((bucket: { key: unknown; }) => bucket.key === term2)
+          (b) => b.key === term1 && b.matrix.buckets.find((bucket) => bucket.key === term2)
         );
   
-        const docCount = bucket ? bucket.matrix.buckets.find((bucket: { key: unknown; }) => bucket.key === term2).doc_count : 0;
+        const docCount = bucket ? bucket.matrix.buckets.find((bucket) => bucket.key === term2)?.doc_count || 0 : 0;
   
         row.push(docCount);
       });
   
       x.push(row);
     });
-    
+  
     return [terms1, terms2, x];
   };
   
-
-  const reorderMatrixByName = (matrixData: any[]) => {
+  const reorderMatrixByName = (matrixData: MatrixAggregationBucket[]) => {
     if (!matrixData || matrixData.length === 0) {
       return [[], [], []];
     }
-  
     const terms1 = matrixData
-      .map((bucket: { key: any; }) => bucket.key)
+      .map((bucket: { key: string; }) => bucket.key)
       .sort((a: string, b: string) => {
         if (a.startsWith('sem') && !b.startsWith('sem')) return 1;
         if (!a.startsWith('sem') && b.startsWith('sem')) return -1;
@@ -142,17 +139,15 @@ const MatrixChart = ({ data }) => {
       return a.localeCompare(b);
     });
   
-    const x: any[][] = [];
+    const x: number[][] = [];
     terms1.forEach((term1: any) => {
-      const row: any[] = [];
+      const row: number[] = [];
   
       terms2.forEach((term2) => {
-        const bucket = matrixData.find(
-          (b: { key: any; matrix: { buckets: any[]; }; }) => b.key === term1 && b.matrix.buckets.find((bucket: { key: unknown; }) => bucket.key === term2)
-        );
-  
-        const docCount = bucket ? bucket.matrix.buckets.find((bucket: { key: unknown; }) => bucket.key === term2).doc_count : 0;
-  
+        const bucket = matrixData.find((b) => b.key === term1 && b.matrix.buckets.find((bucket) => bucket.key === term2));
+
+        const docCount = bucket?.matrix.buckets.find((bucket) => bucket.key === term2)?.doc_count || 0;
+    
         row.push(docCount);
       });
   
@@ -184,9 +179,8 @@ const MatrixChart = ({ data }) => {
   };
   useEffect(() => {
     const margin = { top: 200, right: 50, bottom: 50, left: 200 };
-    const svg = d3.select(svgRef.current);
-
-    if (!data || !data.matrix || !data.matrix.buckets) {
+    const svg = select(svgRef.current);
+    if (!data || !data.matrix|| !data.matrix.buckets) {
       console.error('Invalid data format');
       return;
     }
@@ -197,18 +191,15 @@ const MatrixChart = ({ data }) => {
       return;
     }
 
-    const [terms1, terms2, x] = reorderFunction(matrixData);
+    const [terms1, terms2, x] = reorderFunction(matrixData) as [string[], string[], number[][]];;
 
     const rowCount = terms1.length;
     const colCount = terms2.length;
-    // Calculate the height based on the number of rows and other factors
-    const cellSize = 30;
     const chartW = colCount * cellSize;
     const chartH = rowCount * cellSize;
-    const matrix = adjacencyMatrix().size([chartW, chartH]);
-    const resultdata = matrix(terms1, terms2, x);
-    const color = d3.scaleSequential(d3.interpolateReds)
-    .domain([0,d3.max(resultdata, d => d.value)]);
+    const resultdata = layout(terms1, terms2, x);
+    const color = scaleSequential(interpolateReds)
+    .domain([0,max(resultdata, d => d.value)]);
 
     svg.attr("width", chartW + margin.left + margin.right)
     .attr("height", chartH + margin.top + margin.bottom);
@@ -251,19 +242,29 @@ const MatrixChart = ({ data }) => {
         .text((d) => (d.value ? d.value : 0));
       
       cell.on("mouseover", function () {
-        d3.select(this).raise();
-        d3.select(this).select("text.value").style("opacity", 1);
+        select(this).raise();
+        select(this).select("text.value").style("opacity", 1);
       });
       
       cell.on("mouseout", function () {
-        d3.select(this).select("text.value").style("opacity", 0);
+        select(this).select("text.value").style("opacity", 0);
+      });
+
+      cell.on("click", function () {
+        const dataArray: any = select(this).selectAll("text.value").data()[0];
+         
+        if (dataArray.source && dataArray.target) {
+          const sourceValue = dataArray.source;
+          const targetValue = dataArray.target;
+          onDataSelect(sourceValue, targetValue);
+        }
       });
 
     // Add clip-path for text truncation
     chart
       .append('defs')
       .selectAll('clipPath')
-      .data(resultdata.filter((d) => d.x === 0))
+      .data(resultdata.filter((d: { x: number; }) => d.x === 0))
       .enter()
       .append('clipPath')
       .attr('id', (d, i) => `clip-source-${i}`)
@@ -274,7 +275,7 @@ const MatrixChart = ({ data }) => {
 
     chart
       .selectAll('text.source')
-      .data(resultdata.filter((d) => d.x === 0))
+      .data(resultdata.filter((d: { x: number; }) => d.x === 0))
       .enter()
       .append('text')
       .attr('class', 'source')
@@ -303,7 +304,6 @@ const MatrixChart = ({ data }) => {
         .style("stroke", 'black');
     tooltip.append("text");
 
-    
     return () => {
         svg.selectAll(".cell").remove();
         svg.selectAll("text.source").remove();
@@ -314,15 +314,18 @@ const MatrixChart = ({ data }) => {
     }; 
   }, [data, reorderFunction]);
 
-  return     <div ref={chartRef} style={{ width: '100%', height: '100%' }} >
-    <button onClick={handleReorderCount} style={getButtonStyle(reorderMatrixByCount)}>
+  return <div>
+    <button onClick={handleReorderCount} className="apply-button">
         Ordenar por contagem
     </button>
-    <button onClick={handleReorderName} style={getButtonStyle(reorderMatrixByName)}>
+    <button onClick={handleReorderName} className="apply-button">
         Ordenar alfabéticamente
     </button>
-  <svg ref={svgRef} />
+    <div ref={chartRef} >
+      <svg ref={svgRef} />
+    </div>  
 </div>
 };
 
 export default MatrixChart;
+

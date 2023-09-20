@@ -33,7 +33,7 @@ export default function Home() {
         </div>
         <div className="card m-1 p-1 text-muted">
           <div className="card-body">
-            <h5 className="card-title">Ver estatísticas</h5>
+            <h5 className="card-title">Explorar Dashboard</h5>
             <h6 className="card-subtitle mb-2 text-muted"></h6>
             <div className="card-text"></div>
             <Link href="/estatisticas">Entrar</Link>

@@ -1,0 +1,133 @@
+/* For smaller screens */
+@media (max-width: 768px) {
+    .layout {
+      grid-template-columns: repeat(1, 1fr);
+      grid-template-rows: auto;
+    }
+  }
+  
+  /* For medium screens */
+  @media (min-width: 769px) and (max-width: 1200px) {
+    .layout {
+      grid-template-columns: repeat(2, 1fr);
+      grid-template-rows: auto;
+    }
+  }
+  
+  /* For larger screens */
+  @media (min-width: 1201px) {
+    .layout {
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: auto;
+    }
+  }
+  
+/* CSS in a separate file or style block within the component */
+.visualization-frame {
+    border: 2px solid #ccc;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    position: relative; /* Ensure proper positioning of the resize handle */
+}
+  
+/* For mobile screens, stack the visualization-frame items vertically */
+.visualization-frame.mobile {
+    display: block;
+}
+
+.drag-handle {
+    background-color: lightblue;
+    color: white;
+    font-weight: bold;
+    padding: 5px;
+    cursor: move;
+}
+
+.resize-handle {
+    cursor: se-resize;
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 20px; /* Adjust the width of the resize handle as needed */
+    height: 20px; /* Adjust the height of the resize handle as needed */
+}
+
+* {
+    box-sizing: border-box;
+  }
+
+.tooltip {
+    position: absolute;
+    z-index: 1;
+    background-color: #555;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 5px;
+    transition: opacity 0.3s;
+}  
+
+
+.filter-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filter-box {
+  background-color: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.filter-box button {
+  background-color: #ccc;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  padding: 4px;
+  width: 24px; /* Added width property to make it circular */
+  height: 24px; /* Added height property to make it circular */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 14px; /* Adjust font size as needed */
+}
+
+.filter-box button:hover {
+  background-color: #ff2600;
+}
+
+.apply-button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.apply-button:hover {
+  background-color: #0056b3;
+}
+
+.sticky-filters {
+  position: sticky;
+  top: 0;
+  background-color: #fff;
+  z-index: 100;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  padding: 10px;
+}
+
+.visible-span {
+  color: black;
+  font-size: 18px;
+  font-weight: bold;
+}
