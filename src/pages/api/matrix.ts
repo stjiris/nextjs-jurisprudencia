@@ -1,12 +1,12 @@
 import search, { aggs, createQueryDslQueryContainer, getElasticSearchClient, populateFilters, SearchFilters } from '@/core/elasticsearch';
 import type { NextApiRequest, NextApiResponse } from 'next';
-//import '@/styles/vis.css'
+
 export function matrixAggregation(term1: string, term2: string): Record<string, any> {
   return {
     matrix: {
       terms: {
         field: aggs[term1].terms?.field?.replace("keyword","raw"),
-        size: 15,
+        size: 50,
       },
       aggs: {
         matrix: {

@@ -1,25 +1,53 @@
-// @ts-nocheck 
 import React, { useEffect, useRef, useState } from 'react';
 import { sankey, sankeyLinkHorizontal } from 'd3-sankey';
-import * as d3 from 'd3';
+import ResizeObserver from 'resize-observer-polyfill'; 
+import { updateTooltipPosition } from '@/pages/dashboard';
+import { select } from 'd3-selection'
+import { scaleOrdinal } from 'd3-scale';
 
-const ParallelSets = ({ parallelSetsData }) => {
-  const svgRef = useRef<HTMLDivElement>(null);
-  const margin = { top: 20, right: 20, bottom: 20, left: 100 };
-  const width = 900; //container.node()!.clientWidth;
+
+type DynamicDataAgg = {
+  [key: string]: string | number;
+};
+
+interface SankeyNodeData {
+  [key: string]: string | number;
+}
+
+interface SankeyLinkData {
+  [key: string]: string | number;
+}
+
+const ParallelSets = ({ parallelSetsData, onDataSelect }: {parallelSetsData: ParallelSetsDataSource, onDataSelect: any}) => {
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  const [containerWidth, setContainerWidth] = useState(0);
+  const [containerHeight, setContainerHeight] = useState(600);
   //const height = 720 - margin.top - margin.bottom;
+  const containerWidthRef = useRef(containerWidth);
+  const containerHeightRef = useRef(containerHeight);
   const height = 600;
   const [selectedNode, setSelectedNode] = useState(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
 
+  const handleResize = (entries: ResizeObserverEntry[]) => {
+    for (const entry of entries) {
+      const { width, height } = entry.contentRect;
+      containerWidthRef.current = width;
+      containerHeightRef.current = height;
+    }
+  };
   useEffect(() => {
-    const container = d3.select(svgRef.current!);
-    //const height = 600; //container.node()!.clientWidth!
-    //const width = 900//container.node()!.clientWidth;
+    const containerElement = document.getElementById("parallelsets-container") as Element;
+    const observer = new ResizeObserver(handleResize); // Use the function as the callback
+    observer.observe(containerElement);
+  
+    return () => observer.disconnect();
+  }, []);
+  useEffect(() => {
+    const container = select(svgRef.current!);
+    const width = container.node()!.clientWidth;
 
-    //console.log(parallelSetsData);
-    let data = Object.values(parallelSetsData).flat();
-    data = parallelSetsData.map(entry => {
+    let data: DynamicDataAgg[] = parallelSetsData.map(entry => {
       const newData: { [key: string]: any } = {};
       for (let i = 0; i < entry.key.length; i++) {
         newData[`level${i}`] = entry.key[i];
@@ -37,51 +65,38 @@ const ParallelSets = ({ parallelSetsData }) => {
         if (a[field] > b[field]) return -1;
       }
 
-      return b.value - a.value;
+      return Number(b.value) - Number(a.value);
     });
-    const svg = d3.select(svgRef.current)
+    const svg = select(svgRef.current)
     .attr("viewBox", [0, 0, width, height]);
     // Create the parallel sets chart
     const createParallelSets = () => {
-      const level0Values = new Set();
-      data.forEach(item => {
-        level0Values.add(item.level0);
-      })
-      const color = d3.scaleOrdinal(Array.from(level0Values), ["#da4f81", "#f1c40f", "#2ecc71", "#3498db", "#e67e22"]);
+      const level0Values: Set<string> = new Set();
+      data.forEach((item) => level0Values.add(item.level0.toString()));
+      const color = scaleOrdinal(Array.from(level0Values), [
+        '#a6cee3',
+        '#1f78b4',
+        '#b2df8a',
+        '#33a02c',
+        '#fb9a99',
+        '#e31a1c',
+        '#fdbf6f',
+        '#ff7f00',
+        '#cab2d6',
+        '#6a3d9a'
+      ]);
       const keys = fieldOrder.slice(0, -1);
-      const handleMouseover = (event, d) => {
+
+      const handleMousemove = (event: MouseEvent, d: any) => {
         setSelectedNode(d);
-      
-        // Highlight connected links and nodes
-        const connectedLinks = svg.selectAll('.link').filter((linkData) =>
-          linkData.names.includes(d.name)
-        );
-        const connectedNodes = svg.selectAll('.node').filter((nodeData) =>
-          connectedLinks.data().some((link) => link.source === nodeData || link.target === nodeData)
-        );
-      
-        connectedLinks.attr('opacity', 1);
-        connectedNodes.attr('opacity', 1);
         const tooltipNode = tooltipRef.current;
-        // Show tooltip
-        d3.select(tooltipNode).style('opacity', 1).html(
-          `<strong>${d.names.join(' → ')}</strong><pt />${d.value ? d.value.toLocaleString() : ''}`
-        );
-        tooltipNode.style.fontSize = '10px';
-      
-        // Update tooltip position based on mouse cursor
-        const { clientX, clientY } = event;
-        
-        const boundingRect = tooltipNode.getBoundingClientRect();
-        const tooltipWidth = boundingRect.width;
-        const tooltipHeight = boundingRect.height;
-      
-        // Adjust tooltip position to stay within the SVG bounds
-        const x = Math.min(Math.max(clientX - tooltipWidth, 0), width - tooltipWidth);
-        const y = Math.min(Math.max(clientY - tooltipHeight - 10, 0), height - tooltipHeight);
-      
-        tooltipNode.style.left = `${x}px`;
-        tooltipNode.style.top = `${y}px`;
+        if (tooltipNode) {
+          // Show tooltip
+          select(tooltipNode).style('opacity', 1).html(
+            `<strong>${d.names.join(' → ')}</strong><pt />${d.value ? d.value.toLocaleString() : ''}`
+          );
+          updateTooltipPosition(tooltipNode, event, "parallelsets-container");
+        }  
       };
       
     
@@ -93,19 +108,21 @@ const ParallelSets = ({ parallelSetsData }) => {
         svg.selectAll('.node').attr('opacity', 1);
     
         // Hide tooltip
-        d3.select(tooltipRef.current).style('opacity', 0).style('opacity', 0);
+        select(tooltipRef.current).style('opacity', 0).style('opacity', 0);
     
-        // Hide vertical line
-        //verticalLine.style('opacity', 0);
       };
-      const sankeyGenerator = sankey()
-        .nodeSort(null)
-        .linkSort(null)
+
+      const handleClick = (event: MouseEvent, d: any) => {
+        onDataSelect(d.names);
+      }
+      const sankeyGenerator = sankey<SankeyNodeData, SankeyLinkData>()
+        .nodeSort(() => 0)
+        .linkSort(() => 0)
         .nodeWidth(4)
         .nodePadding(10)
         .extent([[0, 5], [width, height - 5]]);
 
-      const graph = (data) => {
+      const graph = (data : DynamicDataAgg[]) => {
         const nodeByKey = new Map();
         const indexByKey = new Map();
         const nodes = [];
@@ -132,8 +149,8 @@ const ParallelSets = ({ parallelSetsData }) => {
           for (const d of data) {
             const names = prefix.map(k => d[k]);
             const key = JSON.stringify(names);
-            const value = d.value || 1;
-
+            const value = Number(d.value) || 1; // Ensure value is always a number
+      
             let link = linkByKey.get(key);
             if (link) {
               link.value += value;
@@ -157,23 +174,20 @@ const ParallelSets = ({ parallelSetsData }) => {
       const graphData = graph(data);
 
       const { nodes, links } = sankeyGenerator({
-        nodes: graphData.nodes.map(d => Object.assign({}, d)),
-        links: graphData.links.map(d => Object.assign({}, d))
+        nodes: graphData.nodes.map(d => ({ ...d })),
+        links: graphData.links.map(d => ({ ...d }))
       });
-
-      const nodeElements = svg.append('g')
+      const nodeElements = svg
+        .append('g')
         .selectAll('rect')
         .data(nodes)
         .join('rect')
-        .attr('x', (d) => d.x0)
-        .attr('y', (d) => d.y0)
-        .attr('height', (d) => d.y1 - d.y0)
-        .attr('width', (d) => d.x1 - d.x0)
-        //.on('mouseover', handleMouseover)
-        //.on('mouseout', handleMouseout);
-         
-        //.append('title')
-        //.text((d) => `${d.name}\n${d.value ? d.value.toLocaleString() : ''}`);
+        .attr('x', (d) => d.x0 ?? 0)
+        .attr('y', (d) => d.y0 ?? 0)
+        .attr('height', (d) => (d.y1 ?? 0) - (d.y0 ?? 0))
+        .attr('width', (d) => (d.x1 ?? 0) - (d.x0 ?? 0))
+        .attr('fill', '#69b3a2')
+        .attr('opacity', 0.8);
 
         const linkElements = svg.append('g')
         .attr('fill', 'none')
@@ -181,28 +195,29 @@ const ParallelSets = ({ parallelSetsData }) => {
         .data(links)
         .join('path')
         .attr('d', sankeyLinkHorizontal())
-        .attr('stroke', (d) => color(d.names[0]))
-        .attr('stroke-width', (d) => d.width)
+        .attr('stroke', (d) => color(Array.isArray(d.names) ? d.names[0] : d.names))
+        .attr('stroke-width', (d) => d.width  ?? 0)
         .style('mix-blend-mode', 'multiply')
-        //.on('mouseover', handleMouseover)
-        //.on('mouseout', handleMouseout);
-        .append('title')
-        .text((d) => `${d.names.join(' → ')}\n${d.value ? d.value.toLocaleString() : ''}`);
+        .on('mousemove', handleMousemove)
+        .on('mouseout', handleMouseout)
+        .on('click', handleClick);
 
-      svg.append('g')
+        const textElements = svg
+        .append('g')
         .style('font', '10px sans-serif')
         .selectAll('text')
         .data(nodes)
         .join('text')
-        .attr('x', (d) => (d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6))
-        .attr('y', (d) => (d.y1 + d.y0) / 2)
+        .attr('x', (d) => (d.x0 !== undefined ? (d.x0 < width / 2 ? d.x1! + 6 : d.x0 - 6) : 0))
+        .attr('y', (d) => (d.y1 !== undefined && d.y0 !== undefined ? (d.y1 + d.y0) / 2 : 0))
         .attr('dy', '0.35em')
-        .attr('text-anchor', (d) => (d.x0 < width / 2 ? 'start' : 'end'))
-        .text((d) => d.name)
+        .attr('text-anchor', (d) => (d.x0 !== undefined && d.x0 < width / 2 ? 'start' : 'end'))
+        .text((d) => (d.name !== undefined ? d.name : ''))
         .append('tspan')
         .attr('fill-opacity', 0.7)
         .text((d) => `${d.value ? d.value.toLocaleString() : ''}`);
-    };
+      
+      };
 
     createParallelSets();
     return () => {
@@ -215,19 +230,7 @@ const ParallelSets = ({ parallelSetsData }) => {
     <div style={{ position: 'relative' }}>
       <svg ref={svgRef} id="parallelsets-container" style={{ position: 'relative' }}/>
       <div ref={tooltipRef}
-        style={{
-          position: 'absolute',
-          zIndex: 1,
-          backgroundColor: '#555',
-          color: '#fff',
-          textAlign: 'center',
-          borderRadius: '6px',
-          padding: '5px',
-          transition: 'opacity 0.3s',
-          //opacity: selectedNode ? 1 : 0.4,
-          //top: selectedNode ? selectedNode.y0 : 0,
-          //left: selectedNode ? selectedNode.x1 + 10 : 0,
-        }}
+           className="tooltip"
       />
     </div>  
   );

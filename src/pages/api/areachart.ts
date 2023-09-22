@@ -1,5 +1,4 @@
-import search, { aggs, createQueryDslQueryContainer, getElasticSearchClient, populateFilters, SearchFilters } from '@/core/elasticsearch';
-import { long, SearchTotalHits } from '@elastic/elasticsearch/lib/api/types';
+import search, { aggs, createQueryDslQueryContainer, populateFilters, SearchFilters } from '@/core/elasticsearch';
 import type { NextApiRequest, NextApiResponse } from 'next';
 export function areachartAggregation(key: string): Record<string, any> {
   return {
@@ -8,7 +7,7 @@ export function areachartAggregation(key: string): Record<string, any> {
     [key]: {
       terms: {
         field: aggs[key].terms?.field?.replace("keyword","raw"),
-        size: 20
+        size: 10
       },
       aggs: {
         MinAno: aggs.MinAno,
@@ -72,15 +71,6 @@ export default async function areachartHandler(
   try {
     const body = await search(createQueryDslQueryContainer(req.query.q), sfilters, 0, areachartAggregation(aggKey), 0);
     const aggs = body?.aggregations?.[aggKey];
-    let total = 0;
-    if( body.hits.total ){
-        if( Number.isInteger(body.hits.total) ){
-            total = body.hits.total as long;
-        }
-        else{
-            total = (body.hits.total as SearchTotalHits).value;
-        }
-    }
     
     if (!aggs) {
       return res.status(400).json({});

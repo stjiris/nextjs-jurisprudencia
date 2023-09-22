@@ -32,3 +32,14 @@ export function Terms(){
         <option value="Indicações Eventuais" label="Indicações Eventuais" />
     </>
 }
+
+export function DahboardTerms(){
+    return <>
+        <option value="Área" label="Área" />
+        <option value="Secção" label="Secção" />
+        <option value="Relator Nome Profissional" label="Relator Nome Profissional" />
+        <option value="Meio Processual" label="Meio Processual" />
+        <option value="Descritores" label="Descritores" />
+        <option value="Votação" label="Votação" />
+    </>
+}
