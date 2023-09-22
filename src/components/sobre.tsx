@@ -1,6 +1,7 @@
 import Link from "next/link";
 import banner from '../../public/images/stjiris-banner.png'
 import Image from "next/image";
+import { useFetch } from "./useFetch";
 
 export default function ModalSobre(){
     return <div className="modal fade" id="modal-about" tabIndex={-1} role="dialog" aria-labelledby="modal-label" aria-hidden="true">
@@ -10,6 +11,7 @@ export default function ModalSobre(){
                 <div>
                     <h5 className="modal-title" id="modal-label">Sobre a Jurisprudência</h5>
                     <p className="m-0">Permite explorar, pesquisar e filtrar os acórdãos publicados pelo Supremo Tribunal de Justiça na <a href="http://www.dgsi.pt/" target="_blank">DGSI.pt</a>.</p>
+                    <ShowVersion />
                 </div>
             </div>
             <div className="modal-body">
@@ -61,4 +63,14 @@ export default function ModalSobre(){
         </div>
     </div>
 </div>
+}
+
+function ShowVersion(){
+    let info = useFetch<{version: string, report: {dateEnd: string}}>("/api/index-info", []);
+    let intl = new Intl.DateTimeFormat("pt-PT",{dateStyle: "medium", timeStyle: "short"});
+
+    return <p className="m-0">
+        {info?.version && <><small>Versão: {info?.version}</small><br/></>}
+        {info?.report.dateEnd && <small>Última actualização: {intl.format(new Date(info?.report.dateEnd))}</small>}
+    </p>
 }
