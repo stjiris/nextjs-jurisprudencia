@@ -10,7 +10,7 @@ export default function ModalSobre(){
             <div className="modal-header">
                 <div>
                     <h5 className="modal-title" id="modal-label">Sobre a Jurisprudência</h5>
-                    <p className="m-0">Permite explorar, pesquisar e filtrar os acórdãos publicados pelo Supremo Tribunal de Justiça na <a href="http://www.dgsi.pt/" target="_blank">DGSI.pt</a>.</p>
+                    <p className="m-0">Permite explorar, pesquisar e filtrar os acórdãos publicados pelo Supremo Tribunal de Justiça.</p>
                     <ShowVersion />
                 </div>
             </div>
