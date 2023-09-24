@@ -4,7 +4,7 @@ import { AppRouterInstance } from "next/dist/shared/lib/app-router-context";
 import Link from "next/link";
 import { ReadonlyURLSearchParams, useRouter as useNavRouter, useSearchParams } from "next/navigation";
 import { NextRouter, useRouter } from "next/router";
-import { Dispatch, DragEventHandler, SetStateAction, useEffect, useMemo, useRef, useState } from "react";
+import { Dispatch, DragEventHandler, SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FORM_KEY, useFormOrderedKeys } from "./formKeys";
 import { replaceSearchParams } from "./select-navigate";
 
@@ -27,13 +27,23 @@ function submit(form: HTMLFormElement, router: AppRouterInstance){
 
 export default function SearchForm({count, filtersUsed, minAno, maxAno}:{count: number, filtersUsed: Record<string, string[]>, minAno: number, maxAno: number}) {
     const form = useRef<HTMLFormElement>(null);
+    const dataInicio = useRef<HTMLInputElement>(null);
+    const dataFim = useRef<HTMLInputElement>(null);
     const router = useNavRouter();
+    let resetDatas = useCallback(() => {
+        if( dataInicio.current ) dataInicio.current.value = ""
+        if( dataFim.current ) dataFim.current.value = ""
+    },[dataFim, dataInicio])
     useEffect(() => {
         const element = form.current;
         const handleSubmit = () => {
             if( element?.checkValidity() ){
                 submit(element, router);
+                let valueDataInicio = dataInicio.current?.value;
+                let valueDataFim = dataFim.current?.value;
                 form.current?.reset();
+                if(dataInicio.current && valueDataInicio) dataInicio.current.value = valueDataInicio
+                if(dataFim.current && valueDataFim) dataFim.current.value = valueDataFim
             }
             else{
                 element?.reportValidity();
@@ -61,7 +71,8 @@ export default function SearchForm({count, filtersUsed, minAno, maxAno}:{count: 
                 {Object.keys(filtersUsed).length > 0 || q ? 
                     <Link
                         className="text-danger text-decoration-none"
-                        href={"?"+[term ? `term=${encodeURIComponent(term)}`: "", group ? `group=${encodeURIComponent(group)}`: ""].filter(s => s.length > 0).join("&")}>
+                        href={"?"+[term ? `term=${encodeURIComponent(term)}`: "", group ? `group=${encodeURIComponent(group)}`: ""].filter(s => s.length > 0).join("&")}
+                        onClick={resetDatas}>
                             <i className="bi bi-eraser-fill"></i> Limpar
                         </Link>
                 : ""}
@@ -76,13 +87,13 @@ export default function SearchForm({count, filtersUsed, minAno, maxAno}:{count: 
                     <div className="input-group-prepend flex-shrink">
                         <label htmlFor="data_inicio" className="input-group-text rounded-0 p-1">De:</label>
                     </div>
-                    <input id="data_inicio" type="number" className="form-control form-control-sm rounded-0 p-1" name="MinAno" min={minAno} max={maxAno} defaultValue={search.get("MinAno") || ""} step={1} placeholder={`${minAno}`}/>
+                    <input id="data_inicio" type="number" className="form-control form-control-sm rounded-0 p-1" name="MinAno" min={minAno} max={maxAno} defaultValue={search.get("MinAno") || ""} step={1} placeholder={`${minAno}`} ref={dataInicio}/>
                 </div>
                 <div className="input-group input-group-sm">
                     <div className="input-group-prepend flex-shrink">
                         <label htmlFor="data_fim" className="input-group-text rounded-0 p-1">Até:</label>
                     </div>
-                    <input id="data_fim" type="number" className="form-control form-control-sm rounded-0 p-1" name="MaxAno" min={minAno} max={maxAno} defaultValue={search.get("MaxAno") || ""} step={1} placeholder={`${maxAno}`}/>
+                    <input id="data_fim" type="number" className="form-control form-control-sm rounded-0 p-1" name="MaxAno" min={minAno} max={maxAno} defaultValue={search.get("MaxAno") || ""} step={1} placeholder={`${maxAno}`} ref={dataFim}/>
                 </div>
             </div>
             {"hasField" in filtersUsed ? <div className="d-flex align-items-baseline">
@@ -139,7 +150,7 @@ function SwapableFilterList({filtersUsed}: {filtersUsed: Record<string, string[]
     return <div data-key="-2" className="border-top">
         <div className="d-flex my-1 pb-1 align-items-baseline">
             <small className="pe-1 text-white"><i className="bi bi-dash"></i></small>
-            <button role="button" className={"bg-white flex-grow border-0 " + (target !== undefined && selected !== undefined || rest!==0 ? "": "text-muted")} onDragOver={dragOver} onClick={(e) => {e.preventDefault(); rest!==0 ? all() : null;}} data-key="-1"><i className="bi bi-eye"></i> Esconder / Repor ({rest})</button>
+            <label role="button" className={"bg-white flex-grow border-0 " + (target !== undefined && selected !== undefined || rest!==0 ? "": "text-muted")} onDragOver={dragOver} onClick={(e) => {e.preventDefault(); rest!==0 ? all() : null;}} data-key="-1"><i className="bi bi-eye"></i> Esconder / Repor ({rest})</label>
         </div>
         {sort.map((k,i) => k && <div data-key={i} key={i} draggable onDragOver={dragOver} onDragStart={dragStart} onDragEnd={dragEnd} className={"d-flex align-items-baseline " +( selected === i || target === i ? "shadow" : "")}>
             <small className={`pe-1 ${target!==i ? "text-muted" : ""} cursor-move`} style={{cursor: "move"}}><i className="bi bi-list"></i></small>
