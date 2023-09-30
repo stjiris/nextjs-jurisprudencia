@@ -129,7 +129,7 @@ function DocumentPage(props: {doc: JurisprudenciaDocument, keys: JurisprudenciaK
                     </div>
                 </Row> : 
             <></>}
-            {props.keys.filter(k => k.documentShow && !MUST_HAVE.includes(k.key)).map( k => <DefaultRow key={k.key} doc={props.doc} accessKey={k.key} noLink={!k.indicesList} />)}
+            {props.keys.filter(k => k.documentShow && !MUST_HAVE.includes(k.key)).map( k => <DefaultRow key={k.key} doc={props.doc} showkey={k.name} accessKey={k.key} noLink={!k.indicesList} />)}
         </div>
         <h6 className="border-top border-2 mt-2"><b>Sumário</b></h6>
         <div className="p-2" dangerouslySetInnerHTML={{__html: props.doc.Sumário!}}></div>
@@ -138,23 +138,18 @@ function DocumentPage(props: {doc: JurisprudenciaDocument, keys: JurisprudenciaK
     </>
 }
 
-function MultipleRow(props: {accessKeys: JurisprudenciaDocumentKey[], doc: JurisprudenciaDocument, showKeys?: string[]}){
-    return <Row>
-        <div className="col-1"><b>{props.showKeys?.at(0) || props.accessKeys.at(0)}</b></div>
-        <div className="col-11">
-            <Properties accessKey={props.accessKeys.at(0)!} accessValue={props.doc[props.accessKeys.at(0)!]!}/>
-            {props.accessKeys.slice(1).map((k,i) => <React.Fragment key={i}>&nbsp;<span>{props.showKeys?.at(i+1) || k}: <Properties accessKey={k} accessValue={props.doc[k]!}/></span></React.Fragment>)}
-        </div>
-    </Row>
-}
-
 function DefaultRow(props: {accessKey: JurisprudenciaDocumentKey, showkey?: string, doc: JurisprudenciaDocument, style?: CSSProperties, noLink?: boolean}){
-    return <Row style={props.style}>
+    let value = props.doc[props.accessKey];
+    if( !value ) return <></>
+    
+    if( typeof value === "string" && value.length === 0 ) return <></>
+    if( typeof value === "object" && "Show" in value && "Original" in value && value.Show.length === 0 && value.Original.length === 0 ) return <></> 
+    return props.doc[props.accessKey] ? <Row style={props.style}>
         <div className="col-1"><b>{props.showkey ? props.showkey : props.accessKey}:</b></div>
         <div className="col-11">
             <Properties accessKey={props.accessKey} accessValue={props.doc[props.accessKey]} noLink={props.noLink}/>
         </div>
-    </Row>
+    </Row> : <></>
 }
 
 function Row(props: {children: ReactNode, style?: CSSProperties}){
@@ -168,10 +163,19 @@ function Properties({accessKey, accessValue, noLink}: {accessKey: string, access
     }
     if( "Index" in accessValue && "Show" in accessValue && "Original" in accessValue){
         let v = accessValue;
-        return <>{Array.isArray(v.Show) ? v.Show.flatMap((v, i) => [" / ", noLink ? v : <Link key={i} href={`/pesquisa?${accessKey}=${encodeURIComponent(v)}`}>{v}</Link>]).slice(1) : v.Show}</>
+        return <ShowOrOriginal accessKey={accessKey} value={accessValue} noLink={noLink} />
     }
     return <details>
         <summary>{accessKey}</summary>
         <pre>{JSON.stringify(accessValue)}</pre>
     </details>
+}
+
+function ShowOrOriginal(props: {accessKey: string, value: {Show?: string[], Original?: string[]}, noLink?: boolean}){
+    if( props.value.Show && props.value.Show.length > 0 ){
+        return <>{props.value.Show.flatMap((v, i) => [" / ", props.noLink ? v : <Link key={i} href={`/pesquisa?${props.accessKey}=${encodeURIComponent(v)}`}>{v}</Link>]).slice(1)}</>
+    }
+    else{
+        return <>{props.value.Original?.flatMap((v, i) => [" / ", v]).slice(1)}</>
+    }
 }
