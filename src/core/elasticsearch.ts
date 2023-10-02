@@ -1,12 +1,9 @@
+import { canBeActive } from "@/types/keys";
 import { Client } from "@elastic/elasticsearch";
 import { AggregationsAggregationContainer, AggregationsStringTermsBucket, AggregationsTermsAggregation, QueryDslQueryContainer, SearchRequest, SortCombinations } from "@elastic/elasticsearch/lib/api/types";
-import { isJurisprudenciaDocumentGenericKeys, isValidJurisprudenciaDocumentKey, JurisprudenciaDocument, JurisprudenciaDocumentDateKeys, JurisprudenciaDocumentKeys, JurisprudenciaDocumentProperties, JurisprudenciaVersion } from "@stjiris/jurisprudencia-document";
+import { isJurisprudenciaDocumentGenericKeys, JurisprudenciaDocument, JurisprudenciaDocumentDateKeys, JurisprudenciaDocumentKeys, JurisprudenciaDocumentProperties, JurisprudenciaVersion } from "@stjiris/jurisprudencia-document";
 
-export const filterableProps = JurisprudenciaDocumentKeys.filter(key => {
-    let propertyMapping = JurisprudenciaDocumentProperties[key];
-    if( "type" in propertyMapping && (propertyMapping.type === "object" || propertyMapping.type === "string" || propertyMapping.type === "date") ) return false;
-    return true;
-});
+export const filterableProps = JurisprudenciaDocumentKeys.filter(canBeActive);
 
 const DATA_FIELD: JurisprudenciaDocumentDateKeys = "Data";
 
@@ -26,7 +23,7 @@ export const aggs = {
 } as Record<string, AggregationsAggregationContainer>;
 filterableProps.forEach(name => {
     let key = name
-    if( "properties" in JurisprudenciaDocumentProperties[name] ){
+    if( isJurisprudenciaDocumentGenericKeys(name) ){
         key += ".Index.keyword"
     }
     aggs[name] = {
