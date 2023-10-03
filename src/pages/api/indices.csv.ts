@@ -58,7 +58,7 @@ export default async function indicesCsvHandler(
         sortedGroup
     }
     
-    return res.setHeader("Content-Type", "text/csv").send(`"#","Índice","${props.group}",${props.sortedGroup.map(([name, count],i) => `"${name}"`).join(",")},"Datas"
+    return res.setHeader("Content-Type", "text/csv").setHeader("Content-Disposition","attachment").send(`"#","Índice","${props.group}",${props.sortedGroup.map(([name, count],i) => `"${name}"`).join(",")},"Datas"
 ${props.termAggregation.buckets.length},"${props.term}",${(props.termAggregation.buckets as any[]).reduce((acc, b)=> acc+b.doc_count, 0)},${props.sortedGroup.map(([name,count], i) => count).join(",")},"de ... até"
 ${(props.termAggregation.buckets as any[]).map( (b, i) => bucketLine(i, b, props.sortedGroup)).join("\n")}\n`);
 }

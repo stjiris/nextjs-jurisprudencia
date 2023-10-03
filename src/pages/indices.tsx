@@ -12,6 +12,7 @@ import { Loading, SmallSpinner } from "@/components/loading";
 import { useFetch } from "@/components/useFetch";
 import { JurisprudenciaKey } from "@/types/keys";
 import { useKeysFromContext } from "@/contexts/keys";
+import indicesCsvHandler from "./api/indices.csv";
 
 interface IndicesPageProps extends FormProps {
     term: string
@@ -77,7 +78,7 @@ function IndicesTable(props: IndicesPageProps){
             <thead>
                 <tr>
                     <th>#</th>
-                    <th>Índice <Link href={`/api/indices.csv?${searchParams.toString()}`} className="ms-1" download={true}><i className="bi bi-filetype-csv"></i></Link></th>
+                    <th>Índice <a href={`${router.basePath}/api/indices.csv?${searchParams.toString()}`} className="ms-1" download="indices.csv"><i className="bi bi-filetype-csv"></i></a></th>
                     <th className="text-end-border-end">
                         <SelectGroup group={props.group}/>
                     </th>
