@@ -78,7 +78,7 @@ function IndicesTable(props: IndicesPageProps){
             <thead>
                 <tr>
                     <th>#</th>
-                    <th>Índice <a href={`${router.basePath}/api/indices.csv?${searchParams.toString()}`} className="ms-1" download="indices.xlsx"><i className="bi bi-filetype-csv"></i></a><a href={`${router.basePath}/api/indices.xlsx?${searchParams.toString()}`} className="ms-1" download="indices.xlsx"><i className="bi bi-filetype-xlsx"></i></a></th>
+                    <th>Índice <a href={`${router.basePath}/api/indices.csv?${searchParams.toString()}`} className="ms-1" download="indices.csv"><i className="bi bi-filetype-csv"></i></a><a href={`${router.basePath}/api/indices.xlsx?${searchParams.toString()}`} className="ms-1" download="indices.xlsx"><i className="bi bi-filetype-xlsx"></i></a></th>
                     <th className="text-end-border-end">
                         <SelectGroup group={props.group}/>
                     </th>
