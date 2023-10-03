@@ -91,7 +91,7 @@ function IndicesTable(props: IndicesPageProps){
             <thead>
                 <tr>
                     <th>#</th>
-                    <th>Índice <Link href={`./api/indices.csv?${searchParams.toString()}`} className="ms-1"><i className="bi bi-filetype-csv"></i></Link></th>
+                    <th>Índice <Link href={`/api/indices.csv?${searchParams.toString()}`} className="ms-1"><i className="bi bi-filetype-csv"></i></Link></th>
                     <th className="text-end-border-end">
                         <SelectGroup group={props.group}/>
                     </th>
