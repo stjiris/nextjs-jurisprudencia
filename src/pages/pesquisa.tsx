@@ -141,7 +141,7 @@ function JurisprudenciaItem({hit, searchId}:{hit: SearchHandlerResponseItem, sea
         </div>
         {hit._source?.Descritores ? <div className="col-12">
             <div className="mx-1">
-                <b>{keys["Descritores"].name}:&nbsp;</b>
+                <b>{keys?.Descritores.name}:&nbsp;</b>
                 <ShowKey hit={hit} accessKey="Descritores" Comp={(p) => <>{p.vs.flatMap(d => [" / ",hit.highlight?.Descritores && hit.highlight.Descritores.find(h => (h as string).includes(d))?<mark>{d}</mark>:d]).slice(1)}</>} />
             </div>
         </div>: ""}
@@ -149,7 +149,7 @@ function JurisprudenciaItem({hit, searchId}:{hit: SearchHandlerResponseItem, sea
             <summary className="d-flex align-items-center list-unstyled">
                 <span style={{width: "10%", flexShrink: 1}}>
                     <i className="bi bi-caret-downright-fill"></i>
-                    <b className="mouse-click">{keys["Sumário"].name}:</b>
+                    <b className="mouse-click">{keys?.Sumário.name}:</b>
                 </span>
                 {hit.highlight?.["SumárioMarks"] ? <div className="highlight">
                     <div className="highlight-bar" data-key="Sumário">
@@ -166,7 +166,7 @@ function JurisprudenciaItem({hit, searchId}:{hit: SearchHandlerResponseItem, sea
             <summary className="d-flex align-items-center list-unstyled">
                 <span style={{width: "10%", flexShrink: 1}}>
                     <i className="bi bi-caret-downright-fill"></i>
-                    <b className="mouse-click">{keys["Texto"].name}:</b>
+                    <b className="mouse-click">{keys?.Texto.name}:</b>
                 </span>
                 <div className="highlight">
                     <div className="highlight-bar" data-key="Texto">
@@ -195,9 +195,9 @@ function NoResults(){
     </div>
 }
 
-function ShowKey({Comp, ...props}: {hit: SearchHandlerResponseItem, accessKey: JurisprudenciaDocumentGenericKeys, Comp: (props: {vs: string[], ak: string}) => ReactNode}){
+function ShowKey({Comp, ...props}: {hit: SearchHandlerResponseItem, accessKey: JurisprudenciaDocumentGenericKeys, Comp: (props: {vs: string[], ak: string}) => JSX.Element}){
     let actual = showOrOriginal(props.hit, props.accessKey);
-    let showName = useKeysFromContext().records[props.accessKey].name;
+    let showName = useKeysFromContext().records?.[props.accessKey].name || "";
     return actual.length > 0 ? <Comp vs={actual} ak={showName} /> : <></>
 }
 
