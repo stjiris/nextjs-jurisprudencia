@@ -9,9 +9,9 @@ import { FormProps, withForm } from "@/components/pageWithForm";
 import { useRouter } from "next/router";
 import { IndicesProps, INDICES_OTHERS } from "@/types/indices";
 import { Loading, SmallSpinner } from "@/components/loading";
-import { useKeys } from "@/components/formKeys";
 import { useFetch } from "@/components/useFetch";
 import { JurisprudenciaKey } from "@/types/keys";
+import { useKeysFromContext } from "@/contexts/keys";
 
 interface IndicesPageProps extends FormProps {
     term: string
@@ -121,7 +121,7 @@ function IndicesTable(props: IndicesPageProps){
 }
 
 function SelectGroup(props: {group: string}){
-    let values = useKeys()?.filter(k => k.indicesGroup) || [{key: props.group, name: props.group}];
+    let values = useKeysFromContext().keys.filter(k => k.indicesGroup) || [{key: props.group, name: props.group}];
     return <SelectNavigate name="group" defaultValue={props.group} valueToHref={(v, params) => `?${modifySearchParams(params, "group", v).toString()}`}>
         <option value="" label="(total)"/>
         {values.map(k => <option key={k.key} label={k.name} value={k.key}/>)}
@@ -129,7 +129,7 @@ function SelectGroup(props: {group: string}){
 }
 
 function SelectTerm(props: {term: string}){
-    let values = useKeys()?.filter(k => k.indicesList) || [{key: props.term, name: props.term}];
+    let values = useKeysFromContext().keys.filter(k => k.indicesList) || [{key: props.term, name: props.term}];
     return <SelectNavigate name="group" defaultValue={props.term} valueToHref={(v, params) => `?${modifySearchParams(params, "term", v).toString()}`}>
         {values?.map(k => <option key={k.key} label={k.name} value={k.key}/>)}
     </SelectNavigate>    

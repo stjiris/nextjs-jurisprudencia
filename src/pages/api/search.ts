@@ -2,8 +2,11 @@
 import search, { createQueryDslQueryContainer, filterableProps, parseSort, populateFilters, RESULTS_PER_PAGE } from '@/core/elasticsearch';
 import { HighlightFragment, SearchHandlerResponse } from '@/types/search';
 import { SearchHighlight, SortCombinations } from '@elastic/elasticsearch/lib/api/types';
+import { JurisprudenciaDocumentKey } from '@stjiris/jurisprudencia-document';
 import type { NextApiRequest, NextApiResponse } from 'next'
 
+const useSource: JurisprudenciaDocumentKey[] = ["ECLI","Número de Processo","UUID","Data","Área","Meio Processual","Relator Nome Profissional","Secção","Votação","Decisão","Descritores","Sumário","Texto"]
+       
 export default async function searchHandler(
   req: NextApiRequest,
   res: NextApiResponse<SearchHandlerResponse>
@@ -52,7 +55,7 @@ export default async function searchHandler(
         },
         max_analyzed_offset: 1000000
     }
-    const result = await search(queryObj, sfilters, page, {}, RESULTS_PER_PAGE, {sort, highlight, track_scores: true, _source: [...filterableProps, "Data", "Sumário", "Texto","UUID"]})
+    const result = await search(queryObj, sfilters, page, {}, RESULTS_PER_PAGE, {sort, highlight, track_scores: true, _source: useSource})
     const r: SearchHandlerResponse = [];
     for( let hit of result.hits.hits ){
         const {Texto, "Relator Nome Completo": _completo, HASH: _HASH, ...rest} = hit._source!

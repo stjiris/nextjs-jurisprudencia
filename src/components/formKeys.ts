@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { modifySearchParams } from "./select-navigate";
 import { useFetch } from "./useFetch";
 import { JurisprudenciaKey } from "@/types/keys";
+import { useKeysFromContext } from "@/contexts/keys";
 
 export const FORM_KEY = "_f";
 export const FORM_SPL = "-"
@@ -15,7 +16,7 @@ export function useKeys(deps: any[]=[]){
 export function useFormOrderedKeys(){
     let params = useSearchParams();
     let router = useRouter();
-    let allKeys = useKeys();
+    let {keys: allKeys} = useKeysFromContext();
     let availableKeys = useMemo(() => allKeys?.map(k => k.active ? k : null), [allKeys])
     let defaultKeys = useMemo(() => allKeys?.map(k => k.filtersShow ? k : null), [allKeys])
 

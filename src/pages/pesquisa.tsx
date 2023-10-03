@@ -2,13 +2,18 @@ import { GenericPageWithForm } from "@/components/genericPageStructure"
 import { Loading } from "@/components/loading"
 import { FormProps, withForm } from "@/components/pageWithForm"
 import { modifySearchParams, SelectNavigate } from "@/components/select-navigate"
+import { useFetch } from "@/components/useFetch"
+import { useKeysFromContext } from "@/contexts/keys"
 import search, { createQueryDslQueryContainer, DEFAULT_AGGS, getSearchedArray, parseSort, populateFilters, RESULTS_PER_PAGE } from "@/core/elasticsearch"
 import { saveSearch } from "@/core/track-search"
+import { JurisprudenciaKey } from "@/types/keys"
 import { HighlightFragment, SearchHandlerResponse, SearchHandlerResponseItem } from "@/types/search"
+import { SearchHit } from "@elastic/elasticsearch/lib/api/types"
+import { JurisprudenciaDocument, JurisprudenciaDocumentGenericKeys } from "@stjiris/jurisprudencia-document"
 import Head from "next/head"
 import Link from "next/link"
 import { ReadonlyURLSearchParams, useSearchParams } from "next/navigation"
-import { MouseEventHandler, useEffect, useState } from "react"
+import { MouseEventHandler, ReactNode, useEffect, useMemo, useState } from "react"
 
 interface PesquisaProps extends FormProps{
     searchedArray: string[]
@@ -30,14 +35,8 @@ export const getServerSideProps = withForm<PesquisaProps>(async (ctx, formProps)
 })
 
 export default function Pesquisa(props: PesquisaProps){
-    const [results, setResults] = useState<SearchHandlerResponse>()
-    const searchParams = useSearchParams()
-
-    useEffect(() => {
-        fetch(`./api/search?${searchParams}`)
-            .then( r => r.json())
-            .then(l => setResults(l))
-    }, [searchParams])
+    const searchParams = useSearchParams();
+    const results = useFetch<SearchHandlerResponse>(`/api/search?${searchParams}`,[])
 
     return <GenericPageWithForm {...props}>
         <Head>
@@ -122,6 +121,7 @@ function NavLink({page, icon, searchParams}: {page: number, icon: string, search
 const scoreColor = (per:number) => per < 0.2 ? '#E3D5A1' : per < 0.4 ? '#CEB65E' : per < 0.6 ? '#B49936' : per < 0.8 ? '#8C752C' : '#6C5A22';
 
 function JurisprudenciaItem({hit, searchId}:{hit: SearchHandlerResponseItem, searchId?: string}){
+    const keys = useKeysFromContext().records;
     const searchParam = searchId ? `?search=${searchId}` : ""
     return <article className="row border-top result">
         <div className="col-12 pt-1 d-flex flex-wrap">
@@ -132,24 +132,24 @@ function JurisprudenciaItem({hit, searchId}:{hit: SearchHandlerResponseItem, sea
             <span>&nbsp;- {hit._source?.Data}</span>
             {hit._source?.Área && <span>&nbsp;- {hit._source.Área.Show}</span>}
             {hit._source?.["Meio Processual"] && <span>&nbsp;- {hit._source["Meio Processual"].Show.join(" / ")}</span>}
-            <span>&nbsp;- {hit._source?.["Relator Nome Profissional"]?.Show}</span>
-            <span>&nbsp;- {hit._source?.Secção?.Show}</span>
+            <span>&nbsp;- {showOrOriginal(hit, "Relator Nome Profissional")}</span>
+            <span>&nbsp;- {showOrOriginal(hit, "Secção")}</span>
         </div>
         <div className="col-12 d-flex flex-wrap">
-            {hit._source?.["Votação"] && <div className="mx-1"><b>Votação:&nbsp;</b><span>{hit._source?.["Votação"].Show.join(" / ")}</span></div>}
-            {hit._source?.["Decisão"] && <div className="mx-1"><b>Decisão:&nbsp;</b><span>{hit._source?.["Decisão"].Show.join(" / ")}</span></div>}
+            <ShowKey hit={hit} accessKey="Votação" Comp={(p) => <div className="mx-1"><b>{p.ak}:&nbsp;</b><span>{p.vs.join(" / ")}</span></div>} />
+            <ShowKey hit={hit} accessKey="Decisão" Comp={(p) => <div className="mx-1"><b>{p.ak}:&nbsp;</b><span>{p.vs.join(" / ")}</span></div>} />
         </div>
         {hit._source?.Descritores ? <div className="col-12">
             <div className="mx-1">
-                <b>Descritores:&nbsp;</b>
-                {hit._source?.Descritores.Show.flatMap(d => [" / ",hit.highlight?.Descritores && hit.highlight.Descritores.find(h => (h as string).includes(d))?<mark>{d}</mark>:d]).slice(1)}
+                <b>{keys["Descritores"].name}:&nbsp;</b>
+                <ShowKey hit={hit} accessKey="Descritores" Comp={(p) => <>{p.vs.flatMap(d => [" / ",hit.highlight?.Descritores && hit.highlight.Descritores.find(h => (h as string).includes(d))?<mark>{d}</mark>:d]).slice(1)}</>} />
             </div>
         </div>: ""}
         {hit._source?.Sumário? <details className="col-12">
             <summary className="d-flex align-items-center list-unstyled">
                 <span style={{width: "10%", flexShrink: 1}}>
                     <i className="bi bi-caret-downright-fill"></i>
-                    <b className="mouse-click">Sumário:</b>
+                    <b className="mouse-click">{keys["Sumário"].name}:</b>
                 </span>
                 {hit.highlight?.["SumárioMarks"] ? <div className="highlight">
                     <div className="highlight-bar" data-key="Sumário">
@@ -166,7 +166,7 @@ function JurisprudenciaItem({hit, searchId}:{hit: SearchHandlerResponseItem, sea
             <summary className="d-flex align-items-center list-unstyled">
                 <span style={{width: "10%", flexShrink: 1}}>
                     <i className="bi bi-caret-downright-fill"></i>
-                    <b className="mouse-click">Texto:</b>
+                    <b className="mouse-click">{keys["Texto"].name}:</b>
                 </span>
                 <div className="highlight">
                     <div className="highlight-bar" data-key="Texto">
@@ -193,4 +193,17 @@ function NoResults(){
             <li>Verifique o termo pesquisado</li>
         </ol>
     </div>
+}
+
+function ShowKey({Comp, ...props}: {hit: SearchHandlerResponseItem, accessKey: JurisprudenciaDocumentGenericKeys, Comp: (props: {vs: string[], ak: string}) => ReactNode}){
+    let actual = showOrOriginal(props.hit, props.accessKey);
+    let showName = useKeysFromContext().records[props.accessKey].name;
+    return actual.length > 0 ? <Comp vs={actual} ak={showName} /> : <></>
+}
+
+function showOrOriginal(hit: SearchHandlerResponseItem, key: JurisprudenciaDocumentGenericKeys){
+    let show = hit._source![key]?.Show;
+    if( show && show.length > 0 ) return show;
+    let original = hit._source![key]?.Original;
+    return original || [];
 }
