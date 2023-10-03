@@ -24,5 +24,5 @@ export function useKeysFromContext(){
 
 export type KeysContextType = {
     keys: JurisprudenciaKey[],
-    records: Record<JurisprudenciaDocumentKey, JurisprudenciaKey>
+    records: Record<JurisprudenciaDocumentKey, JurisprudenciaKey> | {}
 }
