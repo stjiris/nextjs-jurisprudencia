@@ -53,21 +53,7 @@ export default function Indices(props: IndicesPageProps){
 function IndicesTable(props: IndicesPageProps){
     let router = useRouter()
     let searchParams = useSearchParams();
-    let [state, setTermAggregation] = useState<IndicesProps>()
-    
-    useEffect(() => {
-        let abort = new AbortController();
-        fetch(`${router.basePath}/api/indices?${searchParams.toString()}`, {signal: abort.signal})
-            .then(r => r.status === 200 ?
-                r.json() as Promise<IndicesProps> :
-                Promise.resolve({sortedGroup: [], termAggregation: {buckets: [], sum_other_doc_count: 0}}))
-            .then(setTermAggregation)
-        
-        return () => {
-            abort.abort();
-            setTermAggregation(undefined)    
-        }
-    },[searchParams, router.basePath])
+    let state = useFetch<IndicesProps>(`/api/indices?${searchParams.toString()}`,[])
 
     if( !state ){
         return <Loading />
@@ -91,7 +77,7 @@ function IndicesTable(props: IndicesPageProps){
             <thead>
                 <tr>
                     <th>#</th>
-                    <th>Índice <Link href={`/api/indices.csv?${searchParams.toString()}`} className="ms-1"><i className="bi bi-filetype-csv"></i></Link></th>
+                    <th>Índice <Link href={`/api/indices.csv?${searchParams.toString()}`} className="ms-1" download={true}><i className="bi bi-filetype-csv"></i></Link></th>
                     <th className="text-end-border-end">
                         <SelectGroup group={props.group}/>
                     </th>
