@@ -7,6 +7,7 @@ import { NextRouter, useRouter } from "next/router";
 import { Dispatch, DragEventHandler, SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FORM_KEY, useFormOrderedKeys } from "./formKeys";
 import { replaceSearchParams } from "./select-navigate";
+import { useKeysFromContext } from "@/contexts/keys";
 
 function submit(form: HTMLFormElement, router: AppRouterInstance){
     const fd = new FormData(form);
@@ -59,6 +60,7 @@ export default function SearchForm({count, filtersUsed, minAno, maxAno}:{count: 
     const q = search.get("q");
     const term = search.get("term");
     const group = search.get("group");
+    const keys = useKeysFromContext();
 
     return <form ref={form} method="get" style={{top: 0}} className="position-sticky">
         {term ? <input type="text" name="term" hidden value={term} readOnly/> : ""}
@@ -94,6 +96,13 @@ export default function SearchForm({count, filtersUsed, minAno, maxAno}:{count: 
                         <label htmlFor="data_fim" className="input-group-text rounded-0 p-1">Até:</label>
                     </div>
                     <input id="data_fim" type="number" className="form-control form-control-sm rounded-0 p-1" name="MaxAno" min={minAno} max={maxAno} defaultValue={search.get("MaxAno") || ""} step={1} placeholder={`${maxAno}`} ref={dataFim}/>
+                </div>
+            </div>
+            <div className="d-flex align-items-baseline">
+                <small className="pe-1 text-white"><i className="bi bi-dash"></i></small>
+                <div className="my-1 pb-1 align-items-baseline form-check">
+                    <input id="checkbox-has-text" type="checkbox" className="form-check-input" name="mustHaveText" value="true" defaultChecked={search.has("mustHaveText")}/>
+                    <label className="form-check-label" htmlFor="checkbox-has-text">Tem de ter {keys?.records?.Texto?.name}</label>
                 </div>
             </div>
             {"hasField" in filtersUsed ? <div className="d-flex align-items-baseline">

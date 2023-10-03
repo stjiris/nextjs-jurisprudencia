@@ -205,6 +205,18 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
             });
         });
     }
+    if( body.mustHaveText ){
+        filtersUsed.mustHaveText = ["true"];
+        filters.pre.push({
+            bool: {
+                must: {
+                    exists: {
+                        field: "Texto"
+                    }
+                }
+            }
+        });
+    }
     return filtersUsed;
 }
 
