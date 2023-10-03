@@ -1,4 +1,5 @@
 import { DashboardGenericPage } from "@/components/genericPageStructure";
+import { useFetch } from "@/components/useFetch";
 import { withAuthentication } from "@/core/user/authenticate";
 import { JurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
 import { GetServerSideProps } from "next";
@@ -38,19 +39,7 @@ function SearchCard(){
 }
 
 function SearchResults({id}:{id: string}){
-    let [results, setResults] = useState<{[key: string]: JurisprudenciaDocument}>();
-    let router = useRouter();
-
-    useEffect(() => {
-        setResults(undefined)
-        const controller = new AbortController();
-        fetch(`${router.basePath}/api/searchId?id=${encodeURIComponent(id)}`, {signal: controller.signal}).then( r => 
-            r.status === 200 ? r.json() as Promise<{[key: string]: JurisprudenciaDocument}> : {}
-        ).then(setResults)
-        return () => {
-            controller.abort();
-        }
-    }, [id, router.basePath])
+    let results = useFetch<{[key: string]: JurisprudenciaDocument}>(`/api/searchId?id=${encodeURIComponent(id)}`, [id]);
 
     return <div className="my-2">
         {results ?
