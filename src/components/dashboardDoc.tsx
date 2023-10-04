@@ -1,57 +1,61 @@
-import { JurisprudenciaDocumentKey } from "@stjiris/jurisprudencia-document";
-import { useState, Dispatch, SetStateAction, useCallback, useEffect } from "react";
+import { GenericField, JurisprudenciaDocument, JurisprudenciaDocumentDateKeys, JurisprudenciaDocumentExactKeys, JurisprudenciaDocumentGenericKeys, JurisprudenciaDocumentKey, JurisprudenciaDocumentKeys, JurisprudenciaDocumentTextKeys, PartialJurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
+import { useState, Dispatch, SetStateAction, useCallback, useEffect, createContext, useContext, useRef } from "react";
 
 import dynamic from 'next/dynamic';
 export const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
 import 'react-quill/dist/quill.snow.css';
+import { JurisprudenciaKey } from "@/types/keys";
 
-export interface UpdateObject extends Record<string, string | string []>{}
+export type UpdateObject = PartialJurisprudenciaDocument;
 
-type MaybeKeyOfJurisprudencia = JurisprudenciaDocumentKey | (string & Record<never, never>);
+export const UpdateContext = createContext<[UpdateObject, Dispatch<SetStateAction<UpdateObject>>]>([{}, () => { }]);
 
-export function HTMLInput({ accessKey, value, setUpdateObject }: { accessKey: MaybeKeyOfJurisprudencia; value: string; setUpdateObject: Dispatch<SetStateAction<UpdateObject>>; }) {
-    let [html, setValue] = useState<string>(value);
+export type InputProps<T> = {
+    accessKey: JurisprudenciaKey & { key: T },
+    doc: JurisprudenciaDocument
+}
+
+export function TextInput({accessKey, doc}: InputProps<JurisprudenciaDocumentTextKeys>){
+    let [, setUpdateObject] = useContext(UpdateContext);
+    let initialValue = doc[accessKey.key] || "";
+    let [html, setValue] = useState<string>(initialValue);
     let [edit, setEdit] = useState<boolean>(false);
 
     useEffect(() => {
         if (!edit) {
             // Reset values
-            setValue(value);
-            setUpdateObject(({ [accessKey]: _curr, ...old }) => ({ ...old }));
+            setValue(initialValue);
+            setUpdateObject(({ [accessKey.key]: _curr, ...old }) => ({ ...old }));
         }
-    }, [edit, accessKey, value, setUpdateObject]);
+    }, [edit, accessKey.key, initialValue, setUpdateObject]);
 
     let onChange = (newvalue: string) => {
-        setUpdateObject(old => ({ ...old, [accessKey]: newvalue }));
+        setUpdateObject(old => ({ ...old, [accessKey.key]: newvalue }));
         setValue(newvalue);
     }
 
     return <>
         <div className="d-flex align-items-baseline my-2">
-            <h4 className="m-0 w-25">{accessKey}{value === html ? "" : "*"}</h4>
+            <h4 className="m-0 w-25">{accessKey.name}{initialValue === html ? "" : "*"}</h4>
             <button className="btn btn-warning mx-1" onClick={() => setEdit((v) => !v)}>{edit ? "Cancelar" : "Editar"}</button>
         </div>
         {edit && <ReactQuill theme="snow" value={html} onChange={onChange} />}
     </>;
 }
-export function ReadOnlyInput({ accessKey, value }: { accessKey: MaybeKeyOfJurisprudencia; value: string | string[]; }) {
-    return <div className="input-group">
-        <small className="input-group-text w-25">{accessKey}</small>
-        <input className="form-control" value={value} readOnly />
-    </div>;
-}
 
-export function DateInput({accessKey, value, setUpdateObject}: {accessKey: MaybeKeyOfJurisprudencia, value: string, setUpdateObject: Dispatch<SetStateAction<UpdateObject>>}){
-    let defaultValue = value.split("/").reverse().join("-")
+export function DateInput({accessKey, doc}: InputProps<JurisprudenciaDocumentDateKeys>){
+    let [, setUpdateObject] = useContext(UpdateContext);
+    let initialValue = doc[accessKey.key] || "1900/01/01"
+    let defaultValue = initialValue.split("/").reverse().join("-")
     let [toSave, setToSave] = useState<boolean>(false);
-    let update = (key: string, newValue: string) => {
+    let update = (newValue: string) => {
         let newValueD = newValue.split("-").reverse().join("/")
-        if (JSON.stringify(newValueD) === JSON.stringify(value)) {
-            setUpdateObject(({ [key]: _key_to_remove, ...old }) => ({ ...old }));
+        if (JSON.stringify(newValueD) === JSON.stringify(initialValue)) {
+            setUpdateObject(({ [accessKey.key]: _key_to_remove, ...old }) => ({ ...old }));
             setToSave(false);
         }
         else {
-            setUpdateObject((old) => ({ ...old, [key]: newValueD }));
+            setUpdateObject((old) => ({ ...old, [accessKey.key]: newValueD }));
             setToSave(true);
         }
     };
@@ -60,48 +64,85 @@ export function DateInput({accessKey, value, setUpdateObject}: {accessKey: Maybe
 
     
     return <div className="input-group">
-        <small className="input-group-text w-25">{accessKey}{toSaveString}</small>
-        <input className="form-control" type="date" defaultValue={defaultValue} onInput={(evt) => update(accessKey, evt.currentTarget.value)} />
+        <small className="input-group-text w-25">{accessKey.name}{toSaveString}</small>
+        <input className="form-control" type="date" defaultValue={defaultValue} onInput={(evt) => update(evt.currentTarget.value)} />
     </div>;
 }
 
-export function UpdateInput({ accessKey, value, setUpdateObject }: { accessKey: MaybeKeyOfJurisprudencia, value: string | string[], setUpdateObject: Dispatch<SetStateAction<UpdateObject>> }) {
+export function ExactInput({accessKey, doc}: InputProps<JurisprudenciaDocumentExactKeys>){
+    let [, setUpdateObject] = useContext(UpdateContext);
+    let initialValue = doc[accessKey.key] || "";
     let [toSave, setToSave] = useState<boolean>(false);
-    let update = (key: string, newValue: string | string[]) => {
-        if (JSON.stringify(newValue) === JSON.stringify(value)) {
-            setUpdateObject(({ [key]: _key_to_remove, ...old }) => ({ ...old }));
+    let update = (newValue: string) => {
+        if (JSON.stringify(newValue) === JSON.stringify(initialValue)) {
+            setUpdateObject(({ [accessKey.key]: _key_to_remove, ...old }) => ({ ...old }));
             setToSave(false);
         }
         else {
-            setUpdateObject((old) => ({ ...old, [key]: newValue }));
+            setUpdateObject((old) => ({ ...old, [accessKey.key]: newValue }));
             setToSave(true);
         }
     };
 
     let toSaveString = toSave ? "*" : "";
 
-    if (typeof value === "string") {
-        return <div className="input-group">
-            <small className="input-group-text w-25">{accessKey}{toSaveString}</small>
-            <input className="form-control" defaultValue={value} onInput={(evt) => update(accessKey, evt.currentTarget.value)} />
-        </div>;
-    }
-    else if (Array.isArray(value)) {
-        return <div className="input-group">
-            <small className="input-group-text w-25">{accessKey}{toSaveString}</small>
-            <textarea className="form-control" defaultValue={value.join("\n")} rows={value.length} onInput={(evt) => update(accessKey, evt.currentTarget.value.split("\n"))} />
-        </div>;
-    }
-    else if (value) {
-        return <div className="input-group">
-            <small className="input-group-text w-25">{accessKey}{toSaveString}</small>
-            <textarea className="form-control" readOnly value={JSON.stringify(value, null, "  ")} rows={JSON.stringify(value, null, "   ").split("\n").length} />
-        </div>;
-    }
-    else{
-        return <div className="input-group">
-        <small className="input-group-text w-25">{accessKey}{toSaveString}</small>
-        <textarea className="form-control" defaultValue="" rows={1} onInput={(evt) => update(accessKey, evt.currentTarget.value.split("\n"))} />
+    return <div className="input-group">
+        <small className="input-group-text w-25">{accessKey.name}{toSaveString}</small>
+        <input className="form-control" defaultValue={initialValue} onInput={(evt) => update(evt.currentTarget.value)} />
     </div>;
-    }
+}
+
+export function GenericInput({accessKey, doc}: InputProps<JurisprudenciaDocumentGenericKeys>){
+    let [, setUpdateObject] = useContext(UpdateContext);
+    let initialValue = doc[accessKey.key] || {Original: [], Show: [], Index: []};
+    let [toSave, setToSave] = useState<boolean>(false);
+
+    let originalRef = useRef<HTMLTextAreaElement>(null);
+    let showRef = useRef<HTMLTextAreaElement>(null);
+    let indexRef = useRef<HTMLTextAreaElement>(null);
+
+    let update = () => {
+        if( !originalRef.current || !showRef.current || !indexRef.current ) return;
+        let toBeNewValue = { Original: originalRef.current.value.split("\n"), Show: showRef.current.value.split("\n"), Index: indexRef.current.value.split("\n") };
+        if( JSON.stringify(toBeNewValue, ["Original","Show","Index"]) === JSON.stringify(initialValue, ["Original","Show","Index"]) ){
+            setUpdateObject(({ [accessKey.key]: _key_to_remove, ...old }) => ({ ...old }));
+            setToSave(false);
+        }
+        else {
+            setUpdateObject((old) => ({ ...old, [accessKey.key]: toBeNewValue }));
+            setToSave(true);
+        }
+    };
+
+    let toSaveString = toSave ? "*" : "";
+    
+    return <>
+        <div className="input-group">
+            <small className="input-group-text w-25">{accessKey.name}{toSaveString}</small>
+            <div className="form-control w-75 d-flex flex-wrap">
+                <div className="col-4">Original</div>
+                <div className="col-4">Mostrar</div>
+                <div className="col-4">Índice</div>
+                <div className="col-4">
+                    <textarea ref={originalRef} className="form-control" defaultValue={initialValue.Original.join("\n")} rows={initialValue.Original.length} onInput={(evt) => update()} />
+                </div>
+                <div className="col-4">
+                    <textarea ref={showRef} className="form-control" defaultValue={initialValue.Show.join("\n")} rows={initialValue.Show.length} onInput={(evt) => update()} />
+                </div>
+                <div className="col-4">
+                    <textarea  ref={indexRef} className="form-control" defaultValue={initialValue.Index.join("\n")} rows={initialValue.Index.length} onInput={(evt) => update()} />
+                </div>
+            </div>
+        </div>
+    </>
+}
+
+export function ShowCode({accessKey, doc}: InputProps<JurisprudenciaDocumentKey>){
+    return <div className="input-group">
+        <small className="input-group-text w-25">{accessKey.name}</small>
+        <details className="form-control">
+            <summary>Mostrar código</summary>
+            <pre className="my-0"><code>{JSON.stringify(doc[accessKey.key], null, 2)}</code></pre>
+        </details>
+    </div>;
 }

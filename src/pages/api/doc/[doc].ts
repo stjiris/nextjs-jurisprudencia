@@ -21,12 +21,17 @@ export default async function docApiHandler(
     }
 
     if( req.method === "PUT" ){
-        const content = req.body;
-        return res.json(await updateDoc(id, content))
+        try{
+            const content = JSON.parse(req.body);
+            return res.json(await updateDoc(id, content))
+        }
+        catch(e){
+            return res.status(400).json({})
+        }
     }
 
     if( req.method === "DELETE" ){
         return res.json(await deleteDoc(id))
     }
-    return res.status(405).json(await getDoc(id))
+    return res.status(405).json({})
 }

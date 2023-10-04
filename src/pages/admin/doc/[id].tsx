@@ -1,14 +1,18 @@
 //@ts-nocheck
 import { DashboardGenericPage } from "@/components/genericPageStructure"
 import { withAuthentication } from "@/core/user/authenticate"
-import { JurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
-import { useEffect, useState } from "react";
+import { JurisprudenciaDocument, JurisprudenciaDocumentKey, PartialJurisprudenciaDocument, isJurisprudenciaDocumentContentKey, isJurisprudenciaDocumentDateKeys, isJurisprudenciaDocumentExactKeys, isJurisprudenciaDocumentGenericKeys, isJurisprudenciaDocumentHashKeys, isJurisprudenciaDocumentObjectKeys, isJurisprudenciaDocumentTextKeys } from "@stjiris/jurisprudencia-document";
+import { createContext, useContext, useEffect, useState } from "react";
 
 import Link from "next/link";
 import { useParams, useRouter as useNavRouter, useSearchParams } from "next/navigation";
 import { useRouter } from "next/router";
-import { ReadOnlyInput, UpdateInput, HTMLInput, UpdateObject } from "@/components/dashboardDoc";
+import { ReadOnlyInput, UpdateInput, HTMLInput, UpdateObject, DateInput, TextInput, UpdateContext, ExactInput, GenericInput, ShowCode } from "@/components/dashboardDoc";
 import { Loading } from "@/components/loading";
+import { useFetch } from "@/components/useFetch";
+import { GetResponse } from "@elastic/elasticsearch/lib/api/types";
+import { KeysContext, useKeysFromContext } from "@/contexts/keys";
+import { JurisprudenciaKey } from "@/types/keys";
 
 export const getServerSideProps = withAuthentication( async (ctx) => ({props: {}}))
 
@@ -17,136 +21,42 @@ interface UpdateProps {
     doc: JurisprudenciaDocument
 }
 
-const Sep = () => <div className="m-2 p-0"></div>
-
 export default function UpdatePage(){
-    let [error, setError] = useState<string>()
-    let [props, setProps] = useState<UpdateProps>();
     let searchParams = useSearchParams();
-    let router = useRouter();
-    useEffect(() => {
-        let id = searchParams.get("id");
-        if( id ){
-            fetch(`${router.basePath}/api/doc/${id}`)
-                .then(r => r.status === 200 ?
-                    r.json().then( esr => setProps({doc:esr._source, id: id!}))
-                    :
-                    setError(`Erro ao aceder ao documento. (${r.status} ${r.statusText})`))
-        }
-    },[searchParams, router.basePath])
+    let id = searchParams.get("id");
+    let response = useFetch<GetResponse<JurisprudenciaDocument>>(`/api/doc/${id}`, [id]);
+
     return <DashboardGenericPage>
-        <div className="alert alert-danger">New version doesn support edditing yet</div>
-        {props && <Update doc={props.doc} id={props.id} />}
-        {!props && !error && <Loading text="A carregar documento"/>}
-        {error && <div className="alert alert-danger">
-            <h3>{error}</h3>
+        {response && response._source && <Update doc={response._source} id={id} />}
+        {!response && <Loading text="A carregar documento"/>}
+        {response && !response._source && <div className="alert alert-danger">
+            <h3>Erro ao carregar o documento</h3>
         </div>}
     </DashboardGenericPage>
 }
 
 function Update({doc, id}: UpdateProps){
-    let [updateObj, setUpdateObj] = useState<UpdateObject>({})
-    let navRouter = useNavRouter();
-    let router = useRouter();
-    const save = async () => {
-        fetch(`${router.basePath}/api/doc/${id}`, {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(updateObj)
-        }).finally(() => {
-            navRouter.refresh()
-        })
-    }
+    let keys = useKeysFromContext();
+    let [updateObject, setUpdateObject] = useState<UpdateObject>({});
 
-    const del = async () => {
-        let r = prompt("Tem a certeza que quer eliminar o documento? Insira o Número de Processo:");
-        if( r !== doc["Número de Processo"] ) return;
-        fetch(`${router.basePath}/api/doc/${id}`, {
-            method: "DELETE"
-        }).finally(() => {
-            navRouter.push(`/admin/doc`)
-        })
-    }
-    
-    return <>
+    return <UpdateContext.Provider value={[updateObject, setUpdateObject]}>
         <div className="row">
-            <div className="col-12 col-md-4 col-xl-6">
+            <div className="col-12 col-md-4">
                 <div className="card shadow position-sticky top-0">
                     <h4 className="m-0">Original {doc.URL && <>- <Link target="_blank" href={doc.URL}>{doc.Fonte}</Link></>}</h4>
                     <ShowOriginal original={doc.Original || {}}/>
                 </div>
             </div>
-            <div className="col-12 col-md-8 col-xl-6">
+            <div className="col-12 col-md-8">
                 <div className="card shadow">
                     <div className="card-body">
-                        <ReadOnlyInput accessKey="ID" value={id} />
-                        <Sep/>
-                        <UpdateInput accessKey="Número de Processo" value={doc["Número de Processo"]} setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Fonte" value={doc["Fonte"]} setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="URL" value={doc["URL"]} setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="ECLI" value={doc["ECLI"]} setUpdateObject={setUpdateObj}/>
-                        <Sep/>
-                        <UpdateInput accessKey="Data" value={doc["Data"]} setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Área" value={doc["Área"]} setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Meio Processual" value={doc["Meio Processual"]} setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Relator Nome Profissional" value={doc["Relator Nome Profissional"]} setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Relator Nome Completo" value={doc["Relator Nome Completo"]} setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Secção" value={doc["Secção"]} setUpdateObject={setUpdateObj}/>
-                        <Sep/>
-                        <UpdateInput accessKey="Tribunal de Recurso" value={doc["Tribunal de Recurso"]} setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Tribunal de Recurso - Processo" value={doc["Tribunal de Recurso - Processo"]} setUpdateObject={setUpdateObj}/>
-                        <Sep/>
-                        <UpdateInput accessKey="Decisão" value={doc["Decisão"]} setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Votação" value={doc["Votação"]} setUpdateObject={setUpdateObj}/>
-                        <Sep/>
-                        <UpdateInput accessKey="Descritores" value={doc["Descritores"]} setUpdateObject={setUpdateObj}/>
-                        <Sep/>
-                        <UpdateInput accessKey="Jurisprudência" value={doc["Jurisprudência"]} setUpdateObject={setUpdateObj}/>
-                        <Sep/>
-                        <UpdateInput accessKey="Jurisprudência Estrangeira" value={doc["Jurisprudência Estrangeira"]} setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Jurisprudência Internacional" value={doc["Jurisprudência Internacional"]} setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Jurisprudência Nacional" value={doc["Jurisprudência Nacional"]} setUpdateObject={setUpdateObj}/>
-                        <Sep/>
-                        <UpdateInput accessKey="Doutrina" value={doc["Doutrina"]} setUpdateObject={setUpdateObj}/>
-                        <Sep/>
-                        <UpdateInput accessKey="Legislação Comunitária" value={doc["Legislação Comunitária"]} setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Legislação Estrangeira" value={doc["Legislação Estrangeira"]} setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Legislação Nacional" value={doc["Legislação Nacional"]} setUpdateObject={setUpdateObj}/>
-                        <Sep/>
-                        <UpdateInput accessKey="Referências Internacionais" value={doc["Referências Internacionais"]} setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Referência de publicação" value={doc["Referência de publicação"]} setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Área Temática" value={doc["Área Temática"]} setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Indicações Eventuais" value={doc["Indicações Eventuais"]} setUpdateObject={setUpdateObj}/>
-                        <Sep/>
-                        <HTMLInput accessKey="Sumário" value={doc["Sumário"]} setUpdateObject={setUpdateObj}/>
-                        <HTMLInput accessKey="Texto" value={doc["Texto"]} setUpdateObject={setUpdateObj}/>
-                    </div>
-                    <div className="card-footer">
-                        <div className="alert alert-info" role="alert">
-                        {Object.keys(updateObj).length > 0 ?
-                            <>
-                                <h3>Os seguintes campos serão atualizados:</h3>
-                                <ul>
-                                    {Object.keys(updateObj).map((k,i) => <li key={i}>{k}</li>)}
-                                </ul>
-                                <button className="btn btn-warning" onClick={() => {navRouter.refresh()}}>Cancelar</button>
-                                <button className="btn btn-primary" onClick={() => {save()}}>Confirmar alterações</button>
-                            </>
-                            :
-                            <>
-                                <h3>Sem alterações</h3>
-                                <Link className="btn btn-warning" href=".">Cancelar</Link>
-                                <button className="btn btn-danger" onClick={() => del()}>Eliminar</button>
-                            </>
-                        }
-                        </div>
+                        <UpdateDocument id={id}/>
+                        {keys.keys.map((key, i) => <EditKey key={i} accessKey={key} doc={doc} />)}
                     </div>
                 </div>
             </div>
         </div>
-    </>
+    </UpdateContext.Provider>
 }
 
 function ShowOriginal({original}: {original: Record<string, any>}){
@@ -169,4 +79,56 @@ function ShowOriginal({original}: {original: Record<string, any>}){
             )}
         </tbody>
     </table>
+}
+
+function EditKey({accessKey, doc}: {accessKey: JurisprudenciaKey, doc: PartialJurisprudenciaDocument}){
+
+    if( isJurisprudenciaDocumentObjectKeys(accessKey.key) ) return <ShowCode accessKey={accessKey} doc={doc}/>
+    if( isJurisprudenciaDocumentHashKeys(accessKey.key) ) return <ShowCode accessKey={accessKey} doc={doc}/>
+    if( isJurisprudenciaDocumentContentKey(accessKey.key) ) return <ShowCode accessKey={accessKey} doc={doc}/>
+    if( isJurisprudenciaDocumentTextKeys(accessKey.key) ) return <TextInput accessKey={accessKey} doc={doc}/>
+    if( isJurisprudenciaDocumentDateKeys(accessKey.key) ) return <DateInput accessKey={accessKey} doc={doc}/>
+    if( isJurisprudenciaDocumentExactKeys(accessKey.key) ) return <ExactInput accessKey={accessKey} doc={doc}/>
+    if( isJurisprudenciaDocumentGenericKeys(accessKey.key) ) return <GenericInput accessKey={accessKey} doc={doc}/>
+    
+    //throw new Error("Unreachable")
+    return <>Unreachable</>
+}
+
+function UpdateDocument({id}: {id: string}){
+    let keys = useKeysFromContext().records;
+    let [updateObject,] = useContext(UpdateContext);
+    let router = useRouter();
+    let navRouter = useNavRouter();
+    let update = async () => {
+        await fetch(`${router.basePath}/api/doc/${id}`, {
+            method: "PUT",
+            body: JSON.stringify(updateObject)
+        });
+        navRouter.refresh();
+    }
+
+    let deleteDoc = async () => {
+        if( !confirm("Tem a certeza que quer eliminar o documento?") ) return;
+        await fetch(`${router.basePath}/api/doc/${id}`, {
+            method: "DELETE",
+        });
+        navRouter.push("/admin/doc")
+    }
+
+    return <div className="alert alert-info">
+        <div className="d-flex">
+            <h4 className="flex-shrink-1">Documento <code>{id}</code></h4>
+            <div className="flex-grow-1"></div>
+            <div className="btn-group">
+                <button className="btn btn-secondary" onClick={() => navRouter.push(".")}>Voltar</button>
+                <button className="btn btn-danger" onClick={deleteDoc} disabled={Object.keys(updateObject).length > 0}>Eliminar</button>
+                <button className="btn btn-warning" onClick={() => navRouter.refresh()} disabled={Object.keys(updateObject).length === 0}>Cancelar</button>
+                <button className="btn btn-success" onClick={update} disabled={Object.keys(updateObject).length === 0}>Guardar</button>
+            </div>
+        </div>
+        <ul>
+            {Object.keys(updateObject).map((key, i) => <li key={i}>{keys?.[key]?.name}</li>)}
+        </ul>
+    </div>
 }

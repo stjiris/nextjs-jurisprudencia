@@ -1,5 +1,5 @@
 //@ts-nocheck
-import { JurisprudenciaDocument, JurisprudenciaDocumentKey, JurisprudenciaVersion, PartialJurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
+import { JurisprudenciaDocument, JurisprudenciaDocumentKey, JurisprudenciaVersion, PartialJurisprudenciaDocument, isJurisprudenciaDocumentDateKeys, isJurisprudenciaDocumentExactKeys, isJurisprudenciaDocumentGenericKeys, isJurisprudenciaDocumentTextKeys } from "@stjiris/jurisprudencia-document";
 import { getElasticSearchClient } from "./elasticsearch";
 import crypto from "node:crypto"
 
@@ -7,46 +7,28 @@ export const existsDoc = (docId: string) => getElasticSearchClient().then(c => c
 
 export const getDoc = (docId: string) => getElasticSearchClient().then( c => c.get<JurisprudenciaDocument>({index: JurisprudenciaVersion, id: docId}))
 
-let defaultValues: JurisprudenciaDocument = {
-    "Número de Processo": null,
-    Fonte: null,
-    URL: null,
-    ECLI: null,
-    Data: "01/01/0001",
-    Área: null,
-    "Meio Processual": null,
-    "Relator Nome Completo": null,
-    "Relator Nome Profissional": null,
-    Secção: null,
-    "Tribunal de Recurso": null,
-    "Tribunal de Recurso - Processo": null,
-    Decisão: null,
-    "Votação": null,
-    Descritores: null,
-    Jurisprudência: null,
-    "Jurisprudência Estrangeira": null,
-    "Jurisprudência Internacional": null,
-    "Jurisprudência Nacional": null,
-    "Doutrina": null,
-    "Legislação Comunitária": null,
-    "Legislação Estrangeira": null,
-    "Legislação Nacional": null,
-    "Referências Internacionais": null,
-    "Referência de publicação": null,
-    "Área Temática": null,
-    "Indicações Eventuais": null,
-    CONTENT: [],
-    Original: {
-        "Sem original": "Documento criado por esta aplicação"
-    },
-    Sumário: "",
-    Texto: "",
-    HASH: null,
-    UUID: ""
-}
+export const updateDoc = (docId: string, previewDoc: PartialJurisprudenciaDocument) =>  getElasticSearchClient().then(c => {
 
-export const updateDoc = (docId: string, doc: PartialJurisprudenciaDocument) =>  getElasticSearchClient().then(c => {
-    throw new Error("TODO: Unimplemented")
+    let doc: PartialJurisprudenciaDocument = {};
+    for( let key in previewDoc ){
+        if( !previewDoc[key] ) continue;
+        if( isJurisprudenciaDocumentExactKeys(key) && typeof previewDoc[key] === "string" ){
+            doc[key] = previewDoc[key];
+            continue;
+        }
+        if( isJurisprudenciaDocumentGenericKeys(key) && typeof previewDoc[key] === "object" && previewDoc[key]?.Index.every(v => typeof v === "string") && previewDoc[key]?.Original.every(v => typeof v === "string") && previewDoc[key]?.Show.every(v => typeof v === "string") ){
+            doc[key] = previewDoc[key];
+            continue;
+        }
+        if( isJurisprudenciaDocumentDateKeys(key) && typeof previewDoc[key] === "string" && previewDoc[key].match(/^\d{2}\/\d{2}\/\d{4}$/) ){
+            doc[key] = previewDoc[key];
+            continue;
+        }
+        if( isJurisprudenciaDocumentTextKeys(key) && typeof previewDoc[key] === "string" ){
+            doc[key] = previewDoc[key];
+            continue;
+        }
+    }
     return c.update<JurisprudenciaDocument,PartialJurisprudenciaDocument>({index: JurisprudenciaVersion, id: docId, doc, refresh: "wait_for"})
 })
 
