@@ -142,7 +142,14 @@ export function ShowCode({accessKey, doc}: InputProps<JurisprudenciaDocumentKey>
         <small className="input-group-text w-25">{accessKey.name}</small>
         <details className="form-control">
             <summary>Mostrar código</summary>
-            <pre className="my-0"><code>{JSON.stringify(doc[accessKey.key], null, 2)}</code></pre>
+            <pre className="my-0"><code>{JSON.stringify(doc[accessKey.key] || null, null, 2)}</code></pre>
         </details>
+    </div>;
+}
+
+export function ShowGenerated({accessKey}: InputProps<JurisprudenciaDocumentKey>){
+    return <div className="input-group">
+        <small className="input-group-text w-25">{accessKey.name}</small>
+        <input className="form-control" defaultValue="Gerado automaticamente" disabled />
     </div>;
 }

@@ -1,150 +1,85 @@
 //@ts-nocheck
-import GenericPage, { DashboardGenericPage } from "@/components/genericPageStructure"
-import { getElasticSearchClient } from "@/core/elasticsearch";
+import { DashboardGenericPage } from "@/components/genericPageStructure"
 import { withAuthentication } from "@/core/user/authenticate"
-import { JurisprudenciaDocumentArrayKey, JurisprudenciaDocument, JurisprudenciaDocumentKey, JurisprudenciaVersion, PartialJurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
-import { useState, Dispatch, SetStateAction } from "react";
-import { useRouter as useNavRouter } from "next/navigation";
+import { JurisprudenciaDocument, JurisprudenciaDocumentKey, PartialJurisprudenciaDocument, isJurisprudenciaDocumentContentKey, isJurisprudenciaDocumentDateKeys, isJurisprudenciaDocumentExactKeys, isJurisprudenciaDocumentGenericKeys, isJurisprudenciaDocumentHashKeys, isJurisprudenciaDocumentObjectKeys, isJurisprudenciaDocumentTextKeys } from "@stjiris/jurisprudencia-document";
+import { createContext, useContext, useEffect, useState } from "react";
+
+import Link from "next/link";
+import { useParams, useRouter as useNavRouter, useSearchParams } from "next/navigation";
 import { useRouter } from "next/router";
-import { DateInput, HTMLInput, ReadOnlyInput, UpdateInput } from "@/components/dashboardDoc";
-import { WriteResponseBase } from "@elastic/elasticsearch/lib/api/types";
+import { ReadOnlyInput, UpdateInput, HTMLInput, UpdateObject, DateInput, TextInput, UpdateContext, ExactInput, GenericInput, ShowCode, ShowGenerated } from "@/components/dashboardDoc";
+import { Loading } from "@/components/loading";
+import { useFetch } from "@/components/useFetch";
+import { GetResponse, WriteResponseBase } from "@elastic/elasticsearch/lib/api/types";
+import { KeysContext, useKeysFromContext } from "@/contexts/keys";
+import { JurisprudenciaKey } from "@/types/keys";
 
-export const getServerSideProps = withAuthentication<{}>( async (ctx) => ({props: {}}))
+export const getServerSideProps = withAuthentication( async (ctx) => ({props: {}}))
 
-const Sep = () => <div className="m-2 p-0"></div>
-
-const defaultValues: JurisprudenciaDocument = {
-    "Número de Processo": "",
-    Fonte: "STJ (Manual)",
-    URL: "",
-    ECLI: "",
-    Data: new Date().toLocaleDateString("pt-PT"),
-    Área: "",
-    "Meio Processual": [""],
-    "Relator Nome Completo": "",
-    "Relator Nome Profissional": "",
-    Secção: "",
-    "Tribunal de Recurso": "",
-    "Tribunal de Recurso - Processo": "",
-    Decisão: [""],
-    "Votação": [""],
-    Descritores: [""],
-    Jurisprudência: ["Simples"],
-    "Jurisprudência Estrangeira": [""],
-    "Jurisprudência Internacional": [""],
-    "Jurisprudência Nacional": [""],
-    "Doutrina": [""],
-    "Legislação Comunitária": [""],
-    "Legislação Estrangeira": [""],
-    "Legislação Nacional": [""],
-    "Referências Internacionais": [""],
-    "Referência de publicação": [""],
-    "Área Temática": [""],
-    "Indicações Eventuais": [""],
-    CONTENT: [],
-    HASH: {},
-    Original: {},
-    UUID: "",
-    Sumário: "",
-    Texto: ""
+export default function CreatePage(){
+    return <DashboardGenericPage><Create /></DashboardGenericPage>
 }
 
-export default function Create(){
-    const navRouter = useNavRouter();
-    const router = useRouter();
-    const [updateObj, setUpdateObj] = useState<PartialJurisprudenciaDocument>(defaultValues)
+function Create(){
+    let keys = useKeysFromContext();
+    let [updateObject, setUpdateObject] = useState<UpdateObject>({});
 
-    
-    const save = async () => {
-        let object = {...defaultValues, ...updateObj};
-        fetch(`${router.basePath}/api/doc/`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(object)
-        }).then(r => r.status === 200 ? r.json() : r.status).then( (r: WriteResponseBase | number)  => {
-            if( typeof r === "number" ){
-                alert(`Não foi possível criar documento. (${r})`)
-            }
-            else{
-                navRouter.push(`/admin/doc/${r._id}`);
-            }
-
-        })
-    }
-
-
-    return <DashboardGenericPage>
-        <div className="alert alert-danger">New version doesn support edditing yet</div>
-    </DashboardGenericPage>
-    /*    <div className="row justify-content-sm-center">
-            <div className="col-sm-12 col-md-8 col-xl-6">
+    return <UpdateContext.Provider value={[updateObject, setUpdateObject]}>
+        <div className="row">
+            <div className="col-12">
                 <div className="card shadow">
                     <div className="card-body">
-                        <ReadOnlyInput accessKey="ID" value="" />
-                        <Sep/>
-                        <UpdateInput accessKey="Número de Processo" value={defaultValues["Número de Processo"]} setUpdateObject={setUpdateObj}/>
-                        <ReadOnlyInput accessKey="Fonte" value={defaultValues["Fonte"]}/>
-                        <UpdateInput accessKey="URL" value={defaultValues["URL"]} setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="ECLI" value={defaultValues["ECLI"]} setUpdateObject={setUpdateObj}/>
-                        <Sep/>
-                        <DateInput accessKey="Data" value={defaultValues["Data"]} setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Área" value={defaultValues["Área"]} setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Meio Processual" value={defaultValues["Meio Processual"]} setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Relator Nome Profissional" value={defaultValues["Relator Nome Profissional"]} setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Relator Nome Completo" value={defaultValues["Relator Nome Completo"]} setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Secção" value={defaultValues["Secção"]} setUpdateObject={setUpdateObj}/>
-                        <Sep/>
-                        <UpdateInput accessKey="Tribunal de Recurso" value={defaultValues["Tribunal de Recurso"]} setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Tribunal de Recurso - Processo" value={defaultValues["Tribunal de Recurso - Processo"]} setUpdateObject={setUpdateObj}/>
-                        <Sep/>
-                        <UpdateInput accessKey="Decisão" value={defaultValues.Decisão} setUpdateObject={setUpdateObj}/>
-                        <ReadOnlyInput accessKey="Decisão (textual)" value=""/>
-                        <UpdateInput accessKey="Votação - Decisão" value={defaultValues["Votação - Decisão"]} setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Votação - Vencidos" value={defaultValues["Votação - Vencidos"]} setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Votação - Declarações" value={defaultValues["Votação - Declarações"]} setUpdateObject={setUpdateObj}/>
-                        <Sep/>
-                        <UpdateInput accessKey="Descritores" value={defaultValues["Descritores"]} setUpdateObject={setUpdateObj}/>
-                        <Sep/>
-                        <UpdateInput accessKey="Jurisprudência" value={defaultValues["Jurisprudência"]} setUpdateObject={setUpdateObj}/>
-                        <Sep/>
-                        <UpdateInput accessKey="Jurisprudência Estrangeira" value={defaultValues["Jurisprudência Estrangeira"]} setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Jurisprudência Internacional" value={defaultValues["Jurisprudência Internacional"]} setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Jurisprudência Nacional" value={defaultValues["Jurisprudência Nacional"]} setUpdateObject={setUpdateObj}/>
-                        <Sep/>
-                        <UpdateInput accessKey="Doutrina" value={defaultValues["Doutrina"]} setUpdateObject={setUpdateObj}/>
-                        <Sep/>
-                        <UpdateInput accessKey="Legislação Comunitária" value={defaultValues["Legislação Comunitária"]} setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Legislação Estrangeira" value={defaultValues["Legislação Estrangeira"]} setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Legislação Nacional" value={defaultValues["Legislação Nacional"]} setUpdateObject={setUpdateObj}/>
-                        <Sep/>
-                        <UpdateInput accessKey="Referências Internacionais" value={defaultValues["Referências Internacionais"]} setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Referência de publicação" value={defaultValues["Referência de publicação"]} setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Área Temática" value={defaultValues["Área Temática"]} setUpdateObject={setUpdateObj}/>
-                        <UpdateInput accessKey="Indicações Eventuais" value={defaultValues["Indicações Eventuais"]} setUpdateObject={setUpdateObj}/>
-                        <Sep/>
-                        <HTMLInput accessKey="Sumário" value={defaultValues["Sumário"]} setUpdateObject={setUpdateObj}/>
-                        <HTMLInput accessKey="Texto" value={defaultValues["Texto"]} setUpdateObject={setUpdateObj}/>
-                    </div>
-                    <div className="card-footer">
-                        <div className="alert alert-info" role="alert">
-                        {Object.keys(updateObj).length > 0 ?
-                            <>
-                                <h3>Será criado um documento com os seguintes campos:</h3>
-                                <ul>
-                                    {Object.keys(updateObj).map((k,i) => <li key={i}>{k}</li>)}
-                                </ul>
-                                <button className="btn btn-warning" onClick={() => {navRouter.refresh()}}>Cancelar</button>
-                                <button className="btn btn-primary" onClick={() => {save()}}>Criar documento</button>
-                            </>
-                            :
-                            <h3>Sem campos preenchidos</h3>
-                        }
-                        </div>
+                        <CreateDocument/>
+                        {keys.keys.map((key, i) => <CreateKey key={i} accessKey={key} doc={{}} />)}
                     </div>
                 </div>
             </div>
         </div>
-    </DashboardGenericPage>*/
+    </UpdateContext.Provider>
+}
+
+const AUTO_GENERATED: JurisprudenciaDocumentKey[] = ["Fonte","CONTENT","Original","HASH","UUID"]
+
+function CreateKey({accessKey, doc}: {accessKey: JurisprudenciaKey, doc: PartialJurisprudenciaDocument}){
+
+    if( AUTO_GENERATED.includes(accessKey.key) ) return <ShowGenerated accessKey={accessKey}/>;
+    if( isJurisprudenciaDocumentObjectKeys(accessKey.key) ) return <ShowCode accessKey={accessKey} doc={doc}/>
+    if( isJurisprudenciaDocumentHashKeys(accessKey.key) ) return <ShowCode accessKey={accessKey} doc={doc}/>
+    if( isJurisprudenciaDocumentContentKey(accessKey.key) ) return <ShowCode accessKey={accessKey} doc={doc}/>
+    if( isJurisprudenciaDocumentTextKeys(accessKey.key) ) return <TextInput accessKey={accessKey} doc={doc}/>
+    if( isJurisprudenciaDocumentDateKeys(accessKey.key) ) return <DateInput accessKey={accessKey} doc={doc}/>
+    if( isJurisprudenciaDocumentExactKeys(accessKey.key) ) return <ExactInput accessKey={accessKey} doc={doc}/>
+    if( isJurisprudenciaDocumentGenericKeys(accessKey.key) ) return <GenericInput accessKey={accessKey} doc={doc}/>
+    
+    //throw new Error("Unreachable")
+    return <>Unreachable</>
+}
+
+function CreateDocument(){
+    let keys = useKeysFromContext().records;
+    let [updateObject,] = useContext(UpdateContext);
+    let router = useRouter();
+    let navRouter = useNavRouter();
+    let update = async () => {
+        let writeResponseBase = await fetch(`${router.basePath}/api/doc`, {
+            method: "POST",
+            body: JSON.stringify(updateObject)
+        }).then( r => r.json() as Promise<WriteResponseBase> );
+        navRouter.push(`./${writeResponseBase._id}`)
+    }
+
+    return <div className="alert alert-info">
+        <div className="d-flex">
+            <h4 className="flex-shrink-1">Documento <code>(novo)</code></h4>
+            <div className="flex-grow-1"></div>
+            <div className="btn-group">
+                <button className="btn btn-secondary" onClick={() => navRouter.push(".")}>Voltar</button>
+                <button className="btn btn-warning" onClick={() => navRouter.refresh()} disabled={Object.keys(updateObject).length === 0}>Cancelar</button>
+                <button className="btn btn-success" onClick={update} disabled={Object.keys(updateObject).length === 0}>Guardar</button>
+            </div>
+        </div>
+        <ul>
+            {Object.keys(updateObject).map((key, i) => <li key={i}>{keys?.[key]?.name}</li>)}
+        </ul>
+    </div>
 }

@@ -13,8 +13,13 @@ export default async function docApiHandler(
     }
 
     if( req.method === "POST"){
-        const content = req.body;
-        return res.json(await createDoc(content))
+        try{
+            const content = JSON.parse(req.body);
+            return res.json(await createDoc(content))
+        }
+        catch(e){
+            return res.status(400).json({})
+        }
     }
 
     return res.status(405).json({})

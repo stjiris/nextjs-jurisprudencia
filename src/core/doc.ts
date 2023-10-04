@@ -33,45 +33,47 @@ export const updateDoc = (docId: string, previewDoc: PartialJurisprudenciaDocume
 })
 
 export const createDoc = (newdoc: PartialJurisprudenciaDocument) => getElasticSearchClient().then(c => {
-    throw new Error("TODO: Unimplemented");
-    let createdDoc: PartialJurisprudenciaDocument = {};
-    let CONTENT: string[] = [];
-    let key: JurisprudenciaDocumentKey;
-    for( key in defaultValues ){
+    let doc: PartialJurisprudenciaDocument = {};
+    let CONTENT = []
+    for( let key in newdoc ){
         if( !newdoc[key] ) continue;
-        if( typeof newdoc[key] === "string" ){
-            let v = newdoc[key] as string;
-            CONTENT.push(v);
+        if( isJurisprudenciaDocumentExactKeys(key) && typeof newdoc[key] === "string" ){
+            doc[key] = newdoc[key];
+            CONTENT.push(newdoc[key])
             continue;
         }
-        else if(typeof newdoc[key] === "string"){
-            let maybeVal = newdoc[key].trim();
-            if( maybeVal.length > 0 ){
-                CONTENT.push(maybeVal);
-                if( Array.isArray(defaultValues[key]) ){
-                    createdDoc[key] = [maybeVal]
-                }
-                else{
-                    createdDoc[key] = maybeVal
-                }
-            }
-            else{
-                createdDoc[key] = defaultValues[key]
-            }
-        }    
+        if( isJurisprudenciaDocumentGenericKeys(key) && typeof newdoc[key] === "object" && newdoc[key]?.Index.every(v => typeof v === "string") && newdoc[key]?.Original.every(v => typeof v === "string") && newdoc[key]?.Show.every(v => typeof v === "string") ){
+            doc[key] = newdoc[key];
+            CONTENT.push(...newdoc[key].Show)
+            CONTENT.push(...newdoc[key].Original)
+            CONTENT.push(...newdoc[key].Index)
+            continue;
+        }
+        if( isJurisprudenciaDocumentDateKeys(key) && typeof newdoc[key] === "string" && newdoc[key].match(/^\d{2}\/\d{2}\/\d{4}$/) ){
+            doc[key] = newdoc[key];
+            CONTENT.push(newdoc[key])
+            continue;
+        }
+        if( isJurisprudenciaDocumentTextKeys(key) && typeof newdoc[key] === "string" ){
+            doc[key] = newdoc[key];
+            CONTENT.push(newdoc[key])
+            continue;
+        }
     }
-    createdDoc["Original"] = {
+    doc.Fonte = "STJ (Manual)"
+    doc.CONTENT = CONTENT
+    doc.Original = {
         "Sem Original": "Documento criado nesta aplicação"
     }
-    createdDoc["HASH"] = {
-        "Original": calculateUUID(createDoc,["Original"]),
-        "Sumário": calculateUUID(createdDoc,["Sumário"]),
-        "Texto": calculateUUID(createdDoc,["Texto"]),
-        "Processo": calculateUUID(createdDoc, ["Número de Processo"])
+    doc.HASH = {
+        "Original": calculateUUID(doc,["Original"]),
+        "Sumário": calculateUUID(doc,["Sumário"]),
+        "Texto": calculateUUID(doc,["Texto"]),
+        "Processo": calculateUUID(doc, ["Número de Processo"])
     },
-    createdDoc["UUID"] = calculateUUID(createdDoc["HASH"],["Sumário","Texto","Processo"])
-    createdDoc["CONTENT"] = CONTENT
-    return c.index<JurisprudenciaDocument>({index: JurisprudenciaVersion, document: createdDoc as JurisprudenciaDocument, refresh: "wait_for"})
+    doc.UUID = calculateUUID(doc.HASH,["Sumário","Texto","Processo"])
+    
+    return c.index<JurisprudenciaDocument>({index: JurisprudenciaVersion, document: doc as JurisprudenciaDocument, refresh: "wait_for"});
 })
 
 export const deleteDoc = (docId: string) => getElasticSearchClient().then(c => c.delete({index: JurisprudenciaVersion, id: docId, refresh: "wait_for"}))
