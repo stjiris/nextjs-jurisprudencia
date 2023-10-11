@@ -18,7 +18,25 @@ services:
       elasticsearch:
         condition: service_healthy
     restart: unless-stopped
-
+    profiles:
+      - prod
+  server-dev:
+    build:
+      context: .
+      dockerfile: ./Dockerfile_dev
+    environment:
+      ES_URL: http://elasticsearch:9200
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - excel_data:/usr/src/app/files
+      - .:/usr/src/app
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles:
+      - dev
   elasticsearch:
     build:
       context: ./compose/elasticsearch
@@ -41,6 +59,10 @@ services:
       retries: 15
       start_period: 10s
     restart: unless-stopped
+    profiles:
+      - prod
+      - dev
+      - kibana
   kibana:
     image: docker.elastic.co/kibana/kibana:8.4.0
     depends_on:
@@ -53,3 +75,5 @@ services:
       ELASTICSEARCH_USERNAME: kibana_system
       ELASTICSEARCH_PASSWORD: elasticsearch
     restart: always
+    profiles:
+      - kibana
