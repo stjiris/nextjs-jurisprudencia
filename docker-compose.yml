@@ -10,6 +10,7 @@ services:
       dockerfile: ./Dockerfile
     environment:
       ES_URL: http://elasticsearch:9200
+      NEXT_BASE_PATH: /jurisprudencia
     ports:
       - "80:3000"
     volumes:
@@ -26,6 +27,7 @@ services:
       dockerfile: ./Dockerfile_dev
     environment:
       ES_URL: http://elasticsearch:9200
+      NEXT_BASE_PATH: /dev-jurisprudencia
     ports:
       - "127.0.0.1:3000:3000"
     volumes:
