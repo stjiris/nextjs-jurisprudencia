@@ -2,7 +2,7 @@ import { exportableKeys } from "@/components/exportable-keys";
 import { ExcelState } from "@/types/excel";
 import { Client } from "@elastic/elasticsearch";
 import { AggregationsCardinalityAggregate, AggregationsSumAggregate, AggregationsTermsAggregateBase, SearchHit, SearchPointInTimeReference } from "@elastic/elasticsearch/lib/api/types";
-import { isJurisprudenciaDocumentGenericKeys, JurisprudenciaDocument, JurisprudenciaDocumentGenericKeys, JurisprudenciaDocumentKey, JurisprudenciaVersion } from "@stjiris/jurisprudencia-document";
+import { isJurisprudenciaDocumentGenericKey, JurisprudenciaDocument, JurisprudenciaDocumentGenericKey, JurisprudenciaDocumentGenericKeys, JurisprudenciaDocumentKey, JurisprudenciaVersion } from "@stjiris/jurisprudencia-document";
 import { createHash } from "crypto";
 import { CellValue, stream } from "exceljs";
 import { mkdirSync } from "fs";
@@ -162,7 +162,7 @@ async function updateIds(worksheetData: CellValue[][], client: Client, idIndex: 
     let actualField = fieldsName[0].replace(" - Original","").replace(" - Mostrar","").replace(" - Indice","");
     if( fieldsName.some(fn => fn.indexOf(actualField) === -1) ) return [["invalid header", ...fieldsName]];
     let indexFieldMap: Record<string, number | undefined> = {};
-    if( isJurisprudenciaDocumentGenericKeys(actualField) ){
+    if( isJurisprudenciaDocumentGenericKey(actualField) ){
         indexFieldMap = {
             Original: fieldsIndex[fieldsName.indexOf(`${actualField} - Original`)],
             Show: fieldsIndex[fieldsName.indexOf(`${actualField} - Mostrar`)],
@@ -185,7 +185,7 @@ async function updateIds(worksheetData: CellValue[][], client: Client, idIndex: 
         };
 
         let update: Record<string,string | Record<string, string[]>> = {}
-        if( isJurisprudenciaDocumentGenericKeys(actualField) ){
+        if( isJurisprudenciaDocumentGenericKey(actualField) ){
             update[actualField] = {};
             for(let key in indexFieldMap){
                 if( indexFieldMap[key] ){
@@ -275,7 +275,7 @@ export function startBuilder(start: Date, excludeKeys: string[]=[], all: boolean
 function isJurisprudenciaDocumentGenericField(s: string){
     return  (s.endsWith(".Original") ||
             s.endsWith(".Show") ||
-            s.endsWith(".Index.raw")) && isJurisprudenciaDocumentGenericKeys(s.replace(/\.[^.]*/g,""));
+            s.endsWith(".Index.raw")) && isJurisprudenciaDocumentGenericKey(s.replace(/\.[^.]*/g,""));
 }
 
 async function createAggExcel(id: string, client: Client, pit: SearchPointInTimeReference, keys: JurisprudenciaDocumentKey[]): Promise<Date>{
@@ -289,7 +289,7 @@ async function createAggExcel(id: string, client: Client, pit: SearchPointInTime
     for( let i = 0; i < keys.length; i++){
         let key = keys[i];
         EXCEL_STATE.export_agg = i / keys.length
-        let fields = isJurisprudenciaDocumentGenericKeys(key) ? [`${key}.Original`,`${key}.Show`,`${key}.Index.raw`] : [key]
+        let fields = isJurisprudenciaDocumentGenericKey(key) ? [`${key}.Original`,`${key}.Show`,`${key}.Index.raw`] : [key]
         for(let j = 0; j < fields.length; j++){
             let field = fields[j];
             let sheetName = field.substring(0,30)+"OMI"[j]
@@ -437,13 +437,13 @@ async function getAllIndices(client: Client, pit: SearchPointInTimeReference, ke
         track_total_hits: true,
         sort: [{"Data": "asc"}]
     });
-    let data: string[][][] = keys.map((k) => [isJurisprudenciaDocumentGenericKeys(k) ? [`${k} - Original`,`${k} - Mostrar`,`${k} - Indice`,"id","hash"] : [k,"id","hash"]]);
+    let data: string[][][] = keys.map((k) => [isJurisprudenciaDocumentGenericKey(k) ? [`${k} - Original`,`${k} - Mostrar`,`${k} - Indice`,"id","hash"] : [k,"id","hash"]]);
 
     let i = 0;
     while( r.hits.hits.length > 0 ){
         EXCEL_STATE.export_all = i / (typeof r.hits.total === "object" ? r.hits.total.value : r.hits.total || 1 )
         keys.forEach((key, i) => {
-            if( isJurisprudenciaDocumentGenericKeys(key) ){
+            if( isJurisprudenciaDocumentGenericKey(key) ){
                 data[i].push(...r.hits.hits.flatMap(hit => allGenericColumns(hit, key as typeof JurisprudenciaDocumentGenericKeys[number])))
             }
             else{

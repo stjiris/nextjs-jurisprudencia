@@ -1,4 +1,5 @@
 import search, { createQueryDslQueryContainer, getElasticSearchClient, populateFilters, SearchFilters } from "@/core/elasticsearch";
+import { authenticatedHandler } from "@/core/user/authenticate";
 import { PartialJurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
 import { NextApiRequest, NextApiResponse } from "next";
 
@@ -57,7 +58,9 @@ export default async function datalistHandler(
         after: []
     }
 
-    let {hits: {hits}} = await search(createQueryDslQueryContainer(), sf, 0, {}, 5, {_source: ["Relator Nome Profissional", "Data", "Número de Processo", "ECLI","UUID"]});
+    let all = await authenticatedHandler(req);
+
+    let {hits: {hits}} = await search(createQueryDslQueryContainer(), sf, 0, {}, 5, {_source: ["Relator Nome Profissional", "Data", "Número de Processo", "ECLI","UUID","STATE"]},all);
     let r = {} as {[key: string]: PartialJurisprudenciaDocument}
     for( let hit of hits ){
         r[hit._id] = hit._source!

@@ -18,6 +18,7 @@ export default async function docApiHandler(
             return res.json(await createDoc(content))
         }
         catch(e){
+            console.log(e)
             return res.status(400).json({})
         }
     }

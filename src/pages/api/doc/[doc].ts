@@ -31,7 +31,13 @@ export default async function docApiHandler(
     }
 
     if( req.method === "DELETE" ){
-        return res.json(await deleteDoc(id))
+        let document = await getDoc(id);
+        if( document._source?.STATE === "eliminado" ){
+            return res.json(await deleteDoc(id))
+        }
+        else if( document._source ){
+            return res.json(await updateDoc(id, {STATE: "eliminado"}))
+        }
     }
     return res.status(405).json({})
 }

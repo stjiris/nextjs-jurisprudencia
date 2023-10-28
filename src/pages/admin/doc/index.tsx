@@ -4,8 +4,8 @@ import { withAuthentication } from "@/core/user/authenticate";
 import { JurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
 import { GetServerSideProps } from "next";
 import Link from "next/link";
-import { useRouter } from "next/router";
-import { useEffect, useRef, useState } from "react"
+import { useRef, useState } from "react"
+import { BadgeFromState } from "@/components/BadgeFromState";
 
 export const getServerSideProps: GetServerSideProps<{}> = withAuthentication(async (ctx) => ({props: {}}))
 
@@ -39,7 +39,7 @@ function SearchCard(){
 }
 
 function SearchResults({id}:{id: string}){
-    let results = useFetch<{[key: string]: JurisprudenciaDocument}>(`/api/searchId?id=${encodeURIComponent(id)}`, [id]);
+    let results = useFetch<{[key: string]: JurisprudenciaDocument}>(`/api/searchId?id=${encodeURIComponent(id)}`, [id])
 
     return <div className="my-2">
         {results ?
@@ -58,7 +58,10 @@ function SearchResults({id}:{id: string}){
 function SearchResultHit({id, doc}: {id:string, doc: JurisprudenciaDocument}){
     return <div className="card m-1 p-0">
         <div className="card-body row align-items-center p-1">
-            <div className="card-title col-5"><Link href={`/admin/doc/${encodeURIComponent(id)}/`}>{doc["ECLI"]}</Link></div>
+            <div className="card-title col-5">
+                <Link href={`/admin/doc/${encodeURIComponent(id)}/`}>{doc["ECLI"] || "(ecli vazio)"}</Link><br/>
+                <BadgeFromState state={doc.STATE || undefined} />
+            </div>
             <ul className="col-7 list-group list-group-flush">
                 <li className="list-group-item">Processo: <b>{doc["Número de Processo"]}</b></li>
                 <li className="list-group-item">Relator: <b>{doc["Relator Nome Profissional"]?.Show}</b></li>

@@ -1,4 +1,4 @@
-import { GenericField, JurisprudenciaDocument, JurisprudenciaDocumentDateKeys, JurisprudenciaDocumentExactKeys, JurisprudenciaDocumentGenericKeys, JurisprudenciaDocumentKey, JurisprudenciaDocumentKeys, JurisprudenciaDocumentTextKeys, PartialJurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
+import { GenericField, JurisprudenciaDocument, JurisprudenciaDocumentDateKey, JurisprudenciaDocumentExactKey, JurisprudenciaDocumentGenericKey, JurisprudenciaDocumentKey, JurisprudenciaDocumentTextKey, PartialJurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
 import { useState, Dispatch, SetStateAction, useCallback, useEffect, createContext, useContext, useRef } from "react";
 
 import dynamic from 'next/dynamic';
@@ -15,7 +15,7 @@ export type InputProps<T> = {
     doc: JurisprudenciaDocument
 }
 
-export function TextInput({accessKey, doc}: InputProps<JurisprudenciaDocumentTextKeys>){
+export function TextInput({accessKey, doc}: InputProps<JurisprudenciaDocumentTextKey>){
     let [, setUpdateObject] = useContext(UpdateContext);
     let initialValue = doc[accessKey.key] || "";
     let [html, setValue] = useState<string>(initialValue);
@@ -43,7 +43,7 @@ export function TextInput({accessKey, doc}: InputProps<JurisprudenciaDocumentTex
     </>;
 }
 
-export function DateInput({accessKey, doc}: InputProps<JurisprudenciaDocumentDateKeys>){
+export function DateInput({accessKey, doc}: InputProps<JurisprudenciaDocumentDateKey>){
     let [, setUpdateObject] = useContext(UpdateContext);
     let initialValue = doc[accessKey.key] || "1900/01/01"
     let defaultValue = initialValue.split("/").reverse().join("-")
@@ -69,7 +69,7 @@ export function DateInput({accessKey, doc}: InputProps<JurisprudenciaDocumentDat
     </div>;
 }
 
-export function ExactInput({accessKey, doc}: InputProps<JurisprudenciaDocumentExactKeys>){
+export function ExactInput({accessKey, doc, options}: InputProps<JurisprudenciaDocumentExactKey> & {options?: string[]}){
     let [, setUpdateObject] = useContext(UpdateContext);
     let initialValue = doc[accessKey.key] || "";
     let [toSave, setToSave] = useState<boolean>(false);
@@ -85,6 +85,15 @@ export function ExactInput({accessKey, doc}: InputProps<JurisprudenciaDocumentEx
     };
 
     let toSaveString = toSave ? "*" : "";
+    if( options && options.length > 0 ){
+        // select input
+        return <div className="input-group">
+            <small className="input-group-text w-25">{accessKey.name}{toSaveString}</small>
+            <select className="form-select" defaultValue={initialValue} onChange={(evt) => update(evt.currentTarget.value)}>
+                {options.map((v,i) => <option key={i} value={v}>{v}</option>)}
+            </select>
+        </div>;
+    }
 
     return <div className="input-group">
         <small className="input-group-text w-25">{accessKey.name}{toSaveString}</small>
@@ -92,7 +101,7 @@ export function ExactInput({accessKey, doc}: InputProps<JurisprudenciaDocumentEx
     </div>;
 }
 
-export function GenericInput({accessKey, doc}: InputProps<JurisprudenciaDocumentGenericKeys>){
+export function GenericInput({accessKey, doc}: InputProps<JurisprudenciaDocumentGenericKey>){
     let [, setUpdateObject] = useContext(UpdateContext);
     let initialValue = doc[accessKey.key] || {Original: [], Show: [], Index: []};
     let [toSave, setToSave] = useState<boolean>(false);

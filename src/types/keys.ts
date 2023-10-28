@@ -1,5 +1,5 @@
 import { MappingProperty } from "@elastic/elasticsearch/lib/api/types"
-import { JurisprudenciaDocumentKey, isJurisprudenciaDocumentContentKey, isJurisprudenciaDocumentDateKeys, isJurisprudenciaDocumentHashKeys, isJurisprudenciaDocumentObjectKeys, isJurisprudenciaDocumentTextKeys } from "@stjiris/jurisprudencia-document"
+import { JurisprudenciaDocumentKey, isJurisprudenciaDocumentContentKey, isJurisprudenciaDocumentDateKey, isJurisprudenciaDocumentHashKey, isJurisprudenciaDocumentObjectKey, isJurisprudenciaDocumentTextKey } from "@stjiris/jurisprudencia-document"
 
 
 export type JurisprudenciaKey = {
@@ -31,7 +31,7 @@ export const KEYS_INFO_PROPERTIES: Record<keyof JurisprudenciaKey, MappingProper
 }
 
 export function canBeActive(key: JurisprudenciaDocumentKey){
-    return !(isJurisprudenciaDocumentContentKey(key) || isJurisprudenciaDocumentDateKeys(key) || isJurisprudenciaDocumentHashKeys(key) ||  isJurisprudenciaDocumentTextKeys(key) || isJurisprudenciaDocumentObjectKeys(key));
+    return !(isJurisprudenciaDocumentContentKey(key) || isJurisprudenciaDocumentDateKey(key) || isJurisprudenciaDocumentHashKey(key) ||  isJurisprudenciaDocumentTextKey(key) || isJurisprudenciaDocumentObjectKey(key));
 }
 
 export function makeValidValue(jurisprudenciaKey: JurisprudenciaKey): JurisprudenciaKey{

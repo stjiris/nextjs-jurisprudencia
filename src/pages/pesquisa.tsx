@@ -9,7 +9,7 @@ import { saveSearch } from "@/core/track-search"
 import { JurisprudenciaKey } from "@/types/keys"
 import { HighlightFragment, SearchHandlerResponse, SearchHandlerResponseItem } from "@/types/search"
 import { SearchHit } from "@elastic/elasticsearch/lib/api/types"
-import { JurisprudenciaDocument, JurisprudenciaDocumentGenericKeys } from "@stjiris/jurisprudencia-document"
+import { JurisprudenciaDocument, JurisprudenciaDocumentGenericKey, JurisprudenciaDocumentGenericKeys } from "@stjiris/jurisprudencia-document"
 import Head from "next/head"
 import Link from "next/link"
 import { ReadonlyURLSearchParams, useSearchParams } from "next/navigation"
@@ -195,13 +195,13 @@ function NoResults(){
     </div>
 }
 
-function ShowKey({Comp, ...props}: {hit: SearchHandlerResponseItem, accessKey: JurisprudenciaDocumentGenericKeys, Comp: (props: {vs: string[], ak: string}) => JSX.Element}){
+function ShowKey({Comp, ...props}: {hit: SearchHandlerResponseItem, accessKey: JurisprudenciaDocumentGenericKey, Comp: (props: {vs: string[], ak: string}) => JSX.Element}){
     let actual = showOrOriginal(props.hit, props.accessKey);
     let showName = useKeysFromContext().records?.[props.accessKey].name || "";
     return actual.length > 0 ? <Comp vs={actual} ak={showName} /> : <></>
 }
 
-function showOrOriginal(hit: SearchHandlerResponseItem, key: JurisprudenciaDocumentGenericKeys){
+function showOrOriginal(hit: SearchHandlerResponseItem, key: JurisprudenciaDocumentGenericKey){
     let show = hit._source![key]?.Show;
     if( show && show.length > 0 ) return show;
     let original = hit._source![key]?.Original;

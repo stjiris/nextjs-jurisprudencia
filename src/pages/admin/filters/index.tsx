@@ -4,7 +4,6 @@ import { useFetch } from "@/components/useFetch";
 import { getAllKeys } from "@/core/keys";
 import { withAuthentication } from "@/core/user/authenticate";
 import { JurisprudenciaKey, canBeActive } from "@/types/keys";
-import { JurisprudenciaDocumentKey, isJurisprudenciaDocumentContentKey, isJurisprudenciaDocumentDateKeys, isJurisprudenciaDocumentHashKeys, isJurisprudenciaDocumentObjectKeys, isJurisprudenciaDocumentTextKeys } from "@stjiris/jurisprudencia-document";
 import dynamic from "next/dynamic";
 import { NextRouter, useRouter } from "next/router";
 import { CSSProperties, useEffect, useState } from "react";

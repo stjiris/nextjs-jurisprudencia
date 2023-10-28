@@ -1,6 +1,6 @@
 import { JurisprudenciaKey, KEYS_INFO_INDEX_VERSION, KEYS_INFO_PROPERTIES, makeValidValue } from "@/types/keys";
-import { aggs, getElasticSearchClient } from "./elasticsearch";
-import { JurisprudenciaDocumentKey, JurisprudenciaDocumentKeys, isJurisprudenciaDocumentContentKey, isJurisprudenciaDocumentDateKeys, isJurisprudenciaDocumentHashKeys, isJurisprudenciaDocumentObjectKeys, isJurisprudenciaDocumentTextKeys } from "@stjiris/jurisprudencia-document";
+import { getElasticSearchClient } from "./elasticsearch";
+import { JurisprudenciaDocumentKey, JurisprudenciaDocumentKeys } from "@stjiris/jurisprudencia-document";
 
 async function getClient(){
     let client = await getElasticSearchClient();
@@ -24,6 +24,22 @@ async function getClient(){
                 {key: key, name: key, description: "Sem descrição", active: false, filtersSuggest: false, filtersShow: false, filtersOrder: i+1, indicesList: false, indicesGroup: false}
             ])
         })
+    }
+    else{
+        let r = await client.search<JurisprudenciaKey>({
+            index: KEYS_INFO_INDEX_VERSION,
+            size: JurisprudenciaDocumentKeys.length
+        })
+        if( r.hits.hits.length !== JurisprudenciaDocumentKeys.length ){
+            let create = JurisprudenciaDocumentKeys.filter(k => !r.hits.hits.some(h => h._source?.key === k));
+            await client.bulk<JurisprudenciaKey,JurisprudenciaKey>({
+                index: KEYS_INFO_INDEX_VERSION,
+                operations: create.flatMap((key,i) => [
+                    {create: {}},
+                    {key: key, name: key, description: "Sem descrição", active: false, filtersSuggest: false, filtersShow: false, filtersOrder: r.hits.hits.length+1, indicesList: false, indicesGroup: false}
+                ])
+            })
+        }
     }
     return client;
 }

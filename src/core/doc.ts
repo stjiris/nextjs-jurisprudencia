@@ -1,5 +1,5 @@
 //@ts-nocheck
-import { JurisprudenciaDocument, JurisprudenciaDocumentKey, JurisprudenciaVersion, PartialJurisprudenciaDocument, isJurisprudenciaDocumentDateKeys, isJurisprudenciaDocumentExactKeys, isJurisprudenciaDocumentGenericKeys, isJurisprudenciaDocumentTextKeys } from "@stjiris/jurisprudencia-document";
+import { JurisprudenciaDocument, JurisprudenciaDocumentKey, JurisprudenciaVersion, PartialJurisprudenciaDocument, isJurisprudenciaDocumentDateKey, isJurisprudenciaDocumentExactKey, isJurisprudenciaDocumentGenericKey, isJurisprudenciaDocumentTextKey } from "@stjiris/jurisprudencia-document";
 import { getElasticSearchClient } from "./elasticsearch";
 import crypto from "node:crypto"
 
@@ -12,19 +12,19 @@ export const updateDoc = (docId: string, previewDoc: PartialJurisprudenciaDocume
     let doc: PartialJurisprudenciaDocument = {};
     for( let key in previewDoc ){
         if( !previewDoc[key] ) continue;
-        if( isJurisprudenciaDocumentExactKeys(key) && typeof previewDoc[key] === "string" ){
+        if( isJurisprudenciaDocumentExactKey(key) && typeof previewDoc[key] === "string" ){
             doc[key] = previewDoc[key];
             continue;
         }
-        if( isJurisprudenciaDocumentGenericKeys(key) && typeof previewDoc[key] === "object" && previewDoc[key]?.Index.every(v => typeof v === "string") && previewDoc[key]?.Original.every(v => typeof v === "string") && previewDoc[key]?.Show.every(v => typeof v === "string") ){
+        if( isJurisprudenciaDocumentGenericKey(key) && typeof previewDoc[key] === "object" && previewDoc[key]?.Index.every(v => typeof v === "string") && previewDoc[key]?.Original.every(v => typeof v === "string") && previewDoc[key]?.Show.every(v => typeof v === "string") ){
             doc[key] = previewDoc[key];
             continue;
         }
-        if( isJurisprudenciaDocumentDateKeys(key) && typeof previewDoc[key] === "string" && previewDoc[key].match(/^\d{2}\/\d{2}\/\d{4}$/) ){
+        if( isJurisprudenciaDocumentDateKey(key) && typeof previewDoc[key] === "string" && previewDoc[key].match(/^\d{2}\/\d{2}\/\d{4}$/) ){
             doc[key] = previewDoc[key];
             continue;
         }
-        if( isJurisprudenciaDocumentTextKeys(key) && typeof previewDoc[key] === "string" ){
+        if( isJurisprudenciaDocumentTextKey(key) && typeof previewDoc[key] === "string" ){
             doc[key] = previewDoc[key];
             continue;
         }
@@ -37,24 +37,24 @@ export const createDoc = (newdoc: PartialJurisprudenciaDocument) => getElasticSe
     let CONTENT = []
     for( let key in newdoc ){
         if( !newdoc[key] ) continue;
-        if( isJurisprudenciaDocumentExactKeys(key) && typeof newdoc[key] === "string" ){
+        if( isJurisprudenciaDocumentExactKey(key) && typeof newdoc[key] === "string" ){
             doc[key] = newdoc[key];
             CONTENT.push(newdoc[key])
             continue;
         }
-        if( isJurisprudenciaDocumentGenericKeys(key) && typeof newdoc[key] === "object" && newdoc[key]?.Index.every(v => typeof v === "string") && newdoc[key]?.Original.every(v => typeof v === "string") && newdoc[key]?.Show.every(v => typeof v === "string") ){
+        if( isJurisprudenciaDocumentGenericKey(key) && typeof newdoc[key] === "object" && newdoc[key]?.Index.every(v => typeof v === "string") && newdoc[key]?.Original.every(v => typeof v === "string") && newdoc[key]?.Show.every(v => typeof v === "string") ){
             doc[key] = newdoc[key];
             CONTENT.push(...newdoc[key].Show)
             CONTENT.push(...newdoc[key].Original)
             CONTENT.push(...newdoc[key].Index)
             continue;
         }
-        if( isJurisprudenciaDocumentDateKeys(key) && typeof newdoc[key] === "string" && newdoc[key].match(/^\d{2}\/\d{2}\/\d{4}$/) ){
+        if( isJurisprudenciaDocumentDateKey(key) && typeof newdoc[key] === "string" && newdoc[key].match(/^\d{2}\/\d{2}\/\d{4}$/) ){
             doc[key] = newdoc[key];
             CONTENT.push(newdoc[key])
             continue;
         }
-        if( isJurisprudenciaDocumentTextKeys(key) && typeof newdoc[key] === "string" ){
+        if( isJurisprudenciaDocumentTextKey(key) && typeof newdoc[key] === "string" ){
             doc[key] = newdoc[key];
             CONTENT.push(newdoc[key])
             continue;
@@ -72,6 +72,7 @@ export const createDoc = (newdoc: PartialJurisprudenciaDocument) => getElasticSe
         "Processo": calculateUUID(doc, ["Número de Processo"])
     },
     doc.UUID = calculateUUID(doc.HASH,["Sumário","Texto","Processo"])
+    doc.STATE = "preparação"
     
     return c.index<JurisprudenciaDocument>({index: JurisprudenciaVersion, document: doc as JurisprudenciaDocument, refresh: "wait_for"});
 })

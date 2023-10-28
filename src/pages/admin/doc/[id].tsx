@@ -1,7 +1,7 @@
 //@ts-nocheck
 import { DashboardGenericPage } from "@/components/genericPageStructure"
 import { withAuthentication } from "@/core/user/authenticate"
-import { JurisprudenciaDocument, JurisprudenciaDocumentKey, PartialJurisprudenciaDocument, isJurisprudenciaDocumentContentKey, isJurisprudenciaDocumentDateKeys, isJurisprudenciaDocumentExactKeys, isJurisprudenciaDocumentGenericKeys, isJurisprudenciaDocumentHashKeys, isJurisprudenciaDocumentObjectKeys, isJurisprudenciaDocumentTextKeys } from "@stjiris/jurisprudencia-document";
+import { JurisprudenciaDocument, JurisprudenciaDocumentKey, PartialJurisprudenciaDocument, isJurisprudenciaDocumentContentKey, isJurisprudenciaDocumentDateKey, isJurisprudenciaDocumentExactKey, isJurisprudenciaDocumentGenericKey, isJurisprudenciaDocumentHashKey, isJurisprudenciaDocumentObjectKey, isJurisprudenciaDocumentTextKey } from "@stjiris/jurisprudencia-document";
 import { createContext, useContext, useEffect, useState } from "react";
 
 import Link from "next/link";
@@ -83,13 +83,14 @@ function ShowOriginal({original}: {original: Record<string, any>}){
 
 function EditKey({accessKey, doc}: {accessKey: JurisprudenciaKey, doc: PartialJurisprudenciaDocument}){
 
-    if( isJurisprudenciaDocumentObjectKeys(accessKey.key) ) return <ShowCode accessKey={accessKey} doc={doc}/>
-    if( isJurisprudenciaDocumentHashKeys(accessKey.key) ) return <ShowCode accessKey={accessKey} doc={doc}/>
+    if( isJurisprudenciaDocumentObjectKey(accessKey.key) ) return <ShowCode accessKey={accessKey} doc={doc}/>
+    if( isJurisprudenciaDocumentHashKey(accessKey.key) ) return <ShowCode accessKey={accessKey} doc={doc}/>
     if( isJurisprudenciaDocumentContentKey(accessKey.key) ) return <ShowCode accessKey={accessKey} doc={doc}/>
-    if( isJurisprudenciaDocumentTextKeys(accessKey.key) ) return <TextInput accessKey={accessKey} doc={doc}/>
-    if( isJurisprudenciaDocumentDateKeys(accessKey.key) ) return <DateInput accessKey={accessKey} doc={doc}/>
-    if( isJurisprudenciaDocumentExactKeys(accessKey.key) ) return <ExactInput accessKey={accessKey} doc={doc}/>
-    if( isJurisprudenciaDocumentGenericKeys(accessKey.key) ) return <GenericInput accessKey={accessKey} doc={doc}/>
+    if( isJurisprudenciaDocumentTextKey(accessKey.key) ) return <TextInput accessKey={accessKey} doc={doc}/>
+    if( isJurisprudenciaDocumentDateKey(accessKey.key) ) return <DateInput accessKey={accessKey} doc={doc}/>
+    if( isJurisprudenciaDocumentExactKey(accessKey.key) && accessKey.key === "STATE" ) return <ExactInput accessKey={accessKey} doc={doc} options={["preparação","importação","público","eliminado"]}/>
+    if( isJurisprudenciaDocumentExactKey(accessKey.key) ) return <ExactInput accessKey={accessKey} doc={doc}/>
+    if( isJurisprudenciaDocumentGenericKey(accessKey.key) ) return <GenericInput accessKey={accessKey} doc={doc}/>
     
     //throw new Error("Unreachable")
     return <>Unreachable</>
