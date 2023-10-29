@@ -8,12 +8,9 @@ export default async function datalistHandler(
   res: NextApiResponse<{[key: string] : PartialJurisprudenciaDocument}>
 ) {
     let id = Array.isArray(req.query.id) ? req.query.id[0] : req.query.id || "";
-    if( id === ""){
-        return res.json({});
-    }
 
     let sf: SearchFilters = {
-        pre: [{
+        pre: id.length > 0 ? [{
             bool: {
                 should: [{
                     ids: {
@@ -54,17 +51,31 @@ export default async function datalistHandler(
                 }
                 ]
             }
-        }],
+        }] : [],
         after: []
+    }
+    let state = (Array.isArray(req.query.state) ? req.query.state : req.query.state?.split(",") || []).filter(s => s.length > 0);
+    if( state.length > 0 ){
+        sf.pre.push({
+            terms: {
+                STATE: state,
+                _name: "state"
+            }
+        })
     }
 
     let all = await authenticatedHandler(req);
 
-    let {hits: {hits}} = await search(createQueryDslQueryContainer(), sf, 0, {}, 5, {_source: ["Relator Nome Profissional", "Data", "Número de Processo", "ECLI","UUID","STATE"]},all);
+    let page = parseInt(Array.isArray(req.query.page) ? req.query.page[0] : req.query.page || "" ) || 0
+
+    let {hits: {hits, total}} = await search(createQueryDslQueryContainer(), sf, page, {}, 5, {_source: ["Relator Nome Profissional", "Data", "Número de Processo", "ECLI","UUID","STATE"]},all);
     let r = {} as {[key: string]: PartialJurisprudenciaDocument}
     for( let hit of hits ){
         r[hit._id] = hit._source!
     }
+    res.setHeader("Pagination-Count", typeof total === "number" ? total : total?.value || 0)
+    res.setHeader("Pagination-Page", page)
+    res.setHeader("Pagination-Limit", 5)
     return res.json( r )
 
 }

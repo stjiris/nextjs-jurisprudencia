@@ -11,6 +11,7 @@ import { useRouter } from "next/router";
 import { getAllKeys } from "@/core/keys";
 import { JurisprudenciaKey } from "@/types/keys";
 import { useFetch } from "@/components/useFetch";
+import { authenticatedHandler } from "@/core/user/authenticate";
 
 const MUST_HAVE = ["UUID","Número de Processo","Fonte","ECLI","URL","Sumário","Texto"]
 
@@ -41,8 +42,8 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
     let keys = await getAllKeys();
     let includes = keys.filter(k => k.documentShow || MUST_HAVE.includes(k.key)).map(k => k.key);
     let excludes = keys.filter(k => !k.documentShow && !MUST_HAVE.includes(k.key)).map(k => k.key);
-
-    let r = await search({bool: {must}}, {pre:[], after:[]}, 0, {}, 100, {_source: {includes, excludes}});
+    const all = await authenticatedHandler(ctx.req);
+    let r = await search({bool: {must}}, {pre:[], after:[]}, 0, {}, 100, {_source: {includes, excludes}}, all);
     if( r.hits.hits.length <= 0 ){
         ctx.res.statusCode = 404;
         return {props: {}}

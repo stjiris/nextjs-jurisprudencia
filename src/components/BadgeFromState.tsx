@@ -1,8 +1,14 @@
-export function BadgeFromState({ state }: { state?: string; }) {
-    let color = "light";
-    if (state === "público") color = "primary";
-    if (state === "importação") color = "secondary";
-    if (state === "preparação") color = "secondary";
-    if (state === "eliminado") color = "danger";
+import { JurisprudenciaDocumentStateValue } from "@stjiris/jurisprudencia-document";
+
+export function BadgeFromState({ state }: { state?: JurisprudenciaDocumentStateValue; }) {
+    let color = colorFromState(state);
     return <div className={`badge bg-${color}`}>{state || "(estado)"}</div>;
+}
+
+export function colorFromState(state?: JurisprudenciaDocumentStateValue) {
+    if (state === "público") return "success";
+    if (state === "importação") return "info";
+    if (state === "preparação") return "info";
+    if (state === "eliminado") return "danger";
+    return "light";
 }

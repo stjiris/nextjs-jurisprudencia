@@ -2,6 +2,8 @@ import { GetServerSideProps, GetServerSidePropsContext, NextApiHandler, NextApiR
 import { ParsedUrlQuery } from "querystring";
 import { validateSession } from "./session";
 import { getClient, User, USERS_INDEX, compare, hashPassword, readUser } from "./usercrud";
+import { IncomingMessage } from "http";
+import { NextApiRequestCookies } from "next/dist/server/api-utils";
 
 
 export enum AuthenticateResponse {
@@ -46,7 +48,7 @@ export function withAuthentication<
     }
 }
 
-export async function authenticatedHandler<T>(req: NextApiRequest){
+export async function authenticatedHandler(req: GetServerSidePropsContext["req"]){
     let user = req.cookies["user"];
     let session = req.cookies["session"];
     return !!user && !!session && await validateSession(user, session);

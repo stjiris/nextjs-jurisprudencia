@@ -1,11 +1,11 @@
 import { DashboardGenericPage } from "@/components/genericPageStructure";
 import { useFetch } from "@/components/useFetch";
 import { withAuthentication } from "@/core/user/authenticate";
-import { JurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
+import { JurisprudenciaDocument, JurisprudenciaDocumentStateValues } from "@stjiris/jurisprudencia-document";
 import { GetServerSideProps } from "next";
 import Link from "next/link";
-import { useRef, useState } from "react"
-import { BadgeFromState } from "@/components/BadgeFromState";
+import { use, useEffect, useLayoutEffect, useRef, useState } from "react"
+import { BadgeFromState, colorFromState } from "@/components/BadgeFromState";
 
 export const getServerSideProps: GetServerSideProps<{}> = withAuthentication(async (ctx) => ({props: {}}))
 
@@ -24,34 +24,47 @@ export default function UpdatePage(){
 function SearchCard(){
     let inputRef = useRef<HTMLInputElement>(null);
     let [id, setId] = useState<string>(inputRef.current?.value || "");
+    let StateChecked = JurisprudenciaDocumentStateValues.map(v => ({stateName: v, useState: useState(true)} as const))
+    let allSame = StateChecked.every(({useState}) => useState[0] === StateChecked[0].useState[0])
     
     return <div className="card-body">
         <div className="card-title d-flex align-items-baseline justify-content-between">
             <h4 className="card-title">Editar documento</h4>
+            <div className="btn-group align-items-baseline">
+                <button key="Todos" className={`btn btn-sm btn-${allSame ? (StateChecked[0].useState[0] ? "primary" : "light") : "light"}`} onClick={() =>  StateChecked.forEach(({useState}) => allSame ? useState[1](!useState[0]) : useState[1](true))}>Todos</button>
+                {StateChecked.map(({stateName, useState}, i) => <button key={i} className={`btn btn-sm btn-${useState[0] ? colorFromState(stateName) : "light"}`} onClick={() => useState[1](!useState[0])}>{stateName}</button>)}
+            </div>
             <Link href="/admin/doc/criar" className="btn btn-primary">Criar</Link>
         </div>
         <div className="input-group">
             <span className="input-group-text">Pesquisar:</span>
             <input ref={inputRef} className="form-control" type="text" placeholder="ID, ECLI, UUID ou Processo" onInput={(evt) => setId(evt.currentTarget.value)}/>
         </div>
-        { id && <SearchResults id={id} />}
+        <SearchResults id={id} state={StateChecked.filter(s => s.useState[0]).map(s => s.stateName)}/>
     </div>
 }
 
-function SearchResults({id}:{id: string}){
-    let results = useFetch<{[key: string]: JurisprudenciaDocument}>(`/api/searchId?id=${encodeURIComponent(id)}`, [id])
-
+function SearchResults({id, state}:{id: string, state: JurisprudenciaDocument["STATE"][]}){
+    let [page, setPage] = useState(0);
+    let results = useFetch<{[key: string]: JurisprudenciaDocument}>(`/api/searchId?id=${encodeURIComponent(id)}&state=${encodeURIComponent(state.join(","))}&page=${page}`, [id, state, page])
+    useEffect(() => {
+        if( Object.keys(results || {}).length <= 0 ) setPage(0)
+    }, [results, id, state])
     return <div className="my-2">
         {results ?
         (Object.keys(results).length > 0 ? 
         <div>
             {Object.keys(results).map(id => <SearchResultHit key={id} id={id} doc={results![id]} />)}
+            <div className="d-flex justify-content-center btn-group">
+                <button className="btn btn-primary" onClick={() => setPage(p => p-1)} disabled={page <= 0}>Documentos anteriores</button>
+                <span className="btn btn-secondary">{page+1}</span>
+                <button className="btn btn-primary" onClick={() => setPage(p => p+1)} disabled={Object.keys(results).length < 5}>Próximos documentos</button>
+            </div>
         </div>
         :
         <h6>Sem resultados...</h6>)
         : 
         <h6>A procurar...</h6>}
-    { Array.isArray(results) }
     </div>
 }
 

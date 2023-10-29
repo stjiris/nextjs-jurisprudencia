@@ -30,7 +30,7 @@ function Create(){
                 <div className="card shadow">
                     <div className="card-body">
                         <CreateDocument/>
-                        {keys.keys.map((key, i) => <CreateKey key={i} accessKey={key} doc={{STATE: "preparação"}} />)}
+                        {keys.keys.map((key, i) => <CreateKey key={i} accessKey={key} doc={{STATE: "público"}} />)}
                     </div>
                 </div>
             </div>
