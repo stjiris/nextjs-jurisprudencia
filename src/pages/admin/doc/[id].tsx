@@ -1,7 +1,7 @@
 //@ts-nocheck
 import { DashboardGenericPage } from "@/components/genericPageStructure"
 import { withAuthentication } from "@/core/user/authenticate"
-import { JurisprudenciaDocument, JurisprudenciaDocumentKey, PartialJurisprudenciaDocument, isJurisprudenciaDocumentContentKey, isJurisprudenciaDocumentDateKey, isJurisprudenciaDocumentExactKey, isJurisprudenciaDocumentGenericKey, isJurisprudenciaDocumentHashKey, isJurisprudenciaDocumentObjectKey, isJurisprudenciaDocumentTextKey } from "@stjiris/jurisprudencia-document";
+import { JurisprudenciaDocument, JurisprudenciaDocumentKey, JurisprudenciaDocumentStateValues, PartialJurisprudenciaDocument, isJurisprudenciaDocumentContentKey, isJurisprudenciaDocumentDateKey, isJurisprudenciaDocumentExactKey, isJurisprudenciaDocumentGenericKey, isJurisprudenciaDocumentHashKey, isJurisprudenciaDocumentObjectKey, isJurisprudenciaDocumentStateKey, isJurisprudenciaDocumentTextKey } from "@stjiris/jurisprudencia-document";
 import { createContext, useContext, useEffect, useState } from "react";
 
 import Link from "next/link";
@@ -10,7 +10,7 @@ import { useRouter } from "next/router";
 import { ReadOnlyInput, UpdateInput, HTMLInput, UpdateObject, DateInput, TextInput, UpdateContext, ExactInput, GenericInput, ShowCode } from "@/components/dashboardDoc";
 import { Loading } from "@/components/loading";
 import { useFetch } from "@/components/useFetch";
-import { GetResponse } from "@elastic/elasticsearch/lib/api/types";
+import { GetResponse, WriteResponseBase } from "@elastic/elasticsearch/lib/api/types";
 import { KeysContext, useKeysFromContext } from "@/contexts/keys";
 import { JurisprudenciaKey } from "@/types/keys";
 
@@ -88,7 +88,7 @@ function EditKey({accessKey, doc}: {accessKey: JurisprudenciaKey, doc: PartialJu
     if( isJurisprudenciaDocumentContentKey(accessKey.key) ) return <ShowCode accessKey={accessKey} doc={doc}/>
     if( isJurisprudenciaDocumentTextKey(accessKey.key) ) return <TextInput accessKey={accessKey} doc={doc}/>
     if( isJurisprudenciaDocumentDateKey(accessKey.key) ) return <DateInput accessKey={accessKey} doc={doc}/>
-    if( isJurisprudenciaDocumentExactKey(accessKey.key) && accessKey.key === "STATE" ) return <ExactInput accessKey={accessKey} doc={doc} options={["preparação","importação","público","eliminado"]}/>
+    if( isJurisprudenciaDocumentStateKey(accessKey.key) ) return <ExactInput accessKey={accessKey} doc={doc} options={JurisprudenciaDocumentStateValues}/>
     if( isJurisprudenciaDocumentExactKey(accessKey.key) ) return <ExactInput accessKey={accessKey} doc={doc}/>
     if( isJurisprudenciaDocumentGenericKey(accessKey.key) ) return <GenericInput accessKey={accessKey} doc={doc}/>
     
@@ -111,10 +111,15 @@ function UpdateDocument({id}: {id: string}){
 
     let deleteDoc = async () => {
         if( !confirm("Tem a certeza que quer eliminar o documento?") ) return;
-        await fetch(`${router.basePath}/api/doc/${id}`, {
+        let writeResponseBase = await fetch(`${router.basePath}/api/doc/${id}`, {
             method: "DELETE",
-        });
-        navRouter.push("/admin/doc")
+        }).then( r => r.json() as Promise<WriteResponseBase> );
+        if( writeResponseBase.result === "updated" ){
+            navRouter.refresh();
+        }
+        else{
+            navRouter.push("/admin/doc")
+        }
     }
 
     return <div className="alert alert-info">

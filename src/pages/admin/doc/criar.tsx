@@ -1,7 +1,7 @@
 //@ts-nocheck
 import { DashboardGenericPage } from "@/components/genericPageStructure"
 import { withAuthentication } from "@/core/user/authenticate"
-import { JurisprudenciaDocument, JurisprudenciaDocumentKey, PartialJurisprudenciaDocument, isJurisprudenciaDocumentContentKey, isJurisprudenciaDocumentDateKey, isJurisprudenciaDocumentExactKey, isJurisprudenciaDocumentGenericKey, isJurisprudenciaDocumentHashKey, isJurisprudenciaDocumentObjectKey, isJurisprudenciaDocumentTextKey } from "@stjiris/jurisprudencia-document";
+import { JurisprudenciaDocument, JurisprudenciaDocumentKey, JurisprudenciaDocumentStateKeys, JurisprudenciaDocumentStateValues, PartialJurisprudenciaDocument, isJurisprudenciaDocumentContentKey, isJurisprudenciaDocumentDateKey, isJurisprudenciaDocumentExactKey, isJurisprudenciaDocumentGenericKey, isJurisprudenciaDocumentHashKey, isJurisprudenciaDocumentObjectKey, isJurisprudenciaDocumentStateKey, isJurisprudenciaDocumentTextKey } from "@stjiris/jurisprudencia-document";
 import { createContext, useContext, useEffect, useState } from "react";
 
 import Link from "next/link";
@@ -30,7 +30,7 @@ function Create(){
                 <div className="card shadow">
                     <div className="card-body">
                         <CreateDocument/>
-                        {keys.keys.map((key, i) => <CreateKey key={i} accessKey={key} doc={{}} />)}
+                        {keys.keys.map((key, i) => <CreateKey key={i} accessKey={key} doc={{STATE: "preparação"}} />)}
                     </div>
                 </div>
             </div>
@@ -48,6 +48,7 @@ function CreateKey({accessKey, doc}: {accessKey: JurisprudenciaKey, doc: Partial
     if( isJurisprudenciaDocumentContentKey(accessKey.key) ) return <ShowCode accessKey={accessKey} doc={doc}/>
     if( isJurisprudenciaDocumentTextKey(accessKey.key) ) return <TextInput accessKey={accessKey} doc={doc}/>
     if( isJurisprudenciaDocumentDateKey(accessKey.key) ) return <DateInput accessKey={accessKey} doc={doc}/>
+    if( isJurisprudenciaDocumentStateKey(accessKey.key) ) return <ExactInput accessKey={accessKey} doc={doc} options={JurisprudenciaDocumentStateValues}/>
     if( isJurisprudenciaDocumentExactKey(accessKey.key) ) return <ExactInput accessKey={accessKey} doc={doc}/>
     if( isJurisprudenciaDocumentGenericKey(accessKey.key) ) return <GenericInput accessKey={accessKey} doc={doc}/>
     

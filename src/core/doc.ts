@@ -1,5 +1,5 @@
 //@ts-nocheck
-import { JurisprudenciaDocument, JurisprudenciaDocumentKey, JurisprudenciaVersion, PartialJurisprudenciaDocument, isJurisprudenciaDocumentDateKey, isJurisprudenciaDocumentExactKey, isJurisprudenciaDocumentGenericKey, isJurisprudenciaDocumentTextKey } from "@stjiris/jurisprudencia-document";
+import { JurisprudenciaDocument, JurisprudenciaDocumentKey, JurisprudenciaDocumentStateValues, JurisprudenciaVersion, PartialJurisprudenciaDocument, isJurisprudenciaDocumentDateKey, isJurisprudenciaDocumentExactKey, isJurisprudenciaDocumentGenericKey, isJurisprudenciaDocumentStateKey, isJurisprudenciaDocumentTextKey } from "@stjiris/jurisprudencia-document";
 import { getElasticSearchClient } from "./elasticsearch";
 import crypto from "node:crypto"
 
@@ -25,6 +25,10 @@ export const updateDoc = (docId: string, previewDoc: PartialJurisprudenciaDocume
             continue;
         }
         if( isJurisprudenciaDocumentTextKey(key) && typeof previewDoc[key] === "string" ){
+            doc[key] = previewDoc[key];
+            continue;
+        }
+        if( isJurisprudenciaDocumentStateKey(key) && typeof previewDoc[key] === "string" && JurisprudenciaDocumentStateValues.includes(previewDoc[key]) ){
             doc[key] = previewDoc[key];
             continue;
         }
@@ -59,6 +63,10 @@ export const createDoc = (newdoc: PartialJurisprudenciaDocument) => getElasticSe
             CONTENT.push(newdoc[key])
             continue;
         }
+        if( isJurisprudenciaDocumentStateKey(key) && typeof newdoc[key] === "string" && JurisprudenciaDocumentStateValues.includes(newdoc[key]) ){
+            doc[key] = newdoc[key];
+            continue;
+        }
     }
     doc.Fonte = "STJ (Manual)"
     doc.CONTENT = CONTENT
@@ -72,7 +80,7 @@ export const createDoc = (newdoc: PartialJurisprudenciaDocument) => getElasticSe
         "Processo": calculateUUID(doc, ["Número de Processo"])
     },
     doc.UUID = calculateUUID(doc.HASH,["Sumário","Texto","Processo"])
-    doc.STATE = "preparação"
+    doc.STATE = doc.STATE || "público"
     
     return c.index<JurisprudenciaDocument>({index: JurisprudenciaVersion, document: doc as JurisprudenciaDocument, refresh: "wait_for"});
 })
