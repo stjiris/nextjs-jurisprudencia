@@ -24,15 +24,16 @@ export default function UpdatePage(){
 function SearchCard(){
     let inputRef = useRef<HTMLInputElement>(null);
     let [id, setId] = useState<string>(inputRef.current?.value || "");
-    let StateChecked = JurisprudenciaDocumentStateValues.map(v => ({stateName: v, useState: useState(true)} as const))
-    let allSame = StateChecked.every(({useState}) => useState[0] === StateChecked[0].useState[0])
+    let [StatesFilter, setStatesFilter] = useState(() => JurisprudenciaDocumentStateValues.map(v => ({stateName: v, enabled: true})));
+
+    let allSame = StatesFilter.every(({enabled}) => enabled === StatesFilter[0].enabled);
     
     return <div className="card-body">
         <div className="card-title d-flex align-items-baseline justify-content-between">
             <h4 className="card-title">Editar documento</h4>
             <div className="btn-group align-items-baseline">
-                <button key="Todos" className={`btn btn-sm btn-${allSame ? (StateChecked[0].useState[0] ? "primary" : "light") : "light"}`} onClick={() =>  StateChecked.forEach(({useState}) => allSame ? useState[1](!useState[0]) : useState[1](true))}>Todos</button>
-                {StateChecked.map(({stateName, useState}, i) => <button key={i} className={`btn btn-sm btn-${useState[0] ? colorFromState(stateName) : "light"}`} onClick={() => useState[1](!useState[0])}>{stateName}</button>)}
+                <button key="Todos" className={`btn btn-sm btn-${allSame ? (StatesFilter[0].enabled ? "primary" : "light") : "light"}`} onClick={() => setStatesFilter(s => s.map(({stateName}) => ({stateName, enabled: allSame ? !StatesFilter[0].enabled : true})))}>Todos</button>
+                {StatesFilter.map(({stateName, enabled}, i) => <button key={i} className={`btn btn-sm btn-${enabled ? colorFromState(stateName) : "light"}`} onClick={() => setStatesFilter(s => s.map(({stateName: sName, enabled: sEnabled}) => ({stateName: sName, enabled: sName === stateName ? !sEnabled : sEnabled})))}>{stateName}</button>)}
             </div>
             <Link href="/admin/doc/criar" className="btn btn-primary">Criar</Link>
         </div>
@@ -40,7 +41,7 @@ function SearchCard(){
             <span className="input-group-text">Pesquisar:</span>
             <input ref={inputRef} className="form-control" type="text" placeholder="ID, ECLI, UUID ou Processo" onInput={(evt) => setId(evt.currentTarget.value)}/>
         </div>
-        <SearchResults id={id} state={StateChecked.filter(s => s.useState[0]).map(s => s.stateName)}/>
+        <SearchResults id={id} state={StatesFilter.filter(s => s.enabled).map(s => s.stateName)}/>
     </div>
 }
 
