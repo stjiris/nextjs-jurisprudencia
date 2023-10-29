@@ -23,7 +23,7 @@ export default function ExcelPage(){
                             <thead>
                                 <tr>
                                     <th className="text-center table-secondary" colSpan={1}></th>
-                                    <th className="text-center" colSpan={2}>Sistema</th>
+                                    <th className="text-center" colSpan={3}>Sistema</th>
                                     <th className="text-center" colSpan={2}>Acessibilidade</th>
                                     <th className="text-center" colSpan={2}>Filtros</th>
                                     <th className="text-center" colSpan={2}>Indices</th>
@@ -33,6 +33,7 @@ export default function ExcelPage(){
                                     <th className="text-center table-secondary">#</th>
                                     <th>Campo</th>
                                     <th className="text-center">Ativo</th>
+                                    <th className="text-center">Autenticação</th>
 
                                     <th>Nome</th>
                                     <th>Descrição</th>
@@ -85,14 +86,15 @@ function ShowFilterRow({innitialKey, update: updateOrder}: {innitialKey: Jurispr
                 <button className="btn p-0 m-0" onClick={e => update("filtersOrder", jurisprudenciaKey.filtersOrder+1).then(updateOrder)}><i className="bi bi-arrow-down"></i></button>
             </td>
             <th><label className="form-label p-0 m-0">{jurisprudenciaKey.key}</label></th>
-            <td className="text-center"><DisabledBooleanInput attr="active" /></td>
+            <td className="text-center"><DisabledBooleanInput attr="active"/></td>
+            <td className="text-center"><DisabledBooleanInput attr="authentication"/></td>
             <td><input onChange={e => update("name", e.currentTarget.value)} className="form-control p-0 m-0" type="text" value={jurisprudenciaKey.name}/></td>
             <td>{!edit ? <button className="btn btn-primary py-0 m-0" onClick={() => setEdit(e => !e)}>Editar</button> : <><button className="btn btn-danger py-0 m-0" onClick={() => {setEdit(false); setDesc(jurisprudenciaKey.description) }}>Cancelar</button><button className="btn btn-primary py-0 m-0" onClick={() => {setEdit(false); update("description", desc)}}>Guardar</button></> }</td>
-            <td className="text-center"><DisabledBooleanInput attr="filtersShow" /></td>
-            <td className="text-center"><DisabledBooleanInput attr="filtersSuggest" /></td>
-            <td className="text-center"><DisabledBooleanInput attr="indicesList" /></td>
-            <td className="text-center"><DisabledBooleanInput attr="indicesGroup" /></td>
-            <td className="text-center"><BooleanInput attr="documentShow" /></td>
+            <td className="text-center"><DisabledBooleanInput attr="filtersShow"/></td>
+            <td className="text-center"><DisabledBooleanInput attr="filtersSuggest"/></td>
+            <td className="text-center"><DisabledBooleanInput attr="indicesList"/></td>
+            <td className="text-center"><DisabledBooleanInput attr="indicesGroup"/></td>
+            <td className="text-center"><BooleanInput attr="documentShow"/></td>
         </tr>
         {edit && <tr style={{"--bs-table-accent-bg": "initial"} as CSSProperties}>
             <td colSpan={9}><ReactQuill theme="snow" value={desc} onChange={setDesc}/></td>

@@ -13,6 +13,7 @@ export type JurisprudenciaKey = {
     indicesList: boolean
     indicesGroup: boolean
     documentShow: boolean
+    authentication: boolean
 }
 
 export const KEYS_INFO_INDEX_VERSION = "keys-info.0.0"
@@ -27,7 +28,8 @@ export const KEYS_INFO_PROPERTIES: Record<keyof JurisprudenciaKey, MappingProper
     filtersOrder: {type: "float"},
     indicesList: {type: "boolean"},
     indicesGroup: {type: "boolean"},
-    documentShow: {type: "boolean"}
+    documentShow: {type: "boolean"},
+    authentication: {type: "boolean"}
 }
 
 export function canBeActive(key: JurisprudenciaDocumentKey){

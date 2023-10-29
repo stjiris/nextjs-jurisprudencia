@@ -21,7 +21,7 @@ async function getClient(){
             index: KEYS_INFO_INDEX_VERSION,
             operations: JurisprudenciaDocumentKeys.flatMap((key,i) => [
                 {create: {}},
-                {key: key, name: key, description: "Sem descrição", active: false, filtersSuggest: false, filtersShow: false, filtersOrder: i+1, indicesList: false, indicesGroup: false}
+                {key: key, name: key, description: "Sem descrição", active: false, filtersSuggest: false, filtersShow: false, filtersOrder: i+1, indicesList: false, indicesGroup: false, documentShow: false, authentication: false}
             ])
         })
     }
@@ -36,7 +36,7 @@ async function getClient(){
                 index: KEYS_INFO_INDEX_VERSION,
                 operations: create.flatMap((key,i) => [
                     {create: {}},
-                    {key: key, name: key, description: "Sem descrição", active: false, filtersSuggest: false, filtersShow: false, filtersOrder: r.hits.hits.length+1, indicesList: false, indicesGroup: false}
+                    {key: key, name: key, description: "Sem descrição", active: false, filtersSuggest: false, filtersShow: false, filtersOrder: r.hits.hits.length+1, indicesList: false, indicesGroup: false, documentShow: false, authentication: false}
                 ])
             })
         }
