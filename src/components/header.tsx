@@ -3,10 +3,12 @@ import Link from "next/link";
 import ModalSobre from "./sobre";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation"
 import logoname from '../../public/images/PT-logoLogo-STJ.png'
+import { useAuth } from "@/contexts/auth";
 
 const NAVEGACAO = ["Pesquisa", "Índices", /* "Dashboard"*/]
 
-export function DashboardHeader(){
+export function AdminHeader(){
+    const user = useAuth();
     return <>
         <header className="mb-1 py-2 align-items-center d-flex flex-wrap border-bottom">
             <Link href="/admin" className="align-items-center d-flex flex-wrap text-decoration-none nav-link">
@@ -16,7 +18,10 @@ export function DashboardHeader(){
                     height={70}
                     width={180}></Image>
                 <div className="ps-2 d-flex flex-column align-items-center">
-                    <h5 className="m-0 fancy-font">Jurisprudência - Admin</h5>
+                    <div className="m-0 d-flex align-items-baseline">
+                        <h5 className="m-0 fancy-font">Jurisprudência</h5>
+                        {user && <span className="px-1">Bem vindo, {user?.name}</span>}
+                    </div>
                 </div>
             </Link>
             <div className="flex-fill d-none d-lg-block"></div>
@@ -35,6 +40,7 @@ export function DashboardHeader(){
 }
 
 export default function Header(props: {keys_to_remove: string[]}){
+    const user = useAuth();
     const pathname = usePathname();
     const querystring_from_next = useSearchParams(); // needs to remove path params
     const new_query_string = new URLSearchParams();
@@ -57,7 +63,10 @@ export default function Header(props: {keys_to_remove: string[]}){
                     height={70}
                     width={180}></Image>
                 <div className="ps-2 d-flex flex-column align-items-center">
-                    <h5 className="m-0 fancy-font">Jurisprudência</h5>
+                    <div className="m-0 d-flex align-items-baseline">
+                        <h5 className="m-0 fancy-font">Jurisprudência</h5>
+                        {user && <span className="px-1">Bem vindo, {user?.name}</span>}
+                    </div>
                 </div>
             </Link>
             <div className="flex-fill d-none d-lg-block"></div>
