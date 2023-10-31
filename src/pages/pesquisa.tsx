@@ -1,3 +1,4 @@
+import { BadgeFromState } from "@/components/BadgeFromState"
 import { GenericPageWithForm } from "@/components/genericPageStructure"
 import { Loading } from "@/components/loading"
 import { FormProps, withForm } from "@/components/pageWithForm"
@@ -134,6 +135,7 @@ function JurisprudenciaItem({hit, searchId}:{hit: SearchHandlerResponseItem, sea
             {hit._source?.["Meio Processual"] && <span>&nbsp;- {hit._source["Meio Processual"].Show.join(" / ")}</span>}
             <span>&nbsp;- {showOrOriginal(hit, "Relator Nome Profissional")}</span>
             <span>&nbsp;- {showOrOriginal(hit, "Secção")}</span>
+            {keys?.STATE.active && hit._source.STATE ? <span className="px-1"><BadgeFromState state={hit._source["STATE"]} /></span> : <></>}
         </div>
         <div className="col-12 d-flex flex-wrap">
             <ShowKey hit={hit} accessKey="Votação" Comp={(p) => <div className="mx-1"><b>{p.ak}:&nbsp;</b><span>{p.vs.join(" / ")}</span></div>} />

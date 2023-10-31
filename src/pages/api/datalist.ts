@@ -1,4 +1,5 @@
 import search, { aggs, createQueryDslQueryContainer, filterableProps, getElasticSearchClient, parseSort, populateFilters, RESULTS_PER_PAGE, SearchFilters, sortBucketsAlphabetically } from '@/core/elasticsearch';
+import { authenticatedHandler } from '@/core/user/authenticate';
 import { DatalistObj } from '@/types/search';
 import { AggregationsAggregationContainer, AggregationsStringTermsAggregate } from '@elastic/elasticsearch/lib/api/types';
 import { JurisprudenciaVersion } from '@stjiris/jurisprudencia-document';
@@ -32,7 +33,8 @@ export default async function datalistHandler(
     }
     const sfilters = {pre: [], after: []} as SearchFilters;
     populateFilters(sfilters, req.query, [aggKey]);
-    return search(createQueryDslQueryContainer(req.query.q), sfilters, 0, { [aggKey]: finalAgg }, 10).then(body => {
+    const authed = await authenticatedHandler(req);
+    return search(createQueryDslQueryContainer(req.query.q), sfilters, 0, { [aggKey]: finalAgg }, 10, {}, authed).then(body => {
         if( !body.aggregations || !body.aggregations[aggKey] || !("buckets" in body.aggregations[aggKey]) ) throw new Error("Invalid aggregation result")
         
         let buckets = (body.aggregations[aggKey] as AggregationsStringTermsAggregate).buckets

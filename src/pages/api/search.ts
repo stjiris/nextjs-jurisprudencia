@@ -1,11 +1,12 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 import search, { createQueryDslQueryContainer, filterableProps, parseSort, populateFilters, RESULTS_PER_PAGE } from '@/core/elasticsearch';
+import { authenticatedHandler } from '@/core/user/authenticate';
 import { HighlightFragment, SearchHandlerResponse } from '@/types/search';
 import { SearchHighlight, SortCombinations } from '@elastic/elasticsearch/lib/api/types';
 import { JurisprudenciaDocumentKey } from '@stjiris/jurisprudencia-document';
 import type { NextApiRequest, NextApiResponse } from 'next'
 
-const useSource: JurisprudenciaDocumentKey[] = ["ECLI","Número de Processo","UUID","Data","Área","Meio Processual","Relator Nome Profissional","Secção","Votação","Decisão","Descritores","Sumário","Texto"]
+const useSource: JurisprudenciaDocumentKey[] = ["ECLI","Número de Processo","UUID","Data","Área","Meio Processual","Relator Nome Profissional","Secção","Votação","Decisão","Descritores","Sumário","Texto","STATE"]
        
 export default async function searchHandler(
   req: NextApiRequest,
@@ -55,7 +56,8 @@ export default async function searchHandler(
         },
         max_analyzed_offset: 1000000
     }
-    const result = await search(queryObj, sfilters, page, {}, RESULTS_PER_PAGE, {sort, highlight, track_scores: true, _source: useSource})
+    const authed = await authenticatedHandler(req);
+    const result = await search(queryObj, sfilters, page, {}, RESULTS_PER_PAGE, {sort, highlight, track_scores: true, _source: useSource}, authed)
     const r: SearchHandlerResponse = [];
     for( let hit of result.hits.hits ){
         const {Texto, "Relator Nome Completo": _completo, HASH: _HASH, ...rest} = hit._source!

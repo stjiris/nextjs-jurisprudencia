@@ -4,6 +4,7 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { IndicesProps, INDICES_OTHERS } from "@/types/indices";
 import { listAggregation } from "@/components/indices-helpers";
 import { getAllKeys } from "@/core/keys";
+import { authenticatedHandler } from "@/core/user/authenticate";
 
 export default async function indicesCsvHandler(
     req: NextApiRequest,
@@ -27,7 +28,8 @@ export default async function indicesCsvHandler(
 
     const sfilters = {pre: [], after: []};
     populateFilters(sfilters, req.query, []);
-    const result = await search(createQueryDslQueryContainer(req.query.q), sfilters, 0, listAggregation(term,group), 0)
+    const authed = await authenticatedHandler(req);
+    const result = await search(createQueryDslQueryContainer(req.query.q), sfilters, 0, listAggregation(term,group), 0, {}, authed)
 
 
     let othersCount = 0;

@@ -3,6 +3,7 @@ import search, { aggs, filterableProps, createQueryDslQueryContainer, populateFi
 import { NextApiRequest, NextApiResponse } from "next";
 import { INDICES_OTHERS } from "@/types/indices";
 import { listAggregation } from "@/components/indices-helpers";
+import { authenticatedHandler } from "@/core/user/authenticate";
 
 export default async function indicesCsvHandler(
     req: NextApiRequest,
@@ -16,7 +17,8 @@ export default async function indicesCsvHandler(
 
     const sfilters = {pre: [], after: []};
     populateFilters(sfilters, req.query, []);
-    const result = await search(createQueryDslQueryContainer(req.query.q), sfilters, 0, listAggregation(term,group), 0)
+    const authed = await authenticatedHandler(req);
+    const result = await search(createQueryDslQueryContainer(req.query.q), sfilters, 0, listAggregation(term,group), 0, {}, authed)
 
     let total = 0;
     if( result.hits.total ){

@@ -8,7 +8,7 @@ export default async function docApiHandler(
 ){
     const authed = await authenticatedHandler(req);
     if( !authed ){
-        return res.status(401).json({});
+        return res.status(401).json(null);
     }
     let user = req.cookies["user"]!;
 
@@ -16,5 +16,5 @@ export default async function docApiHandler(
         return res.json(await readUser(user).then(r => ({name: r?._source?.username})))
     }
 
-    return res.status(405).json({})
+    return res.status(405).json(null)
 }

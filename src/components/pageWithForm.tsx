@@ -2,6 +2,7 @@ import { AggregationsMaxAggregate, AggregationsMinAggregate, long, SearchTotalHi
 import { GetServerSideProps, GetServerSidePropsContext, PreviewData } from "next";
 import search, { createQueryDslQueryContainer, DEFAULT_AGGS, populateFilters } from "@/core/elasticsearch"
 import { ParsedUrlQuery } from "querystring";
+import { authenticatedHandler } from "@/core/user/authenticate";
 
 export interface FormProps {
     count: number,
@@ -18,7 +19,8 @@ export function withForm<
         const sfilters = {pre: [], after: []};
         const filtersUsed = populateFilters(sfilters, ctx.query)
         const queryObj = createQueryDslQueryContainer(ctx.query.q);
-        const result = await search(queryObj, sfilters, 0, DEFAULT_AGGS, 0, {track_scores: true, _source: []})
+        const authed = await authenticatedHandler(ctx.req);
+        const result = await search(queryObj, sfilters, 0, DEFAULT_AGGS, 0, {track_scores: true, _source: []}, authed)
         let total = 0;
         if( result.hits.total ){
             if( Number.isInteger(result.hits.total) ){

@@ -12,7 +12,8 @@ async function getClient(){
             },
             settings: {
                 number_of_shards: 1,
-                number_of_replicas: 0
+                number_of_replicas: 0,
+                refresh_interval: "1s"
             }
         }).catch(e => {
             console.log(e)
@@ -30,23 +31,24 @@ async function getClient(){
             index: KEYS_INFO_INDEX_VERSION,
             size: JurisprudenciaDocumentKeys.length
         })
-        if( r.hits.hits.length !== JurisprudenciaDocumentKeys.length ){
+        if( r.hits.hits.length < JurisprudenciaDocumentKeys.length ){
             let create = JurisprudenciaDocumentKeys.filter(k => !r.hits.hits.some(h => h._source?.key === k));
             await client.bulk<JurisprudenciaKey,JurisprudenciaKey>({
                 index: KEYS_INFO_INDEX_VERSION,
                 operations: create.flatMap((key,i) => [
                     {create: {}},
                     {key: key, name: key, description: "Sem descrição", active: false, filtersSuggest: false, filtersShow: false, filtersOrder: r.hits.hits.length+1, indicesList: false, indicesGroup: false, documentShow: false, authentication: false}
-                ])
-            })
+                ]),
+                refresh: "true"
+            }).then(r => console.log(r.items[0]))
         }
     }
     return client;
 }
 
-export async function getAllKeys(){
+export async function getAllKeys(authed: boolean = false){
     let client = await getClient();
-    let r = await client.search<JurisprudenciaKey>({
+    return await client.search<JurisprudenciaKey>({
         index: KEYS_INFO_INDEX_VERSION,
         size: JurisprudenciaDocumentKeys.length,
         sort: [{
@@ -54,8 +56,27 @@ export async function getAllKeys(){
         },{
             "key": "asc"
         }]
-    })
-    return r.hits.hits.map(h => h._source!);
+    }).then( r => r.hits.hits.map<JurisprudenciaKey>(({_source: key}) => {
+        if( !key ) throw new Error("Unreachable");
+
+        if( !authed && key.authentication ){
+            return {
+                key: key.key,
+                name: key.name,
+                description: key.description,
+                filtersOrder: key.filtersOrder,
+                active: false,
+                authentication: true,
+                documentShow: false,
+                filtersShow: false,
+                filtersSuggest: false,
+                indicesGroup: false,
+                indicesList: false
+            }
+        }
+
+        return key;
+    }));
 }
 
 export function getKey(k: JurisprudenciaDocumentKey){

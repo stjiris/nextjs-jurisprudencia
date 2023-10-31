@@ -1,4 +1,5 @@
 import search, { aggs, createQueryDslQueryContainer, getElasticSearchClient, populateFilters, SearchFilters } from '@/core/elasticsearch';
+import { authenticatedHandler } from '@/core/user/authenticate';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 export function matrixAggregation(term1: string, term2: string): Record<string, any> {
@@ -29,7 +30,8 @@ export default async function matrixHandler(
     const term2 = Array.isArray(req.query.termMatrix2) ? req.query.termMatrix2[0] : req.query.termMatrix2 || "Secção"; 
 
     try {
-      const body = await search(createQueryDslQueryContainer(req.query.q), sfilters, 0, matrixAggregation(term1, term2), 0); 
+      const authed = await authenticatedHandler(req);
+      const body = await search(createQueryDslQueryContainer(req.query.q), sfilters, 0, matrixAggregation(term1, term2), 0, {}, authed); 
       const aggs = body?.aggregations;
 
       return res.status(200).json(aggs);

@@ -1,4 +1,5 @@
 import search, { aggs, createQueryDslQueryContainer, populateFilters, SearchFilters } from '@/core/elasticsearch';
+import { authenticatedHandler } from '@/core/user/authenticate';
 import type { NextApiRequest, NextApiResponse } from 'next';
 export function areachartAggregation(key: string): Record<string, any> {
   return {
@@ -69,7 +70,8 @@ export default async function areachartHandler(
   const sfilters = { pre: [], after: [] } as SearchFilters;
   populateFilters(sfilters, req.query, []);
   try {
-    const body = await search(createQueryDslQueryContainer(req.query.q), sfilters, 0, areachartAggregation(aggKey), 0);
+    const authed = await authenticatedHandler(req);
+    const body = await search(createQueryDslQueryContainer(req.query.q), sfilters, 0, areachartAggregation(aggKey), 0, {}, authed);
     const aggs = body?.aggregations?.[aggKey];
     
     if (!aggs) {

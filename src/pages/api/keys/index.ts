@@ -1,13 +1,13 @@
-import { getAllKeys, getKey } from "@/core/keys";
+import { getAllKeys } from "@/core/keys";
+import { authenticatedHandler } from "@/core/user/authenticate";
 import { JurisprudenciaKey } from "@/types/keys";
-import { JurisprudenciaDocumentKey } from "@stjiris/jurisprudencia-document";
 
 import { NextApiRequest, NextApiResponse } from "next";
 
-export default async function getKeyHandler(
+export default async function getKeysHandler(
     req: NextApiRequest,
     res: NextApiResponse<JurisprudenciaKey[]>
     ){
-    
-    return res.json(await getAllKeys());
+    let authed = await authenticatedHandler(req);
+    return res.json(await getAllKeys(authed));
 }

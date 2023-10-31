@@ -1,6 +1,6 @@
 import { GetServerSideProps } from "next";
 import search from "@/core/elasticsearch"
-import { GenericField, JurisprudenciaDocument, JurisprudenciaDocumentKey } from "@stjiris/jurisprudencia-document";
+import { GenericField, JurisprudenciaDocument, JurisprudenciaDocumentKey, JurisprudenciaDocumentStateValue, isJurisprudenciaDocumentStateKey } from "@stjiris/jurisprudencia-document";
 import React, { CSSProperties, HTMLAttributes, ReactNode, useEffect, useState } from "react";
 import Link from "next/link";
 import TargetBlankLink from "@/components/link";
@@ -12,6 +12,7 @@ import { getAllKeys } from "@/core/keys";
 import { JurisprudenciaKey } from "@/types/keys";
 import { useFetch } from "@/components/useFetch";
 import { authenticatedHandler } from "@/core/user/authenticate";
+import { BadgeFromState } from "@/components/BadgeFromState";
 
 const MUST_HAVE = ["UUID","Número de Processo","Fonte","ECLI","URL","Sumário","Texto"]
 
@@ -38,12 +39,12 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
             must.push({wildcard: {UUID: `${uuid}*`}})
         }
     }
-
-    let keys = await getAllKeys();
+    
+    const authed = await authenticatedHandler(ctx.req);
+    let keys = await getAllKeys(authed);
     let includes = keys.filter(k => k.documentShow || MUST_HAVE.includes(k.key)).map(k => k.key);
     let excludes = keys.filter(k => !k.documentShow && !MUST_HAVE.includes(k.key)).map(k => k.key);
-    const all = await authenticatedHandler(ctx.req);
-    let r = await search({bool: {must}}, {pre:[], after:[]}, 0, {}, 100, {_source: {includes, excludes}}, all);
+    let r = await search({bool: {must}}, {pre:[], after:[]}, 0, {}, 100, {_source: {includes, excludes}}, authed);
     if( r.hits.hits.length <= 0 ){
         ctx.res.statusCode = 404;
         return {props: {}}
@@ -159,6 +160,9 @@ function Row(props: {children: ReactNode, style?: CSSProperties}){
 
 function Properties({accessKey, accessValue, noLink}: {accessKey: string, accessValue: JurisprudenciaDocument[JurisprudenciaDocumentKey], noLink?: boolean}){
     if( !accessValue ) return <>«sem valor»</>
+    if( isJurisprudenciaDocumentStateKey(accessKey) ){
+        return <BadgeFromState state={accessValue as JurisprudenciaDocumentStateValue} />
+    }
     if( typeof accessValue === "string"  ){
         return noLink ? <>{accessValue}</> : <Link href={`/pesquisa?${accessKey}=${encodeURIComponent(accessValue)}`}>{accessValue}</Link>
     }

@@ -1,4 +1,5 @@
 import search, { aggs, createQueryDslQueryContainer, populateFilters, SearchFilters } from '@/core/elasticsearch';
+import { authenticatedHandler } from '@/core/user/authenticate';
 import { AggregationsAggregationContainer } from '@elastic/elasticsearch/lib/api/types';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
@@ -38,6 +39,6 @@ export default async function histogramHandler(
     
     const sfilters: SearchFilters = {pre: [], after: []};
     const filters = populateFilters(sfilters, req.query, []);
-
-    return search(createQueryDslQueryContainer(req.query.q), sfilters, 0, histogramAggregation(aggKey, value), 0).then( r => res.json(r.aggregations))
+    const authed = await authenticatedHandler(req);
+    return search(createQueryDslQueryContainer(req.query.q), sfilters, 0, histogramAggregation(aggKey, value), 0, {}, authed).then( r => res.json(r.aggregations))
 }
