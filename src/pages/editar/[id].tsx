@@ -127,7 +127,7 @@ function UpdateDocument({id}: {id: string}){
             <h4 className="flex-shrink-1">Documento <code>{id}</code></h4>
             <div className="flex-grow-1"></div>
             <div className="btn-group">
-                <button className="btn btn-secondary" onClick={() => navRouter.push(".")}>Voltar</button>
+                <button className="btn btn-secondary" onClick={() => navRouter.back()}>Voltar</button>
                 <button className="btn btn-danger" onClick={deleteDoc} disabled={Object.keys(updateObject).length > 0}>Eliminar</button>
                 <button className="btn btn-warning" onClick={() => navRouter.refresh()} disabled={Object.keys(updateObject).length === 0}>Cancelar</button>
                 <button className="btn btn-success" onClick={update} disabled={Object.keys(updateObject).length === 0}>Guardar</button>

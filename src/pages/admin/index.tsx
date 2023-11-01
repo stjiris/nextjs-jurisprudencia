@@ -12,14 +12,11 @@ export default function IndexPage(){
             <div className="col-sm-12 col-md-8 col-xl-6">
                 <div className="card shadow">
                     <div className="card-body">
-                        <LinkEntry link="/admin/doc" title="Documento">
-                                <p>Atualizar ou criar acordão</p>
+                    <LinkEntry link="/pesquisa" title="Pesquisa">
+                                <p>Pesquise normalmente pelos acórdãos. Terá acesso a mais informação e poderá abrir em modo de edição os acórdãos</p>
                         </LinkEntry>
-                        <LinkEntry link="/admin/bulk" title="Índices">
-                                <p>Atualizar vários valores de índices ao mesmo tempo</p>
-                        </LinkEntry>
-                        <LinkEntry link="/admin/users" title="Utilizadores">
-                                <p>Atualizar, modificar ou criar utilizadores</p>
+                        <LinkEntry link="/editar/criar" title="Criar Acórdão">
+                                <p>Criar acordão manualmente</p>
                         </LinkEntry>
                         <LinkEntry link="/admin/excel" title="Importar/Exportar">
                                 <p>Importar ou exportar excel para atualização dos dados</p>

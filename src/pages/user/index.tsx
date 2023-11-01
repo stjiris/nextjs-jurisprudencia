@@ -23,6 +23,7 @@ export default function UserIndex({user}: UserIndexProps){
                     <div className="card-body">
                         <h4 className="card-title">Bem vindo, {user._source?.username}!</h4>
                         <div className="d-flex justify-content-between w-75 mx-auto">
+                            <Link href="/admin" className="btn btn-primary m-1">Gestão</Link>
                             <Link href="/user/update" className="btn btn-primary m-1">Mudar palavra-passe</Link>
                             <Link href="/user/logout" className="btn btn-warning m-1">Logout</Link>
                         </div>

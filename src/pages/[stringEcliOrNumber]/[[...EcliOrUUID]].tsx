@@ -7,12 +7,12 @@ import TargetBlankLink from "@/components/link";
 import Head from "next/head";
 import GenericPage from "@/components/genericPageStructure";
 import { trackClickedDocument } from "@/core/track-search";
-import { useRouter } from "next/router";
 import { getAllKeys } from "@/core/keys";
 import { JurisprudenciaKey } from "@/types/keys";
 import { useFetch } from "@/components/useFetch";
 import { authenticatedHandler } from "@/core/user/authenticate";
 import { BadgeFromState } from "@/components/BadgeFromState";
+import { useAuth } from "@/contexts/auth";
 
 const MUST_HAVE = ["UUID","Número de Processo","Fonte","ECLI","URL","Sumário","Texto"]
 
@@ -50,21 +50,21 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
         return {props: {}}
     }
     if( r.hits.hits.length == 1 ){
-        return {props: {doc: r.hits.hits[0]._source, keys}}
+        return {props: {doc: r.hits.hits[0]._source, keys, id: r.hits.hits[0]._id }}
     }
-    return {props: {doc: r.hits.hits.map( o => o._source )}}
+    return {props: {doc: r.hits.hits.map( o => o._source ), ids: r.hits.hits.map( o => o._id ), keys}}
 }
 
-export default function MaybeDocumentPage(props: {doc?: JurisprudenciaDocument | JurisprudenciaDocument[], keys: JurisprudenciaKey[]}){
+export default function MaybeDocumentPage(props: {doc?: JurisprudenciaDocument | JurisprudenciaDocument[], keys: JurisprudenciaKey[], id?: string, ids?: string[]}){
     let Comp;
     if( !props.doc ){
         Comp = <NoDocumentPage />
     }
     else if( Array.isArray(props.doc) ){
-        Comp = <MultipleDocumentPage docs={props.doc} />
+        Comp = <MultipleDocumentPage docs={props.doc} ids={props.ids!} />
     }
     else{
-        Comp = <DocumentPage doc={props.doc} keys={props.keys}/>
+        Comp = <DocumentPage doc={props.doc} id={props.id!} keys={props.keys}/>
     }
 
 
@@ -88,7 +88,7 @@ function NoDocumentPage(){
     </>
 }
 
-function MultipleDocumentPage(props: {docs: JurisprudenciaDocument[]}){
+function MultipleDocumentPage(props: {docs: JurisprudenciaDocument[], ids: string[]}){
     return <>
         <Head>
             <title>Vários documentos encontrados - Jurisprudência - STJ</title>
@@ -104,7 +104,8 @@ function MultipleDocumentPage(props: {docs: JurisprudenciaDocument[]}){
     </>
 }
 
-function DocumentPage(props: {doc: JurisprudenciaDocument, keys: JurisprudenciaKey[]}){
+function DocumentPage(props: {doc: JurisprudenciaDocument, id: string, keys: JurisprudenciaKey[]}){
+    let auth = useAuth();
     let proc = props.doc["Número de Processo"]!;
     let uuid = props.doc["UUID"]!;
     let related = useFetch<JurisprudenciaDocument[]>(`/api/related/${encodeURIComponent(proc)}/${uuid}`, []) || []
@@ -113,6 +114,13 @@ function DocumentPage(props: {doc: JurisprudenciaDocument, keys: JurisprudenciaK
         <Head>
             <title>{`${proc} - Jurisprudência - STJ`}</title>
         </Head>
+        { auth &&
+        <div className="border border-dark container-fluid mb-1">
+            <Row>
+                <div className="col-1"><b>Gestão:</b></div>
+                <div className="col-11"><Link href={`/editar/${encodeURIComponent(props.id)}`}><i className="bi bi-pencil-square"></i> Abrir editor</Link></div>
+            </Row>
+        </div> }
         <div className="border border-dark container-fluid">
             <Row>
                 <div className="col-1"><b>N.º de Processo:</b></div>

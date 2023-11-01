@@ -3,6 +3,7 @@ import Link from "next/link";
 import ModalSobre from "./sobre";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation"
 import logoname from '../../public/images/PT-logoLogo-STJ.png'
+import { useAuth } from "@/contexts/auth";
 
 const NAVEGACAO = ["Pesquisa", "Índices", /* "Dashboard"*/]
 
@@ -36,6 +37,7 @@ export function AdminHeader(){
 
 export default function Header(props: {keys_to_remove: string[]}){
     const pathname = usePathname();
+    const authed = useAuth();
     const querystring_from_next = useSearchParams(); // needs to remove path params
     const new_query_string = new URLSearchParams();
     for(let key of querystring_from_next.keys()){
@@ -63,6 +65,16 @@ export default function Header(props: {keys_to_remove: string[]}){
             <div className="flex-fill d-none d-lg-block"></div>
             <nav>
                 <ul className="container d-flex nav align-items-center justify-content-evenly flex-wrap">
+                    {authed && <><li className="nav-link py-1 px-2 mx-1">
+                        <Link href="/editar/criar"
+                            className={`${pathname.startsWith("/editar/criar")} border-0 nav-link fs-6 bg-transparent`}
+                        >Criar Acórdão</Link>
+                    </li>
+                    <li className="nav-link py-1 px-2 mx-1">
+                        <Link href="/user"
+                            className={`border-0 nav-link fs-6 bg-transparent`}>Utilizador</Link>
+                    </li>
+                    <li>|</li></>}
                     {NAVEGACAO.map((name,i) => <li key={i} className="nav-link py-1 px-2 mx-1">
                         <Link
                             href={`/${name.normalize("NFKD").replace(/[^\w]/g,"").toLocaleLowerCase()}?${new_query_string.toString()}`}
