@@ -39,6 +39,16 @@ services:
     restart: unless-stopped
     profiles:
       - dev
+  clitools:
+    build:
+      dockerfile: ./Dockerfile_clitools
+    environment:
+      ES_URL: http://elasticsearch:9200
+      ES_USER: elastic
+      ES_PASS: elasticsearch
+    profiles:
+      - dev
+      - prod
   elasticsearch:
     build:
       context: ./compose/elasticsearch

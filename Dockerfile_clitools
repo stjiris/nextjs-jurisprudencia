@@ -1,0 +1,18 @@
+FROM node:lts
+
+RUN useradd -m clitools
+
+RUN passwd -d clitools
+
+USER clitools
+
+WORKDIR /home/clitools
+
+RUN git clone https://github.com/stjiris/version-converter && cd version-converter && npm install && npm run build
+
+RUN git clone https://github.com/stjiris/jurisprudencia-etl && cd jurisprudencia-etl && npm install && npm run build
+
+# no build needed here
+RUN git clone https://github.com/stjiris/backup-jurisprudencia && cd backup-jurisprudencia && npm install
+
+ENTRYPOINT ["tail", "-f", "/dev/null"]
