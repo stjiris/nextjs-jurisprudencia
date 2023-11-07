@@ -66,11 +66,10 @@ export default function ModalSobre(){
 }
 
 function ShowVersion(){
-    let info = useFetch<{version: string, report?: {dateEnd: string}}>("/api/index-info", []);
-    let intl = new Intl.DateTimeFormat("pt-PT",{dateStyle: "medium", timeStyle: "short"});
+    let info = useFetch<{version: string, mostRecent?: string}>("/api/index-info", []);
 
     return <p className="m-0">
         {info?.version && <><small>Versão: {info?.version}</small><br/></>}
-        {info?.report?.dateEnd && <small>Última actualização: {intl.format(new Date(info?.report?.dateEnd))}</small>}
+        {info?.mostRecent && <small>Documento mais recente: {info?.mostRecent}</small>}
     </p>
 }
