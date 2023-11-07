@@ -26,7 +26,7 @@ RUN echo "30 4 * * 6 cd /home/clitools/jurisprudencia-etl && node dist --full  >
 # no build needed here
 RUN git clone https://github.com/stjiris/backup-jurisprudencia && cd backup-jurisprudencia && npm install
 #   At 10:00 on Sunday.
-RUN echo "0 10 * * 0 cd /home/clitools/backup-jurisprudencia && node cli backup jurisprudencia.12.0,users.0.0,keys-info.0.0 >> ../backup-jurisprudencia.full.stdout.log 2>> ../backup-jurisprudencia.full.stderr.log"" | crontab -
+RUN echo "0 10 * * 0 cd /home/clitools/backup-jurisprudencia && node cli backup jurisprudencia.12.0,users.0.0,keys-info.0.0 >> ../backup-jurisprudencia.full.stdout.log 2>> ../backup-jurisprudencia.full.stderr.log" | crontab -
 
 USER root
 
