@@ -2,6 +2,8 @@ FROM node:lts
 
 RUN apt update && apt install cron -y
 
+RUN env > /etc/environment
+
 RUN useradd -m clitools
 
 RUN passwd -d clitools
