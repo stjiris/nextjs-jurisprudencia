@@ -1,8 +1,14 @@
 FROM node:lts
 
-RUN apt update && apt install cron -y
+ENV ES_URL
+ENV ES_USER
+ENV ES_PASS
 
-RUN env > /etc/environment
+RUN apt update && apt install vim cron -y
+
+RUN echo "ES_URL=$ES_URL" > /etc/environment
+RUN echo "ES_USER=$ES_USER" >> /etc/environment
+RUN echo "ES_PASS=$ES_PASS" >> /etc/environment
 
 RUN useradd -m clitools
 
