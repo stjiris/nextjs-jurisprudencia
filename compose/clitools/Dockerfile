@@ -1,14 +1,6 @@
 FROM node:lts
 
-ENV ES_URL
-ENV ES_USER
-ENV ES_PASS
-
 RUN apt update && apt install vim cron -y
-
-RUN echo "ES_URL=$ES_URL" > /etc/environment
-RUN echo "ES_USER=$ES_USER" >> /etc/environment
-RUN echo "ES_PASS=$ES_PASS" >> /etc/environment
 
 RUN useradd -m clitools
 
@@ -36,6 +28,8 @@ RUN git clone https://github.com/stjiris/backup-jurisprudencia && cd backup-juri
 #   At 10:00 on Sunday.
 RUN (crontab -l; echo "0 10 * * 0 cd /home/clitools/backup-jurisprudencia && node cli backup jurisprudencia.12.0,users.0.0,keys-info.0.0 >> ../backup-jurisprudencia.full.stdout.log 2>> ../backup-jurisprudencia.full.stderr.log") | crontab -
 
+COPY entrypoint.sh .
+
 USER root
 
-ENTRYPOINT ["cron", "-L","15", "-f"]
+ENTRYPOINT ["./entrypoint.sh"]
