@@ -12,7 +12,7 @@ services:
       ES_URL: http://elasticsearch:9200
       NEXT_BASE_PATH: /jurisprudencia
     ports:
-      - "80:3000"
+      - "3000:3000"
     volumes:
       - excel_data:/usr/src/app/files
     depends_on:
@@ -29,7 +29,7 @@ services:
       ES_URL: http://elasticsearch:9200
       NEXT_BASE_PATH: /dev-jurisprudencia
     ports:
-      - "127.0.0.1:3000:3000"
+      - "127.0.0.1:3001:3000"
     volumes:
       - excel_data:/usr/src/app/files
       - .:/usr/src/app
@@ -61,6 +61,7 @@ services:
       xpack.security.enabled: true
       xpack.security.http.ssl.enabled: false
       discovery.type: single-node
+      ES_JAVA_OPTS: -Xms6g -Xmx6g
       ELASTIC_PASSWORD: elasticsearch
       # to use kibana set the kibana_system password to elasticsearch with:
       # $ elasticsearch-reset-password -u kibana_system -i
