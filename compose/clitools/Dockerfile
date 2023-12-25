@@ -1,6 +1,6 @@
-FROM node:lts
+FROM node:20.10-bookworm-slim
 
-RUN apt update && apt install vim cron -y
+RUN apt update && apt install vim cron git -y
 
 RUN useradd -m clitools
 

@@ -1,4 +1,4 @@
-FROM node:lts
+FROM node:20.10-bookworm-slim
 
 RUN apt update && apt install -y pandoc texlive-xetex
 
@@ -6,9 +6,11 @@ WORKDIR /usr/src/app
 
 COPY package*.json ./
 
-RUN npm install
+RUN npm ci
 
 COPY . .
+
+ARG NEXT_BASE_PATH
 
 RUN npm run build
 

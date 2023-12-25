@@ -8,28 +8,34 @@ services:
     build:
       context: .
       dockerfile: ./Dockerfile
+      args:
+        NEXT_BASE_PATH: ${NEXT_BASE_PATH}
     environment:
       ES_URL: http://elasticsearch:9200
-      NEXT_BASE_PATH: /jurisprudencia
+      ES_USER: elastic
+      ES_PASS: elasticsearch
+      NEXT_BASE_PATH: ${NEXT_BASE_PATH}
     ports:
-      - "3000:3000"
+      - "${SERVER_HOST:-0.0.0.0}:${SERVER_PORT:-3000}:3000"
     volumes:
       - excel_data:/usr/src/app/files
     depends_on:
       elasticsearch:
         condition: service_healthy
     restart: unless-stopped
-    profiles:
-      - prod
   server-dev:
     build:
       context: .
       dockerfile: ./Dockerfile_dev
+      args:
+        NEXT_BASE_PATH: ${NEXT_DEV_BASE_PATH}
     environment:
       ES_URL: http://elasticsearch:9200
-      NEXT_BASE_PATH: /dev-jurisprudencia
+      ES_USER: elastic
+      ES_PASS: elasticsearch
+      NEXT_BASE_PATH: ${NEXT_DEV_BASE_PATH}
     ports:
-      - "127.0.0.1:3001:3000"
+      - "${SERVER_DEV_HOST:-127.0.0.1}:${SERVER_DEV_PORT:-3000}:3000"
     volumes:
       - excel_data:/usr/src/app/files
       - .:/usr/src/app
@@ -46,9 +52,6 @@ services:
       ES_URL: http://elasticsearch:9200
       ES_USER: elastic
       ES_PASS: elasticsearch
-    profiles:
-      - dev
-      - prod
   elasticsearch:
     build:
       context: ./compose/elasticsearch
@@ -72,10 +75,6 @@ services:
       retries: 15
       start_period: 10s
     restart: unless-stopped
-    profiles:
-      - prod
-      - dev
-      - kibana
   kibana:
     image: docker.elastic.co/kibana/kibana:8.4.0
     depends_on:
