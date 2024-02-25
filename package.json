@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@elastic/elasticsearch": "^8.9.0",
-    "@stjiris/jurisprudencia-document": "^11.1.1",
+    "@stjiris/jurisprudencia-document": "^11.1.4",
     "brace": "^0.11.1",
     "d3": "^7.8.5",
     "d3-path": "^3.1.0",

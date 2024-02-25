@@ -7,6 +7,7 @@ export function BadgeFromState({ state }: { state?: JurisprudenciaDocumentStateV
 
 export function colorFromState(state?: JurisprudenciaDocumentStateValue) {
     if (state === "público") return "success";
+    if (state === "privado") return "warning";
     if (state === "importação") return "info";
     if (state === "preparação") return "info";
     if (state === "eliminado") return "danger";
