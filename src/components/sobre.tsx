@@ -73,7 +73,6 @@ function ShowVersion() {
     return <p className="m-0">
         {info?.version && <><small>Versão: {info?.version}</small><br /></>}
         {info?.mostRecent && <small>Documento mais recente: {info?.mostRecent}<br /></small>}
-        {info?.publicStates && <small>Estados visiveis: {info?.publicStates.map((s, i) => <BadgeFromState key={i} state={s} />)}</small>
-        }
+        {info?.publicStates && <small>Estados visiveis: {info?.publicStates.map((s, i) => <BadgeFromState key={i} state={s} />)}</small>}
     </p >
 }
