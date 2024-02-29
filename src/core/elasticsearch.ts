@@ -1,11 +1,20 @@
 import { canBeActive } from "@/types/keys";
 import { Client } from "@elastic/elasticsearch";
 import { AggregationsAggregationContainer, AggregationsStringTermsBucket, AggregationsTermsAggregation, QueryDslQueryContainer, SearchRequest, SortCombinations } from "@elastic/elasticsearch/lib/api/types";
-import { isJurisprudenciaDocumentGenericKey, JurisprudenciaDocument, JurisprudenciaDocumentDateKey, JurisprudenciaDocumentDateKeys, JurisprudenciaDocumentKeys, JurisprudenciaDocumentProperties, JurisprudenciaVersion } from "@stjiris/jurisprudencia-document";
+import { isJurisprudenciaDocumentGenericKey, JurisprudenciaDocument, JurisprudenciaDocumentDateKey, JurisprudenciaDocumentDateKeys, JurisprudenciaDocumentKeys, JurisprudenciaDocumentProperties, JurisprudenciaDocumentStateValue, JurisprudenciaDocumentStateValues, JurisprudenciaVersion } from "@stjiris/jurisprudencia-document";
 
 export const filterableProps = JurisprudenciaDocumentKeys.filter(canBeActive);
 
 const DATA_FIELD: JurisprudenciaDocumentDateKey = "Data";
+const ENV_PUBLIC_STATES = process.env.PUBLIC_STATES?.trim().split(",") || [];
+const _PUBLIC_STATES: JurisprudenciaDocumentStateValue[] = [];
+for (let state of ENV_PUBLIC_STATES) {
+    if (JurisprudenciaDocumentStateValues.includes(state as JurisprudenciaDocumentStateValue)) {
+        _PUBLIC_STATES.push(state as JurisprudenciaDocumentStateValue);
+    }
+}
+
+export const PUBLIC_STATES = [..._PUBLIC_STATES];
 
 export const aggs = {
     MinAno: {
@@ -23,7 +32,7 @@ export const aggs = {
 } as Record<string, AggregationsAggregationContainer>;
 filterableProps.forEach(name => {
     let key = name
-    if( isJurisprudenciaDocumentGenericKey(name) ){
+    if (isJurisprudenciaDocumentGenericKey(name)) {
         key += ".Index.keyword"
     }
     aggs[name] = {
@@ -38,13 +47,13 @@ filterableProps.forEach(name => {
 });
 
 export const DEFAULT_AGGS = {
-    MaxAno : aggs.MaxAno,
-    MinAno : aggs.MinAno
+    MaxAno: aggs.MaxAno,
+    MinAno: aggs.MinAno
 };
 export const RESULTS_PER_PAGE = 10;
 
-export async function getElasticSearchClient(){
-    return new Client({node: process.env.ES_URL || "http://localhost:9200", auth: { username: "elastic", password: "elasticsearch"}})
+export async function getElasticSearchClient() {
+    return new Client({ node: process.env.ES_URL || "http://localhost:9200", auth: { username: "elastic", password: "elasticsearch" } })
 }
 
 export type SearchFilters = {
@@ -54,16 +63,20 @@ export type SearchFilters = {
 
 export default function search(
     query: QueryDslQueryContainer | QueryDslQueryContainer[],
-    filters: SearchFilters={pre: [],after: []},
-    page: number=0,
-    saggs: Record<string, AggregationsAggregationContainer>=DEFAULT_AGGS,
-    rpp=RESULTS_PER_PAGE,
-    extras: Partial<SearchRequest>={}, all: boolean=false){
+    filters: SearchFilters = { pre: [], after: [] },
+    page: number = 0,
+    saggs: Record<string, AggregationsAggregationContainer> = DEFAULT_AGGS,
+    rpp = RESULTS_PER_PAGE,
+    extras: Partial<SearchRequest> = {}, all: boolean = false) {
+    const must = Array.isArray(query) ? query : [query];
+    if (!all) {
+        must.push({ terms: { STATE: _PUBLIC_STATES } })
+    }
     return getElasticSearchClient().then(client => client.search<JurisprudenciaDocument>({
         index: JurisprudenciaVersion,
         query: {
             bool: {
-                must: !all ? Array.isArray(query) ? query.concat({term: {STATE: "público"}}) : [query, {term: {STATE: "público"}}] : query,
+                must: must,
                 filter: filters.pre
             }
         },
@@ -74,32 +87,32 @@ export default function search(
         },
         aggs: saggs,
         size: rpp,
-        from: page*rpp,
+        from: page * rpp,
         track_total_hits: true,
         _source: filterableProps.concat("Sumário"),
         ...extras // Allows 
     }))
 }
 
-export const padZero = (num: number | string, size: number=4) => {
+export const padZero = (num: number | string, size: number = 4) => {
     let s = num.toString();
-    while( s.length < size ){
+    while (s.length < size) {
         s = "0" + s;
     }
     return s;
 }
 
-export function populateFilters(filters: SearchFilters, body: Partial<Record<string, string | string[]>>={}, afters=["MinAno","MaxAno"]){
+export function populateFilters(filters: SearchFilters, body: Partial<Record<string, string | string[]>> = {}, afters = ["MinAno", "MaxAno"]) {
     const filtersUsed = {} as Record<string, string[]>;
-    for( let key in aggs ){
+    for (let key in aggs) {
         let aggName = key;
         let aggObj = aggs[key];
         let aggField = (aggObj.terms ? "terms" : "significant_terms") as keyof AggregationsAggregationContainer;
-        if( !aggObj[aggField] ) continue;
-        if( body[aggName] ){
+        if (!aggObj[aggField]) continue;
+        if (body[aggName]) {
             filtersUsed[aggName] = ((Array.isArray(body[aggName]) ? body[aggName] : [body[aggName]]) as string[]).filter(o => o.length > 0);
             let when = "pre" as keyof SearchFilters;
-            if( afters.indexOf(aggName) != -1 ){
+            if (afters.indexOf(aggName) != -1) {
                 when = "after" as keyof SearchFilters;
             }
             let fieldName = (aggObj[aggField] as AggregationsTermsAggregation).field!;
@@ -108,18 +121,18 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
             let must_or_should = !isJurisprudenciaDocumentGenericKey(aggName) || body["_should"]?.includes(aggName) ? "should" : "must"  // AND or OR - if a signle value use alawys OR else default OR but flag for AND
             filters[when].push({
                 bool: {
-                    [must_or_should]: should.map( o => (o.startsWith("\"") && o.endsWith("\"") ? {
+                    [must_or_should]: should.map(o => (o.startsWith("\"") && o.endsWith("\"") ? {
                         term: {
-                            [fieldName.replace("keyword","raw")]: { value: `${o.slice(1,-1)}` }
+                            [fieldName.replace("keyword", "raw")]: { value: `${o.slice(1, -1)}` }
                         }
                     } : {
                         wildcard: {
                             [fieldName]: { value: `*${o}*` }
                         }
                     })),
-                    must_not: must_not.map( o => (o.startsWith("\"") && o.endsWith("\"") ? {
+                    must_not: must_not.map(o => (o.startsWith("\"") && o.endsWith("\"") ? {
                         term: {
-                            [fieldName.replace("keyword","raw")]: { value: `${o.slice(1,-1)}` }
+                            [fieldName.replace("keyword", "raw")]: { value: `${o.slice(1, -1)}` }
                         }
                     } : {
                         wildcard: {
@@ -132,11 +145,11 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
     }
 
     let dateWhen = "pre" as keyof SearchFilters;
-    if( afters.indexOf("MinAno") >= 0 || afters.indexOf("MaxAno") >= 0 ) dateWhen = "after";
+    if (afters.indexOf("MinAno") >= 0 || afters.indexOf("MaxAno") >= 0) dateWhen = "after";
     let minAno = Array.isArray(body.MinAno) ? body.MinAno[0] : body.MinAno
     let maxAno = Array.isArray(body.MaxAno) ? body.MaxAno[0] : body.MaxAno
 
-    if( minAno && maxAno ){
+    if (minAno && maxAno) {
 
         filtersUsed.MinAno = [minAno];
         filtersUsed.MaxAno = [maxAno];
@@ -144,13 +157,13 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
             range: {
                 [DATA_FIELD]: {
                     gte: padZero(minAno),
-                    lt: padZero((parseInt(maxAno) || new Date().getFullYear())+1),
+                    lt: padZero((parseInt(maxAno) || new Date().getFullYear()) + 1),
                     format: "yyyy"
                 }
             }
         });
     }
-    else if( minAno ){
+    else if (minAno) {
         filtersUsed.MinAno = [minAno];
         filters[dateWhen].push({
             range: {
@@ -161,19 +174,19 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
             }
         });
     }
-    else if( maxAno ){
+    else if (maxAno) {
         filtersUsed.MaxAno = [maxAno];
         filters[dateWhen].push({
             range: {
                 [DATA_FIELD]: {
-                    lt: padZero((parseInt(maxAno) || new Date().getFullYear())+1),
+                    lt: padZero((parseInt(maxAno) || new Date().getFullYear()) + 1),
                     format: "yyyy"
                 }
             }
         });
     }
-    if( body.notHasField ){
-        filtersUsed.notHasField = (Array.isArray(body.notHasField) ? body.notHasField : [body.notHasField]).filter(o => o.length> 0);
+    if (body.notHasField) {
+        filtersUsed.notHasField = (Array.isArray(body.notHasField) ? body.notHasField : [body.notHasField]).filter(o => o.length > 0);
         filtersUsed.notHasField.forEach(field => {
             filters.pre.push({
                 bool: {
@@ -186,8 +199,8 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
             });
         });
     }
-    if( body.hasField ){
-        filtersUsed.hasField = (Array.isArray(body.hasField) ? body.hasField : [body.hasField]).filter(o => o.length> 0);
+    if (body.hasField) {
+        filtersUsed.hasField = (Array.isArray(body.hasField) ? body.hasField : [body.hasField]).filter(o => o.length > 0);
         filtersUsed.hasField.forEach(field => {
             filters.pre.push({
                 bool: {
@@ -205,7 +218,7 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
             });
         });
     }
-    if( body.mustHaveText ){
+    if (body.mustHaveText) {
         filtersUsed.mustHaveText = ["true"];
         filters.pre.push({
             bool: {
@@ -220,19 +233,19 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
     return filtersUsed;
 }
 
-export function parseSort(value: string | undefined, array: SortCombinations[]){
+export function parseSort(value: string | undefined, array: SortCombinations[]) {
     const sortV = value || "des";
-    if( sortV == "des" ){
+    if (sortV == "des") {
         array.push({
             [DATA_FIELD]: { order: "desc" }
         });
     }
-    else if( sortV == "asc" ){
+    else if (sortV == "asc") {
         array.push({
             [DATA_FIELD]: { order: "asc" }
         });
     }
-    else if( sortV == "score" ){
+    else if (sortV == "score") {
         array.push({
             _score: { order: "desc" }
         });
@@ -244,7 +257,7 @@ export function parseSort(value: string | undefined, array: SortCombinations[]){
 }
 
 export function createQueryDslQueryContainer(string?: string | string[]): QueryDslQueryContainer | QueryDslQueryContainer[] {
-    if( !string ){
+    if (!string) {
         return {
             match_all: {}
         };
@@ -259,11 +272,11 @@ export function createQueryDslQueryContainer(string?: string | string[]): QueryD
 }
 
 
-export function getSearchedArray(text: string){
-    return getElasticSearchClient().then(c => c.indices.analyze({index: JurisprudenciaVersion, text: text})).then( r => r.tokens?.map( o => o.token ) || []).catch( e => [] as string[])
+export function getSearchedArray(text: string) {
+    return getElasticSearchClient().then(c => c.indices.analyze({ index: JurisprudenciaVersion, text: text })).then(r => r.tokens?.map(o => o.token) || []).catch(e => [] as string[])
 }
 
-export function sortAlphabetically(a: string, b: string){
+export function sortAlphabetically(a: string, b: string) {
     if (a.startsWith("«") && !b.startsWith("«"))
         return 1;
     if (b.startsWith("«") && !a.startsWith("«"))
@@ -273,6 +286,6 @@ export function sortAlphabetically(a: string, b: string){
     return ak.localeCompare(bk);
 }
 
-export function sortBucketsAlphabetically(a: AggregationsStringTermsBucket,b: AggregationsStringTermsBucket) {
+export function sortBucketsAlphabetically(a: AggregationsStringTermsBucket, b: AggregationsStringTermsBucket) {
     return sortAlphabetically(a.key, b.key);
 }
