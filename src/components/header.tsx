@@ -7,11 +7,11 @@ import { useAuth } from "@/contexts/auth";
 
 const NAVEGACAO = ["Pesquisa", "Índices", /* "Dashboard"*/]
 
-export function AdminHeader(){
+export function AdminHeader() {
     return <>
         <header className="mb-1 py-2 align-items-center d-flex flex-wrap border-bottom">
             <Link href="/admin" className="align-items-center d-flex flex-wrap text-decoration-none nav-link">
-                <Image 
+                <Image
                     src={logoname}
                     alt="Logótipo STJ"
                     height={70}
@@ -35,15 +35,15 @@ export function AdminHeader(){
     </>
 }
 
-export default function Header(props: {keys_to_remove: string[]}){
+export default function Header(props: { keys_to_remove: string[] }) {
     const pathname = usePathname();
     const authed = useAuth();
     const querystring_from_next = useSearchParams(); // needs to remove path params
     const new_query_string = new URLSearchParams();
-    for(let key of querystring_from_next.keys()){
-        if( !props.keys_to_remove.includes(key)){
+    for (let key of querystring_from_next.keys()) {
+        if (!props.keys_to_remove.includes(key)) {
             new_query_string.delete(key)
-            for( let val of querystring_from_next.getAll(key)){
+            for (let val of querystring_from_next.getAll(key)) {
                 new_query_string.append(key, val);
             }
         }
@@ -53,7 +53,7 @@ export default function Header(props: {keys_to_remove: string[]}){
     return <>
         <header className="mb-1 py-2 align-items-center d-flex flex-wrap border-bottom">
             <Link href="/" className="align-items-center d-flex flex-wrap text-decoration-none nav-link">
-                <Image 
+                <Image
                     src={logoname}
                     alt="Logótipo STJ"
                     height={70}
@@ -66,20 +66,20 @@ export default function Header(props: {keys_to_remove: string[]}){
             <nav>
                 <ul className="container d-flex nav align-items-center justify-content-evenly flex-wrap">
                     {authed && <><li className="nav-link py-1 px-2 mx-1">
-                        <Link href="/editar/criar"
-                            className={`${pathname.startsWith("/editar/criar")} border-0 nav-link fs-6 bg-transparent`}
+                        <Link href="/editar/avancado/criar"
+                            className={`${pathname.startsWith("/editar/avancado/criar") ? "active" : ""} border-0 nav-link fs-6 bg-transparent`}
                         >Criar Acórdão</Link>
                     </li>
-                    <li className="nav-link py-1 px-2 mx-1">
-                        <Link href="/user"
-                            className={`border-0 nav-link fs-6 bg-transparent`}>Utilizador</Link>
-                    </li>
-                    <li>|</li></>}
-                    {NAVEGACAO.map((name,i) => <li key={i} className="nav-link py-1 px-2 mx-1">
+                        <li className="nav-link py-1 px-2 mx-1">
+                            <Link href="/user"
+                                className={`border-0 nav-link fs-6 bg-transparent`}>Utilizador</Link>
+                        </li>
+                        <li>|</li></>}
+                    {NAVEGACAO.map((name, i) => <li key={i} className="nav-link py-1 px-2 mx-1">
                         <Link
-                            href={`/${name.normalize("NFKD").replace(/[^\w]/g,"").toLocaleLowerCase()}?${new_query_string.toString()}`}
-                            className={`${pathname.startsWith(`/${name.normalize("NFKD").replace(/[^\w]/g,"").toLocaleLowerCase()}`) ? "active": ""} border-0 nav-link fs-6 bg-transparent`}>
-                                {name}</Link>
+                            href={`/${name.normalize("NFKD").replace(/[^\w]/g, "").toLocaleLowerCase()}?${new_query_string.toString()}`}
+                            className={`${pathname.startsWith(`/${name.normalize("NFKD").replace(/[^\w]/g, "").toLocaleLowerCase()}`) ? "active" : ""} border-0 nav-link fs-6 bg-transparent`}>
+                            {name}</Link>
                     </li>)}
                     <li>|</li>
                     <li className="nav-link py-1 px-2 mx-1">
@@ -88,6 +88,6 @@ export default function Header(props: {keys_to_remove: string[]}){
                 </ul>
             </nav>
         </header>
-        <ModalSobre/>
+        <ModalSobre />
     </>
 }
