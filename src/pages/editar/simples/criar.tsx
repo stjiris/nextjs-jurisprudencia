@@ -88,8 +88,5 @@ function CreateDocument() {
         <ul>
             {Object.keys(updateObject).map((key, i) => <li key={i}>{keys?.[key]?.name}</li>)}
         </ul>
-        <pre>
-            {JSON.stringify(updateObject, null, 2)}
-        </pre>
     </div>
 }
