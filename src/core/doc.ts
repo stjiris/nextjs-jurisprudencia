@@ -74,9 +74,43 @@ export const createDoc = (newdoc: PartialJurisprudenciaDocument) => getElasticSe
     }
     doc.HASH = calculateHASH(doc);
     doc.UUID = calculateUUID(doc.HASH)
-    doc.STATE = doc.STATE || "público"
+    doc.STATE = doc.STATE || "preparação"
 
     return c.index<JurisprudenciaDocument>({ index: JurisprudenciaVersion, document: doc as JurisprudenciaDocument, refresh: "wait_for" });
 })
+
+export const createSimpleDoc = (newdoc: Record<keyof PartialJurisprudenciaDocument, string>) => {
+    let doc: PartialJurisprudenciaDocument = {};
+    for (let key in newdoc) {
+        if (!newdoc[key]) continue;
+        let trimmed = newdoc[key].trim();
+        if (isJurisprudenciaDocumentExactKey(key)) {
+            doc[key] = trimmed;
+            continue;
+        }
+        if (isJurisprudenciaDocumentGenericKey(key)) {
+            let value = trimmed.split("\n").map(v => v.trim()).filter(v => v.length > 0);
+            doc[key] = {
+                Index: value,
+                Original: value,
+                Show: value
+            }
+            continue;
+        }
+        if (isJurisprudenciaDocumentDateKey(key) && trimmed.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+            doc[key] = trimmed;
+            continue;
+        }
+        if (isJurisprudenciaDocumentTextKey(key)) {
+            doc[key] = trimmed;
+            continue;
+        }
+        if (isJurisprudenciaDocumentStateKey(key) && JurisprudenciaDocumentStateValues.includes(trimmed)) {
+            doc[key] = trimmed;
+            continue;
+        }
+    }
+    return createDoc(doc)
+}
 
 export const deleteDoc = (docId: string) => getElasticSearchClient().then(c => c.delete({ index: JurisprudenciaVersion, id: docId, refresh: "wait_for" }))

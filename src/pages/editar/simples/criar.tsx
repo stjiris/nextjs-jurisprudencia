@@ -7,7 +7,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter as useNavRouter, useSearchParams } from "next/navigation";
 import { useRouter } from "next/router";
-import { ReadOnlyInput, UpdateInput, HTMLInput, UpdateObject, DateInput, TextInput, UpdateContext, ExactInput, GenericInput, ShowCode, ShowGenerated } from "@/components/dashboardDoc";
+import { ReadOnlyInput, UpdateInput, HTMLInput, UpdateObject, DateInput, TextInput, UpdateContext, ExactInput, GenericInput, ShowCode, ShowGenerated, ExactInputWithSuggestions, ExactInputSelection, TokenSelection, GenericInputSimple } from "@/components/dashboardDoc";
 import { Loading } from "@/components/loading";
 import { useFetch } from "@/components/useFetch";
 import { GetResponse, WriteResponseBase } from "@elastic/elasticsearch/lib/api/types";
@@ -18,7 +18,7 @@ export const getServerSideProps = withAuthentication(async (ctx) => ({ props: {}
 
 export default function CreatePage() {
     return <DashboardGenericPage>
-        <Link href="/editar/simples/criar">Mudar para modo simples</Link>
+        <Link href="/editar/avancado/criar">Mudar para modo avançado</Link>
         <Create />
     </DashboardGenericPage>
 }
@@ -33,7 +33,7 @@ function Create() {
                 <div className="card shadow">
                     <div className="card-body">
                         <CreateDocument />
-                        {keys.keys.map((key, i) => <CreateKey key={i} accessKey={key} doc={{ STATE: "público" }} />)}
+                        {keys.keys.map((key, i) => <CreateKey key={i} accessKey={key} doc={{ STATE: "preparação" }} />)}
                     </div>
                 </div>
             </div>
@@ -44,6 +44,9 @@ function Create() {
 const AUTO_GENERATED: JurisprudenciaDocumentKey[] = ["Fonte", "CONTENT", "Original", "HASH", "UUID"]
 
 function CreateKey({ accessKey, doc }: { accessKey: JurisprudenciaKey, doc: PartialJurisprudenciaDocument }) {
+    if (!accessKey.editorEnabled) return null;
+    if (accessKey.editorRestricted) return <ExactInputSelection accessKey={accessKey} doc={doc} />;
+    if (accessKey.editorSuggestions) return <TokenSelection accessKey={accessKey} doc={doc} />
 
     if (AUTO_GENERATED.includes(accessKey.key)) return <ShowGenerated accessKey={accessKey} />;
     if (isJurisprudenciaDocumentObjectKey(accessKey.key)) return <ShowCode accessKey={accessKey} doc={doc} />
@@ -53,7 +56,7 @@ function CreateKey({ accessKey, doc }: { accessKey: JurisprudenciaKey, doc: Part
     if (isJurisprudenciaDocumentDateKey(accessKey.key)) return <DateInput accessKey={accessKey} doc={doc} />
     if (isJurisprudenciaDocumentStateKey(accessKey.key)) return <ExactInput accessKey={accessKey} doc={doc} options={JurisprudenciaDocumentStateValues} />
     if (isJurisprudenciaDocumentExactKey(accessKey.key)) return <ExactInput accessKey={accessKey} doc={doc} />
-    if (isJurisprudenciaDocumentGenericKey(accessKey.key)) return <GenericInput accessKey={accessKey} doc={doc} />
+    if (isJurisprudenciaDocumentGenericKey(accessKey.key)) return <GenericInputSimple accessKey={accessKey} doc={doc} />
 
     //throw new Error("Unreachable")
     return <>Unreachable</>
@@ -65,11 +68,11 @@ function CreateDocument() {
     let router = useRouter();
     let navRouter = useNavRouter();
     let update = async () => {
-        let writeResponseBase = await fetch(`${router.basePath}/api/doc`, {
+        let writeResponseBase = await fetch(`${router.basePath}/api/doc?mode=simple`, {
             method: "POST",
             body: JSON.stringify(updateObject)
         }).then(r => r.json() as Promise<WriteResponseBase>);
-        navRouter.push(`./${writeResponseBase._id}`)
+        navRouter.push(`../avancado/${writeResponseBase._id}`)
     }
 
     return <div className="alert alert-info">
@@ -85,5 +88,8 @@ function CreateDocument() {
         <ul>
             {Object.keys(updateObject).map((key, i) => <li key={i}>{keys?.[key]?.name}</li>)}
         </ul>
+        <pre>
+            {JSON.stringify(updateObject, null, 2)}
+        </pre>
     </div>
 }

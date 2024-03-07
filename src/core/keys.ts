@@ -2,9 +2,9 @@ import { JurisprudenciaKey, KEYS_INFO_INDEX_VERSION, KEYS_INFO_PROPERTIES, makeV
 import { getElasticSearchClient } from "./elasticsearch";
 import { JurisprudenciaDocumentKey, JurisprudenciaDocumentKeys } from "@stjiris/jurisprudencia-document";
 
-async function getClient(){
+async function getClient() {
     let client = await getElasticSearchClient();
-    if( !(await client.indices.exists({index: KEYS_INFO_INDEX_VERSION})) ){
+    if (!(await client.indices.exists({ index: KEYS_INFO_INDEX_VERSION }))) {
         await client.indices.create({
             index: KEYS_INFO_INDEX_VERSION,
             mappings: {
@@ -18,26 +18,26 @@ async function getClient(){
         }).catch(e => {
             console.log(e)
         });
-        await client.bulk<JurisprudenciaKey,JurisprudenciaKey>({
+        await client.bulk<JurisprudenciaKey, JurisprudenciaKey>({
             index: KEYS_INFO_INDEX_VERSION,
-            operations: JurisprudenciaDocumentKeys.flatMap((key,i) => [
-                {create: {}},
-                {key: key, name: key, description: "Sem descrição", active: false, filtersSuggest: false, filtersShow: false, filtersOrder: i+1, indicesList: false, indicesGroup: false, documentShow: false, authentication: false}
+            operations: JurisprudenciaDocumentKeys.flatMap((key, i) => [
+                { create: {} },
+                { key: key, name: key, description: "Sem descrição", active: false, filtersSuggest: false, filtersShow: false, filtersOrder: i + 1, indicesList: false, indicesGroup: false, documentShow: false, authentication: false, editorEnabled: false, editorRestricted: false, editorSuggestions: false }
             ])
         })
     }
-    else{
+    else {
         let r = await client.search<JurisprudenciaKey>({
             index: KEYS_INFO_INDEX_VERSION,
             size: JurisprudenciaDocumentKeys.length
         })
-        if( r.hits.hits.length < JurisprudenciaDocumentKeys.length ){
+        if (r.hits.hits.length < JurisprudenciaDocumentKeys.length) {
             let create = JurisprudenciaDocumentKeys.filter(k => !r.hits.hits.some(h => h._source?.key === k));
-            await client.bulk<JurisprudenciaKey,JurisprudenciaKey>({
+            await client.bulk<JurisprudenciaKey, JurisprudenciaKey>({
                 index: KEYS_INFO_INDEX_VERSION,
-                operations: create.flatMap((key,i) => [
-                    {create: {}},
-                    {key: key, name: key, description: "Sem descrição", active: false, filtersSuggest: false, filtersShow: false, filtersOrder: r.hits.hits.length+1, indicesList: false, indicesGroup: false, documentShow: false, authentication: false}
+                operations: create.flatMap((key, i) => [
+                    { create: {} },
+                    { key: key, name: key, description: "Sem descrição", active: false, filtersSuggest: false, filtersShow: false, filtersOrder: r.hits.hits.length + 1, indicesList: false, indicesGroup: false, documentShow: false, authentication: false, editorEnabled: false, editorRestricted: false, editorSuggestions: false }
                 ]),
                 refresh: "true"
             }).then(r => console.log(r.items[0]))
@@ -46,20 +46,20 @@ async function getClient(){
     return client;
 }
 
-export async function getAllKeys(authed: boolean = false){
+export async function getAllKeys(authed: boolean = false) {
     let client = await getClient();
     return await client.search<JurisprudenciaKey>({
         index: KEYS_INFO_INDEX_VERSION,
         size: JurisprudenciaDocumentKeys.length,
         sort: [{
             "filtersOrder": "asc"
-        },{
+        }, {
             "key": "asc"
         }]
-    }).then( r => r.hits.hits.map<JurisprudenciaKey>(({_source: key}) => {
-        if( !key ) throw new Error("Unreachable");
+    }).then(r => r.hits.hits.map<JurisprudenciaKey>(({ _source: key }) => {
+        if (!key) throw new Error("Unreachable");
 
-        if( !authed && key.authentication ){
+        if (!authed && key.authentication) {
             return {
                 key: key.key,
                 name: key.name,
@@ -71,7 +71,10 @@ export async function getAllKeys(authed: boolean = false){
                 filtersShow: false,
                 filtersSuggest: false,
                 indicesGroup: false,
-                indicesList: false
+                indicesList: false,
+                editorEnabled: false,
+                editorRestricted: false,
+                editorSuggestions: false
             }
         }
 
@@ -79,11 +82,11 @@ export async function getAllKeys(authed: boolean = false){
     }));
 }
 
-export function getKey(k: JurisprudenciaDocumentKey){
-    return getClient().then(c => c.search<JurisprudenciaKey>({index: KEYS_INFO_INDEX_VERSION, query: {term: {key: k}}})).then(r => r.hits.hits[0]._source!)
+export function getKey(k: JurisprudenciaDocumentKey) {
+    return getClient().then(c => c.search<JurisprudenciaKey>({ index: KEYS_INFO_INDEX_VERSION, query: { term: { key: k } } })).then(r => r.hits.hits[0]._source!)
 }
 
-export async function updateKey(key: JurisprudenciaDocumentKey, update: Partial<JurisprudenciaKey>){
+export async function updateKey(key: JurisprudenciaDocumentKey, update: Partial<JurisprudenciaKey>) {
     let client = await getClient();
 
     let r = await client.search<JurisprudenciaKey>({
@@ -95,15 +98,17 @@ export async function updateKey(key: JurisprudenciaDocumentKey, update: Partial<
         }
     });
     let hit = r.hits.hits[0];
-    if(!hit) return;
+    if (!hit) return;
 
     // if update a boolean that it's dependent of other update it
-    if( update.indicesGroup ) update.indicesList = true;
-    if( update.filtersSuggest || update.filtersShow || update.indicesList ) update.active = true;
+    if (update.indicesGroup) update.indicesList = true;
+    if (update.filtersSuggest || update.filtersShow || update.indicesList) update.active = true;
+    if (update.editorRestricted) update.editorSuggestions = true;
+    if (update.editorSuggestions) update.editorEnabled = true;
 
     // Can never update internal key
-    update = makeValidValue({...hit._source!, ...update, key: key})
-    
+    update = makeValidValue({ ...hit._source!, ...update, key: key })
+
     return await client.update<JurisprudenciaKey>({
         index: KEYS_INFO_INDEX_VERSION,
         id: hit._id,

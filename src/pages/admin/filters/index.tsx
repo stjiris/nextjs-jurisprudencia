@@ -3,7 +3,7 @@ import { DashboardGenericPage } from "@/components/genericPageStructure";
 import { useFetch } from "@/components/useFetch";
 import { getAllKeys } from "@/core/keys";
 import { withAuthentication } from "@/core/user/authenticate";
-import { JurisprudenciaKey, canBeActive } from "@/types/keys";
+import { JurisprudenciaKey, canBeActive, canHaveSuggestions } from "@/types/keys";
 import dynamic from "next/dynamic";
 import { NextRouter, useRouter } from "next/router";
 import { CSSProperties, useEffect, useState } from "react";
@@ -28,6 +28,7 @@ export default function ExcelPage() {
                             <th className="text-center" colSpan={2}>Filtros</th>
                             <th className="text-center" colSpan={2}>Indices</th>
                             <th className="text-center" colSpan={1}>Documento</th>
+                            <th className="text-center" colSpan={3}>Edição Simples</th>
                         </tr>
                         <tr>
                             <th className="text-center table-secondary">#</th>
@@ -45,6 +46,10 @@ export default function ExcelPage() {
                             <th className="text-center">Agrupa colunas</th>
 
                             <th className="text-center">Mostrar</th>
+
+                            <th className="text-center">Ativo</th>
+                            <th className="text-center">Sugestões</th>
+                            <th className="text-center">Restrito</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -77,6 +82,9 @@ function ShowFilterRow({ innitialKey, update: updateOrder }: { innitialKey: Juri
     let disableKey = !canBeActive(jurisprudenciaKey.key);
     let BooleanInput = ({ attr }: { attr: keyof JurisprudenciaKey }) => <input onChange={e => update(attr, e.currentTarget.checked)} className="form-check-input" type="checkbox" checked={jurisprudenciaKey[attr] as boolean} />
     let DisabledBooleanInput = ({ attr }: { attr: keyof JurisprudenciaKey }) => disableKey ? <></> : <BooleanInput attr={attr} />
+    let disableEditorSuggestions = !canHaveSuggestions(jurisprudenciaKey.key);
+    let EditorSuggestions = () => disableEditorSuggestions ? <></> : <BooleanInput attr="editorSuggestions" />
+    let EditorRestricted = () => disableEditorSuggestions ? <></> : <BooleanInput attr="editorRestricted" />
 
     return <>
         <tr className="align-middle">
@@ -95,6 +103,9 @@ function ShowFilterRow({ innitialKey, update: updateOrder }: { innitialKey: Juri
             <td className="text-center"><DisabledBooleanInput attr="indicesList" /></td>
             <td className="text-center"><DisabledBooleanInput attr="indicesGroup" /></td>
             <td className="text-center"><BooleanInput attr="documentShow" /></td>
+            <td className="text-center"><BooleanInput attr="editorEnabled" /></td>
+            <td className="text-center"><EditorSuggestions /></td>
+            <td className="text-center"><EditorRestricted /></td>
         </tr>
         {edit && <tr style={{ "--bs-table-accent-bg": "initial" } as CSSProperties}>
             <td colSpan={9}><ReactQuill theme="snow" value={desc} onChange={setDesc} /></td>
