@@ -15,7 +15,7 @@ export default function IndexPage() {
                         <LinkEntry link="/pesquisa" title="Pesquisa">
                             <p>Pesquise normalmente pelos acórdãos. Terá acesso a mais informação e poderá abrir em modo de edição os acórdãos</p>
                         </LinkEntry>
-                        <LinkEntry link="/editar/avancado/criar" title="Criar Acórdão">
+                        <LinkEntry link="/editar/simples/criar" title="Criar Acórdão">
                             <p>Criar acordão manualmente</p>
                         </LinkEntry>
                         <LinkEntry link="/admin/excel" title="Importar/Exportar">

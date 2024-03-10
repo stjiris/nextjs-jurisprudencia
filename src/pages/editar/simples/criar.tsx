@@ -1,18 +1,17 @@
 //@ts-nocheck
-import { DashboardGenericPage } from "@/components/genericPageStructure"
-import { withAuthentication } from "@/core/user/authenticate"
-import { JurisprudenciaDocument, JurisprudenciaDocumentKey, JurisprudenciaDocumentStateKeys, JurisprudenciaDocumentStateValues, PartialJurisprudenciaDocument, isJurisprudenciaDocumentContentKey, isJurisprudenciaDocumentDateKey, isJurisprudenciaDocumentExactKey, isJurisprudenciaDocumentGenericKey, isJurisprudenciaDocumentHashKey, isJurisprudenciaDocumentObjectKey, isJurisprudenciaDocumentStateKey, isJurisprudenciaDocumentTextKey } from "@stjiris/jurisprudencia-document";
-import { createContext, useContext, useEffect, useState } from "react";
+import { DashboardGenericPage } from "@/components/genericPageStructure";
+import { withAuthentication } from "@/core/user/authenticate";
+import { JurisprudenciaDocumentKey, JurisprudenciaDocumentStateValues, PartialJurisprudenciaDocument, isJurisprudenciaDocumentContentKey, isJurisprudenciaDocumentDateKey, isJurisprudenciaDocumentExactKey, isJurisprudenciaDocumentGenericKey, isJurisprudenciaDocumentHashKey, isJurisprudenciaDocumentObjectKey, isJurisprudenciaDocumentStateKey, isJurisprudenciaDocumentTextKey } from "@stjiris/jurisprudencia-document";
+import { useContext, useState } from "react";
 
-import Link from "next/link";
-import { useParams, useRouter as useNavRouter, useSearchParams } from "next/navigation";
-import { useRouter } from "next/router";
-import { ReadOnlyInput, UpdateInput, HTMLInput, UpdateObject, DateInput, TextInput, UpdateContext, ExactInput, GenericInput, ShowCode, ShowGenerated, ExactInputWithSuggestions, ExactInputSelection, TokenSelection, GenericInputSimple } from "@/components/dashboardDoc";
-import { Loading } from "@/components/loading";
-import { useFetch } from "@/components/useFetch";
-import { GetResponse, WriteResponseBase } from "@elastic/elasticsearch/lib/api/types";
-import { KeysContext, useKeysFromContext } from "@/contexts/keys";
+import { DateInput, ExactInput, ExactInputSelection, GenericInputSimple, ShowCode, ShowGenerated, TextInput, TokenSelection, UpdateContext, UpdateObject } from "@/components/dashboardDoc";
+import { useKeysFromContext } from "@/contexts/keys";
 import { JurisprudenciaKey } from "@/types/keys";
+import { WriteResponseBase } from "@elastic/elasticsearch/lib/api/types";
+import Link from "next/link";
+import { useRouter as useNavRouter } from "next/navigation";
+import { useRouter } from "next/router";
+import { getSimpleEditorDefaults } from "@/components/simpleEditorDefaults";
 
 export const getServerSideProps = withAuthentication(async (ctx) => ({ props: {} }))
 
@@ -26,6 +25,7 @@ export default function CreatePage() {
 function Create() {
     let keys = useKeysFromContext();
     let [updateObject, setUpdateObject] = useState<UpdateObject>({});
+    const defaults = getSimpleEditorDefaults();
 
     return <UpdateContext.Provider value={[updateObject, setUpdateObject]}>
         <div className="row">
@@ -33,7 +33,7 @@ function Create() {
                 <div className="card shadow">
                     <div className="card-body">
                         <CreateDocument />
-                        {keys.keys.map((key, i) => <CreateKey key={i} accessKey={key} doc={{ STATE: "preparação" }} />)}
+                        {keys.keys.map((key, i) => <CreateKey key={i} accessKey={key} doc={defaults} />)}
                     </div>
                 </div>
             </div>
@@ -52,7 +52,7 @@ function CreateKey({ accessKey, doc }: { accessKey: JurisprudenciaKey, doc: Part
     if (isJurisprudenciaDocumentObjectKey(accessKey.key)) return <ShowCode accessKey={accessKey} doc={doc} />
     if (isJurisprudenciaDocumentHashKey(accessKey.key)) return <ShowCode accessKey={accessKey} doc={doc} />
     if (isJurisprudenciaDocumentContentKey(accessKey.key)) return <ShowCode accessKey={accessKey} doc={doc} />
-    if (isJurisprudenciaDocumentTextKey(accessKey.key)) return <TextInput accessKey={accessKey} doc={doc} />
+    if (isJurisprudenciaDocumentTextKey(accessKey.key)) return <TextInput accessKey={accessKey} doc={doc} open />
     if (isJurisprudenciaDocumentDateKey(accessKey.key)) return <DateInput accessKey={accessKey} doc={doc} />
     if (isJurisprudenciaDocumentStateKey(accessKey.key)) return <ExactInput accessKey={accessKey} doc={doc} options={JurisprudenciaDocumentStateValues} />
     if (isJurisprudenciaDocumentExactKey(accessKey.key)) return <ExactInput accessKey={accessKey} doc={doc} />

@@ -14,28 +14,28 @@ import { GetResponse, WriteResponseBase } from "@elastic/elasticsearch/lib/api/t
 import { KeysContext, useKeysFromContext } from "@/contexts/keys";
 import { JurisprudenciaKey } from "@/types/keys";
 
-export const getServerSideProps = withAuthentication( async (ctx) => ({props: {}}))
+export const getServerSideProps = withAuthentication(async (ctx) => ({ props: {} }))
 
 interface UpdateProps {
     id: string
     doc: JurisprudenciaDocument
 }
 
-export default function UpdatePage(){
+export default function UpdatePage() {
     let searchParams = useSearchParams();
     let id = searchParams.get("id");
     let response = useFetch<GetResponse<JurisprudenciaDocument>>(`/api/doc/${id}`, [id]);
 
     return <DashboardGenericPage>
         {response && response._source && <Update doc={response._source} id={id} />}
-        {!response && <Loading text="A carregar documento"/>}
+        {!response && <Loading text="A carregar documento" />}
         {response && !response._source && <div className="alert alert-danger">
             <h3>Erro ao carregar o documento</h3>
         </div>}
     </DashboardGenericPage>
 }
 
-function Update({doc, id}: UpdateProps){
+function Update({ doc, id }: UpdateProps) {
     let keys = useKeysFromContext();
     let [updateObject, setUpdateObject] = useState<UpdateObject>({});
 
@@ -44,13 +44,13 @@ function Update({doc, id}: UpdateProps){
             <div className="col-12 col-md-4">
                 <div className="card shadow position-sticky top-0">
                     <h4 className="m-0">Original {doc.URL && <>- <Link target="_blank" href={doc.URL}>{doc.Fonte}</Link></>}</h4>
-                    <ShowOriginal original={doc.Original || {}}/>
+                    <ShowOriginal original={doc.Original || {}} />
                 </div>
             </div>
             <div className="col-12 col-md-8">
                 <div className="card shadow">
                     <div className="card-body">
-                        <UpdateDocument id={id}/>
+                        <UpdateDocument id={id} />
                         {keys.keys.map((key, i) => <EditKey key={i} accessKey={key} doc={doc} />)}
                     </div>
                 </div>
@@ -59,7 +59,7 @@ function Update({doc, id}: UpdateProps){
     </UpdateContext.Provider>
 }
 
-function ShowOriginal({original}: {original: Record<string, any>}){
+function ShowOriginal({ original }: { original: Record<string, any> }) {
     return <table className="table table-sm">
         <tbody>
             {Object.entries(original).map(([accessKey, obj], i) => obj.length > 1200 ?
@@ -67,36 +67,36 @@ function ShowOriginal({original}: {original: Record<string, any>}){
                     <td colSpan={2}>
                         <details>
                             <summary>{accessKey}</summary>
-                            <div dangerouslySetInnerHTML={{__html: obj}}></div>
+                            <div dangerouslySetInnerHTML={{ __html: obj }}></div>
                         </details>
                     </td>
                 </tr>
                 :
                 <tr key={i}>
                     <td>{accessKey}</td>
-                    <td dangerouslySetInnerHTML={{__html: obj}}></td>
+                    <td dangerouslySetInnerHTML={{ __html: obj }}></td>
                 </tr>
             )}
         </tbody>
     </table>
 }
 
-function EditKey({accessKey, doc}: {accessKey: JurisprudenciaKey, doc: PartialJurisprudenciaDocument}){
+function EditKey({ accessKey, doc }: { accessKey: JurisprudenciaKey, doc: PartialJurisprudenciaDocument }) {
 
-    if( isJurisprudenciaDocumentObjectKey(accessKey.key) ) return <ShowCode accessKey={accessKey} doc={doc}/>
-    if( isJurisprudenciaDocumentHashKey(accessKey.key) ) return <ShowCode accessKey={accessKey} doc={doc}/>
-    if( isJurisprudenciaDocumentContentKey(accessKey.key) ) return <ShowCode accessKey={accessKey} doc={doc}/>
-    if( isJurisprudenciaDocumentTextKey(accessKey.key) ) return <TextInput accessKey={accessKey} doc={doc}/>
-    if( isJurisprudenciaDocumentDateKey(accessKey.key) ) return <DateInput accessKey={accessKey} doc={doc}/>
-    if( isJurisprudenciaDocumentStateKey(accessKey.key) ) return <ExactInput accessKey={accessKey} doc={doc} options={JurisprudenciaDocumentStateValues}/>
-    if( isJurisprudenciaDocumentExactKey(accessKey.key) ) return <ExactInput accessKey={accessKey} doc={doc}/>
-    if( isJurisprudenciaDocumentGenericKey(accessKey.key) ) return <GenericInput accessKey={accessKey} doc={doc}/>
-    
+    if (isJurisprudenciaDocumentObjectKey(accessKey.key)) return <ShowCode accessKey={accessKey} doc={doc} />
+    if (isJurisprudenciaDocumentHashKey(accessKey.key)) return <ShowCode accessKey={accessKey} doc={doc} />
+    if (isJurisprudenciaDocumentContentKey(accessKey.key)) return <ShowCode accessKey={accessKey} doc={doc} />
+    if (isJurisprudenciaDocumentTextKey(accessKey.key)) return <TextInput accessKey={accessKey} doc={doc} />
+    if (isJurisprudenciaDocumentDateKey(accessKey.key)) return <DateInput accessKey={accessKey} doc={doc} />
+    if (isJurisprudenciaDocumentStateKey(accessKey.key)) return <ExactInput accessKey={accessKey} doc={doc} options={JurisprudenciaDocumentStateValues} />
+    if (isJurisprudenciaDocumentExactKey(accessKey.key)) return <ExactInput accessKey={accessKey} doc={doc} />
+    if (isJurisprudenciaDocumentGenericKey(accessKey.key)) return <GenericInput accessKey={accessKey} doc={doc} />
+
     //throw new Error("Unreachable")
     return <>Unreachable</>
 }
 
-function UpdateDocument({id}: {id: string}){
+function UpdateDocument({ id }: { id: string }) {
     let keys = useKeysFromContext().records;
     let [updateObject,] = useContext(UpdateContext);
     let router = useRouter();
@@ -110,15 +110,15 @@ function UpdateDocument({id}: {id: string}){
     }
 
     let deleteDoc = async () => {
-        if( !confirm("Tem a certeza que quer eliminar o documento?") ) return;
+        if (!confirm("Tem a certeza que quer eliminar o documento?")) return;
         let writeResponseBase = await fetch(`${router.basePath}/api/doc/${id}`, {
             method: "DELETE",
-        }).then( r => r.json() as Promise<WriteResponseBase> );
-        if( writeResponseBase.result === "updated" ){
+        }).then(r => r.json() as Promise<WriteResponseBase>);
+        if (writeResponseBase.result === "updated") {
             navRouter.refresh();
         }
-        else{
-            navRouter.push("/admin/doc")
+        else {
+            navRouter.push("/admin/")
         }
     }
 

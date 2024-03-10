@@ -1,7 +1,7 @@
 //@ts-nocheck
 import { JurisprudenciaDocument, JurisprudenciaDocumentStateValues, JurisprudenciaVersion, PartialJurisprudenciaDocument, isJurisprudenciaDocumentDateKey, isJurisprudenciaDocumentExactKey, isJurisprudenciaDocumentGenericKey, isJurisprudenciaDocumentStateKey, isJurisprudenciaDocumentTextKey, calculateUUID, calculateHASH } from "@stjiris/jurisprudencia-document";
-import crypto from "node:crypto";
 import { getElasticSearchClient } from "./elasticsearch";
+import { SimpleJurisprudenciaDocument, getSimpleEditorDefaults } from "@/components/simpleEditorDefaults";
 
 export const existsDoc = (docId: string) => getElasticSearchClient().then(c => c.exists({ index: JurisprudenciaVersion, id: docId }))
 
@@ -79,8 +79,14 @@ export const createDoc = (newdoc: PartialJurisprudenciaDocument) => getElasticSe
     return c.index<JurisprudenciaDocument>({ index: JurisprudenciaVersion, document: doc as JurisprudenciaDocument, refresh: "wait_for" });
 })
 
-export const createSimpleDoc = (newdoc: Record<keyof PartialJurisprudenciaDocument, string>) => {
+export const createSimpleDoc = (newdoc: SimpleJurisprudenciaDocument) => {
     let doc: PartialJurisprudenciaDocument = {};
+    let defaultValues = getSimpleEditorDefaults(newdoc);
+    for (let key in defaultValues) {
+        if (!newdoc[key]) {
+            newdoc[key] = defaultValues[key]
+        }
+    }
     for (let key in newdoc) {
         if (!newdoc[key]) continue;
         let trimmed = newdoc[key].trim();

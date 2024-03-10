@@ -1,15 +1,14 @@
-import { GenericField, JurisprudenciaDocument, JurisprudenciaDocumentDateKey, JurisprudenciaDocumentExactKey, JurisprudenciaDocumentGenericKey, JurisprudenciaDocumentKey, JurisprudenciaDocumentTextKey, PartialJurisprudenciaDocument, isJurisprudenciaDocumentGenericKey } from "@stjiris/jurisprudencia-document";
-import { useState, Dispatch, SetStateAction, useCallback, useEffect, createContext, useContext, useRef, useMemo } from "react";
+import { JurisprudenciaDocument, JurisprudenciaDocumentDateKey, JurisprudenciaDocumentExactKey, JurisprudenciaDocumentGenericKey, JurisprudenciaDocumentKey, JurisprudenciaDocumentTextKey, PartialJurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
+import { Dispatch, SetStateAction, createContext, useContext, useMemo, useRef, useState } from "react";
 
-import dynamic from 'next/dynamic';
-export const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
-import 'react-quill/dist/quill.snow.css';
 import { JurisprudenciaKey } from "@/types/keys";
-import { NextRouter, useRouter } from "next/router";
 import { DatalistObj } from "@/types/search";
-import { useFetch } from "./useFetch";
+import dynamic from 'next/dynamic';
+import { NextRouter, useRouter } from "next/router";
+import 'react-quill/dist/quill.snow.css';
 import Createable from "react-select/creatable";
-import Selectable from "react-select";
+import { useFetch } from "./useFetch";
+export const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
 
 export type UpdateObject = PartialJurisprudenciaDocument;
 
@@ -20,31 +19,27 @@ export type InputProps<T> = {
     doc: JurisprudenciaDocument
 }
 
+export type SimpleInputProps = {
+    accessKey: JurisprudenciaKey & { key: JurisprudenciaDocumentKey },
+    doc: Partial<Record<JurisprudenciaDocumentKey, string>>
+}
+
 export function TextInput({ accessKey, doc }: InputProps<JurisprudenciaDocumentTextKey>) {
     let [, setUpdateObject] = useContext(UpdateContext);
     let initialValue = doc[accessKey.key] || "";
     let [html, setValue] = useState<string>(initialValue);
-    let [edit, setEdit] = useState<boolean>(false);
-
-    useEffect(() => {
-        if (!edit) {
-            // Reset values
-            setValue(initialValue);
-            setUpdateObject(({ [accessKey.key]: _curr, ...old }) => ({ ...old }));
-        }
-    }, [edit, accessKey.key, initialValue, setUpdateObject]);
 
     let onChange = (newvalue: string) => {
-        setUpdateObject(old => ({ ...old, [accessKey.key]: newvalue }));
-        setValue(newvalue);
+        let valueWithoutEmpty = newvalue.replaceAll("<p><br></p>", "");
+        setUpdateObject(old => ({ ...old, [accessKey.key]: valueWithoutEmpty }));
+        setValue(valueWithoutEmpty);
     }
 
     return <>
         <div className="d-flex align-items-baseline my-2">
             <h4 className="m-0 w-25">{accessKey.name}{initialValue === html ? "" : "*"}</h4>
-            <button className="btn btn-warning mx-1" onClick={() => setEdit((v) => !v)}>{edit ? "Cancelar" : "Editar"}</button>
+            <ReactQuill className="w-75" theme="snow" defaultValue={initialValue} onChange={onChange} />
         </div>
-        {edit && <ReactQuill theme="snow" value={html} onChange={onChange} />}
     </>;
 }
 
@@ -209,7 +204,7 @@ async function loadDatalist(router: NextRouter, accessKey: string, setDatalist: 
         .then(setDatalist)
 }
 
-export function ExactInputSelection({ accessKey, doc }: InputProps<JurisprudenciaDocumentKey>) {
+export function ExactInputSelection({ accessKey, doc }: SimpleInputProps) {
     let [, setUpdateObject] = useContext(UpdateContext);
     let initialValue = doc[accessKey.key] || "";
     let [toSave, setToSave] = useState<boolean>(false);
@@ -224,14 +219,14 @@ export function ExactInputSelection({ accessKey, doc }: InputProps<Jurisprudenci
         }
     };
 
-    let options = useFetch<DatalistObj[]>(`/api/datalist?agg=${encodeURIComponent(accessKey.key)}`, []);
+    let options = useFetch<DatalistObj[]>(`/api/datalist?agg=${encodeURIComponent(accessKey.key)}`, []) || [{ key: initialValue }];
 
     let toSaveString = toSave ? "*" : "";
 
     return <div className="input-group">
         <small className="input-group-text w-25">{accessKey.name}{toSaveString}</small>
 
-        <select className="form-select" onChange={(evt) => update(evt.currentTarget.value)}>
+        <select className="form-select" defaultValue={initialValue} onChange={(evt) => update(evt.currentTarget.value)}>
             <option value="">Selecione...</option>
             {options?.map((v, i) => <option key={i} value={v.key}>{v.key}</option>)}
         </select>
@@ -239,7 +234,7 @@ export function ExactInputSelection({ accessKey, doc }: InputProps<Jurisprudenci
 }
 
 
-export function TokenSelection({ accessKey, doc }: InputProps<JurisprudenciaDocumentKey>) {
+export function TokenSelection({ accessKey, doc }: SimpleInputProps) {
     let [, setUpdateObject] = useContext(UpdateContext);
     let initialValue = doc[accessKey.key] || "";
     let [toSave, setToSave] = useState<boolean>(false);
@@ -255,13 +250,18 @@ export function TokenSelection({ accessKey, doc }: InputProps<JurisprudenciaDocu
     };
 
     let options = useFetch<DatalistObj[]>(`/api/datalist?agg=${encodeURIComponent(accessKey.key)}`, []);
-    let optionsList = useMemo(() => options?.map((v) => ({ value: v.key, label: v.key })), [options]);
+    let optionsList = useMemo(() => {
+        if (!options) return [{ value: initialValue, label: initialValue }];
+        if (!initialValue || options.find(v => v.key === initialValue)) return options.map((v) => ({ value: v.key, label: v.key }));
+        return options.map((v) => ({ value: v.key, label: v.key })).concat({ value: initialValue, label: initialValue });
+    }, [options]);
 
     let toSaveString = toSave ? "*" : "";
+    let defaultValue = initialValue ? initialValue.split("\n").map(v => ({ value: v, label: v })) : [];
 
     return <div className="input-group">
         <small className="input-group-text w-25">{accessKey.name}{toSaveString}</small>
-        <Createable placeholder="Selectione..." loadingMessage={lbl => "A carregar..."} formatCreateLabel={lbl => `Novo ${accessKey.name}: "${lbl}"`} className="w-75" isMulti options={optionsList} onChange={(evt) => update(evt.map(v => v.value).join("\n"))} />
+        <Createable placeholder="Selectione..." defaultValue={defaultValue} loadingMessage={lbl => "A carregar..."} formatCreateLabel={lbl => `Novo ${accessKey.name}: "${lbl}"`} className="w-75" isMulti options={optionsList} onChange={(evt) => update(evt.map(v => v.value).join("\n"))} />
     </div>;
 }
 
@@ -284,6 +284,6 @@ export function GenericInputSimple({ accessKey, doc }: InputProps<Jurisprudencia
 
     return <div className="input-group">
         <small className="input-group-text w-25">{accessKey.name}{toSaveString}</small>
-        <textarea className="form-control" defaultValue={initialValue} onInput={(evt) => update(evt.currentTarget.value)} rows={8} />
+        <textarea className="form-control" defaultValue={initialValue} onInput={(evt) => update(evt.currentTarget.value)} rows={4} />
     </div>;
 }
