@@ -8,7 +8,7 @@ export const SIMPLE_EDITOR_DEFAULTS = {
     Tipo: "Acórdão",
     Jurisprudência: "Simples",
     Fonte: "STJ (Manual)",
-    Votação: "Decisão por unanimidade\nDecisão por maioria\nDecisão sem declarações de voto\nDecisão sem voto de vencido",
+    Votação: "Decisão por unanimidade\nDecisão sem declarações de voto\nDecisão sem voto de vencido",
     Decisão: "Negar provimento",
     Área: (ctx: SimpleJurisprudenciaDocument) => "Secção" in ctx ? areaFromSeccao(ctx.Secção) : undefined,
 } as Partial<Record<JurisprudenciaDocumentKey, string | ((ctx: SimpleJurisprudenciaDocument) => string | undefined)>>;
