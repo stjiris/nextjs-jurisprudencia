@@ -31,7 +31,7 @@ RUN (crontab -l; echo "0 10 * * 0 cd /home/clitools/backup-jurisprudencia && /us
 # update rss feed
 RUN git clone https://github.com/SobriKeN/jurisprudencia-rss.git && cd jurisprudencia-rss && npm install && npm run build
 # At minute 45 past every 3rd hour from 9 through 18 on every day-of-week from Monday through Friday.
-RUN RUN (crontab -l; echo "45 9-18/3 * * 1-5 cd /home/clitools/jurisprudencia-rss && /usr/local/bin/node dist >> ../jurisprudencia-rss.stdout.log 2>> ../jurisprudencia-rss.stderr.log") | crontab -
+RUN (crontab -l; echo "45 9-18/3 * * 1-5 cd /home/clitools/jurisprudencia-rss && /usr/local/bin/node dist >> ../jurisprudencia-rss.stdout.log 2>> ../jurisprudencia-rss.stderr.log") | crontab -
 
 COPY entrypoint.sh .
 
