@@ -60,6 +60,7 @@ services:
       ES_USER: elastic
       ES_PASS: elasticsearch
       RSS_FOLDER: /rss
+      RSS_LINK: ${RSS_LINK:-http://localhost:3000/jurisprudencia}
     volumes:
       - rss_data:/rss 
   elasticsearch:
