@@ -4,8 +4,9 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { INDICES_OTHERS } from "@/types/indices";
 import { listAggregation } from "@/components/indices-helpers";
 import { authenticatedHandler } from "@/core/user/authenticate";
+import LoggerApi from "@/core/logger-api";
 
-export default async function indicesCsvHandler(
+export default LoggerApi(async function indicesCsvHandler(
     req: NextApiRequest,
     res: NextApiResponse<string>
 ) {
@@ -63,7 +64,7 @@ export default async function indicesCsvHandler(
     return res.setHeader("Content-Type", "text/csv; charset=utf-8").setHeader("Content-Disposition","attachment").send(`"#","Índice","${props.group}",${props.sortedGroup.map(([name, count],i) => `"${name}"`).join(",")},"Datas"
 ${props.termAggregation.buckets.length},"${props.term}",${(props.termAggregation.buckets as any[]).reduce((acc, b)=> acc+b.doc_count, 0)},${props.sortedGroup.map(([name,count], i) => count).join(",")},"de ... até"
 ${(props.termAggregation.buckets as any[]).map( (b, i) => bucketLine(i, b, props.sortedGroup)).join("\n")}\n`);
-}
+});
 
 
 

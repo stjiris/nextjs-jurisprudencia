@@ -1,5 +1,6 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 import search, { createQueryDslQueryContainer, filterableProps, parseSort, populateFilters, RESULTS_PER_PAGE } from '@/core/elasticsearch';
+import LoggerApi from '@/core/logger-api';
 import { authenticatedHandler } from '@/core/user/authenticate';
 import { HighlightFragment, SearchHandlerResponse } from '@/types/search';
 import { SearchHighlight, SortCombinations } from '@elastic/elasticsearch/lib/api/types';
@@ -8,7 +9,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 
 const useSource: JurisprudenciaDocumentKey[] = ["ECLI","Número de Processo","UUID","Data","Área","Meio Processual","Relator Nome Profissional","Secção","Votação","Decisão","Descritores","Sumário","Texto","STATE"]
        
-export default async function searchHandler(
+export default LoggerApi(async function searchHandler(
   req: NextApiRequest,
   res: NextApiResponse<SearchHandlerResponse>
 ) {
@@ -117,4 +118,4 @@ export default async function searchHandler(
 
     res.status(200).json(r);
 
-}
+});

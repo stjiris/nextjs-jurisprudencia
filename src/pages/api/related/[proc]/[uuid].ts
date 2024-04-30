@@ -1,10 +1,11 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 import search from '@/core/elasticsearch';
+import LoggerApi from '@/core/logger-api';
 import { authenticatedHandler } from '@/core/user/authenticate';
 import { PartialJurisprudenciaDocument } from '@stjiris/jurisprudencia-document'
 import type { NextApiRequest, NextApiResponse } from 'next'
 
-export default async function handler(
+export default LoggerApi(async function handler(
     req: NextApiRequest,
     res: NextApiResponse<PartialJurisprudenciaDocument[]>
 ) {
@@ -24,4 +25,4 @@ export default async function handler(
             Data: hit._source.Data
         }) : {}).filter(hit => hit.UUID && hit.UUID.indexOf(uuid) != 0);
     }).then(l => res.status(200).json(l))
-}
+});

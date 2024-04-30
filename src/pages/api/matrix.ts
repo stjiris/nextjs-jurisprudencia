@@ -1,4 +1,5 @@
 import search, { aggs, createQueryDslQueryContainer, getElasticSearchClient, populateFilters, SearchFilters } from '@/core/elasticsearch';
+import LoggerApi from '@/core/logger-api';
 import { authenticatedHandler } from '@/core/user/authenticate';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
@@ -20,7 +21,7 @@ export function matrixAggregation(term1: string, term2: string): Record<string, 
   };
 }
 
-export default async function matrixHandler(
+export default LoggerApi(async function matrixHandler(
     req: NextApiRequest,
     res: NextApiResponse
   ) {
@@ -40,4 +41,4 @@ export default async function matrixHandler(
       return res.status(500);
     }
 
-}
+});

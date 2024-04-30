@@ -5,6 +5,7 @@ import { isMainThread } from "worker_threads";
 import formidable from "formidable";
 import { rename } from "fs/promises";
 import { join } from "path";
+import LoggerApi from "@/core/logger-api";
 
 export const config = {
     api: {
@@ -18,7 +19,7 @@ const form = formidable({
     keepExtensions: true
 });
 
-export default async function excelStatusHandler(
+export default LoggerApi(async function excelStatusHandler(
     req: NextApiRequest,
     res: NextApiResponse
 ){
@@ -46,6 +47,5 @@ export default async function excelStatusHandler(
     }
     else{
         return res.json(startBuilder(start, exclude, doAll))
-    }
-    
-}
+    } 
+});

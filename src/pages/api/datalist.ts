@@ -1,11 +1,12 @@
 import search, { aggs, createQueryDslQueryContainer, filterableProps, getElasticSearchClient, parseSort, populateFilters, RESULTS_PER_PAGE, SearchFilters, sortBucketsAlphabetically } from '@/core/elasticsearch';
+import LoggerApi from '@/core/logger-api';
 import { authenticatedHandler } from '@/core/user/authenticate';
 import { DatalistObj } from '@/types/search';
 import { AggregationsAggregationContainer, AggregationsStringTermsAggregate } from '@elastic/elasticsearch/lib/api/types';
 import { JurisprudenciaVersion } from '@stjiris/jurisprudencia-document';
 import type { NextApiRequest, NextApiResponse } from 'next'
 
-export default async function datalistHandler(
+export default LoggerApi(async function datalistHandler(
   req: NextApiRequest,
   res: NextApiResponse<DatalistObj[]>
 ) {
@@ -45,4 +46,4 @@ export default async function datalistHandler(
         console.error(err);
         return res.status(500).json([]);
     });
-}
+});

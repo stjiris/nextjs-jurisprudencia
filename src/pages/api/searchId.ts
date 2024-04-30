@@ -1,9 +1,10 @@
 import search, { createQueryDslQueryContainer, getElasticSearchClient, populateFilters, SearchFilters } from "@/core/elasticsearch";
+import LoggerApi from "@/core/logger-api";
 import { authenticatedHandler } from "@/core/user/authenticate";
 import { PartialJurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
 import { NextApiRequest, NextApiResponse } from "next";
 
-export default async function datalistHandler(
+export default LoggerApi(async function datalistHandler(
   req: NextApiRequest,
   res: NextApiResponse<{[key: string] : PartialJurisprudenciaDocument}>
 ) {
@@ -78,4 +79,4 @@ export default async function datalistHandler(
     res.setHeader("Pagination-Limit", 5)
     return res.json( r )
 
-}
+});

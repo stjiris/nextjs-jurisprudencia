@@ -5,8 +5,9 @@ import { IndicesProps, INDICES_OTHERS } from "@/types/indices";
 import { listAggregation } from "@/components/indices-helpers";
 import { getAllKeys } from "@/core/keys";
 import { authenticatedHandler } from "@/core/user/authenticate";
+import LoggerApi from "@/core/logger-api";
 
-export default async function indicesCsvHandler(
+export default LoggerApi(async function indicesCsvHandler(
     req: NextApiRequest,
     res: NextApiResponse<IndicesProps>
 ) {
@@ -57,4 +58,4 @@ export default async function indicesCsvHandler(
         termAggregation: result.aggregations![term] as AggregationsStringTermsAggregate,
         sortedGroup
     });
-}
+});

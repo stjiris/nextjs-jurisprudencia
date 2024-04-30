@@ -2,8 +2,9 @@ import { authenticatedHandler } from "@/core/user/authenticate";
 import { NextApiRequest, NextApiResponse } from "next";
 import { createDoc, createSimpleDoc, deleteDoc, getDoc, updateDoc } from "@/core/doc";
 import { WriteResponseBase } from "@elastic/elasticsearch/lib/api/types";
+import LoggerApi from "@/core/logger-api";
 
-export default async function docApiHandler(
+export default LoggerApi(async function docApiHandler(
     req: NextApiRequest,
     res: NextApiResponse
 ) {
@@ -27,4 +28,4 @@ export default async function docApiHandler(
     }
 
     return res.status(405).json({})
-}
+});

@@ -1,13 +1,66 @@
 import Image from "next/image";
 import Link from "next/link";
 import ModalSobre from "./sobre";
-import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation"
+import { useParams, usePathname, useSearchParams } from "next/navigation"
 import logoname from '../../public/images/PT-logoLogo-STJ.png'
 import { useAuth } from "@/contexts/auth";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/router";
 
 const NAVEGACAO = ["Pesquisa", "Índices", /* "Dashboard"*/]
 
 export function AdminHeader() {
+    const router = useRouter();
+    const user = useAuth();
+    const [userIsLoggedIn, setUserIsLoggedIn] = useState(true);
+    const Beat = useMemo(() => {
+        if( !userIsLoggedIn ) return <i className="bi bi-circle text-danger"></i>
+        return <i className="bi bi-circle-fill text-success"></i>
+    }, [user, userIsLoggedIn])
+
+    const checkLogin = useCallback((abortController?: AbortController) => {
+        fetch(router.basePath + "/api/user", { signal: abortController?.signal })
+            .then(r => r.json())
+            .then(r => {
+                if (r.name && r.name === user?.name) {
+                    setUserIsLoggedIn(true)
+                }
+                else {
+                    setUserIsLoggedIn(false)
+                }
+            }).catch(_e => setUserIsLoggedIn(false))
+    }, [router.basePath, user])
+
+    useEffect(() => {
+        const abortController = new AbortController();
+        const int = setInterval(() => {
+            if( !document.hasFocus() ) return;
+            checkLogin(abortController);
+        }, 60000)
+        return () => {
+            abortController.abort()
+            clearInterval(int)
+        }
+    }, [router.basePath, user])
+
+    useEffect(() => {
+        if( !userIsLoggedIn ){
+            alert("A sessão expirou. Por favor faça login novamente.")
+            window.open(window.location.origin + router.basePath + "/user/login?redirect=/close", "_blank", 'location=yes,height=570,width=520,scrollbars=no,status=no')?.focus()
+        }
+    }, [userIsLoggedIn])
+
+    useEffect(() => {
+        const abortController = new AbortController();
+        const focusEventHandler = () => {
+            checkLogin(abortController)
+        }
+        window.addEventListener("focus", focusEventHandler)
+        return () => {
+            abortController.abort()
+            window.removeEventListener("focus", focusEventHandler)
+        }
+    }, [router.basePath, user])
     return <>
         <header className="mb-1 py-2 align-items-center d-flex flex-wrap border-bottom">
             <Link href="/admin" className="align-items-center d-flex flex-wrap text-decoration-none nav-link">
@@ -20,6 +73,9 @@ export function AdminHeader() {
                     <h5 className="m-0 fancy-font">Jurisprudência - Admin</h5>
                 </div>
             </Link>
+            <div className="m-0 mt-auto text-dark">
+                <p className="m-0">Utilizador: {user?.name} {Beat}</p>
+            </div>
             <div className="flex-fill d-none d-lg-block"></div>
             <nav>
                 <ul className="container d-flex nav align-items-center justify-content-evenly flex-wrap">
