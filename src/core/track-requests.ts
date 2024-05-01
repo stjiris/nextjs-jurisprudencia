@@ -51,7 +51,7 @@ async function getClient(){
 
 export async function trackRequest(req: NextApiRequest, res: NextApiResponse, start: Date, end: Date){
     let client = await getClient();
-    client.index({
+    return await client.index({
         index: REQUEST_INDEX,
         body: {
             method: req.method,

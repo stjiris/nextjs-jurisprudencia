@@ -8,7 +8,7 @@ export default function LoggerApi(cb: NextApiHandler): NextApiHandler{
         let r = await cb(req, res);
         const end = new Date();
         console.log(`[API] ${start.toISOString()} ${req.method} ${req.url} ${res.statusCode} ${(+end) - (+start)}ms`);
-        trackRequest(req, res, start, end);
+        await trackRequest(req, res, start, end);
         return r;
     }
 }
