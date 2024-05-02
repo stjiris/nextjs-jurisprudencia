@@ -1,9 +1,8 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { getElasticSearchClient } from "./elasticsearch";
-import { NextRequest, NextResponse, userAgent } from "next/server";
 import { IncomingMessage, ServerResponse } from "http";
 
-const REQUEST_INDEX = "requests.0.1"
+const REQUEST_INDEX = "requests.0.2"
 
 async function getClient(){
     let client = await getElasticSearchClient();
@@ -35,6 +34,9 @@ async function getClient(){
                     },
                     ip: {
                         type: 'ip'
+                    },
+                    type: {
+                        type: 'keyword'
                     }
                 }
             },
@@ -63,7 +65,8 @@ export async function trackApiRequest(req: NextApiRequest, res: NextApiResponse,
             end: end.toISOString(),
             duration: (+end) - (+start),
             userAgent: req.headers['user-agent'],
-            ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress
+            ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+            type: "api"
         }
     })
 }
@@ -80,7 +83,8 @@ export async function trackSspRequest(req: IncomingMessage, res: ServerResponse<
             end: end.toISOString(),
             duration: (+end) - (+start),
             userAgent: req.headers['user-agent'],
-            ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress
+            ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+            type: "ssp"
         }
     })
 }
