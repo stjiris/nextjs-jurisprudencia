@@ -2,6 +2,7 @@ import { useKeys } from "@/components/formKeys";
 import { DashboardGenericPage } from "@/components/genericPageStructure";
 import { useFetch } from "@/components/useFetch";
 import { getAllKeys } from "@/core/keys";
+import { LoggerServerSideProps } from "@/core/logger-api";
 import { withAuthentication } from "@/core/user/authenticate";
 import { JurisprudenciaKey, canBeActive, canHaveSuggestions } from "@/types/keys";
 import dynamic from "next/dynamic";
@@ -10,7 +11,10 @@ import { CSSProperties, useEffect, useState } from "react";
 const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
 import 'react-quill/dist/quill.snow.css';
 
-export const getServerSideProps = withAuthentication<{}>(async ctx => ({ props: {} }))
+export const getServerSideProps = withAuthentication<{}>(async ctx => {
+    LoggerServerSideProps(ctx);
+    return {props: {}}
+})
 
 export default function ExcelPage() {
     let [bell, setBell] = useState(0);

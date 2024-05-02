@@ -6,6 +6,7 @@ import { modifySearchParams, SelectNavigate } from "@/components/select-navigate
 import { useFetch } from "@/components/useFetch"
 import { useKeysFromContext } from "@/contexts/keys"
 import search, { createQueryDslQueryContainer, DEFAULT_AGGS, getSearchedArray, parseSort, populateFilters, RESULTS_PER_PAGE } from "@/core/elasticsearch"
+import { LoggerServerSideProps } from "@/core/logger-api"
 import { saveSearch } from "@/core/track-search"
 import { JurisprudenciaKey } from "@/types/keys"
 import { HighlightFragment, SearchHandlerResponse, SearchHandlerResponseItem } from "@/types/search"
@@ -23,6 +24,7 @@ interface PesquisaProps extends FormProps{
 }
 
 export const getServerSideProps = withForm<PesquisaProps>(async (ctx, formProps) => {
+    LoggerServerSideProps(ctx);
     let searchId = await saveSearch(ctx.resolvedUrl)
     let searchedArray = await getSearchedArray(Array.isArray(ctx.query.q) ? ctx.query.q.join(" ") : ctx.query.q || "")
     let pages = Math.ceil(formProps.count / RESULTS_PER_PAGE)

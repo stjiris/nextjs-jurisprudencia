@@ -1,13 +1,17 @@
 import { exportableKeys } from "@/components/exportable-keys";
 import { DashboardGenericPage } from "@/components/genericPageStructure";
 import { useFetch } from "@/components/useFetch";
+import { LoggerServerSideProps } from "@/core/logger-api";
 import { withAuthentication } from "@/core/user/authenticate";
 import { ExcelFile, ExcelState, FileState } from "@/types/excel";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import React, { useEffect, useRef, useState } from "react";
 
-export const getServerSideProps = withAuthentication<{}>(async ctx => ({props: {}}))
+export const getServerSideProps = withAuthentication<{}>(async ctx => {
+    LoggerServerSideProps(ctx);
+    return {props: {}}
+})
 
 const intl = new Intl.DateTimeFormat("pt-PT", {dateStyle: "short", timeStyle: "long"})
 

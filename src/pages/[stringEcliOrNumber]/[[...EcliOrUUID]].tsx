@@ -13,10 +13,12 @@ import { useFetch } from "@/components/useFetch";
 import { authenticatedHandler } from "@/core/user/authenticate";
 import { BadgeFromState } from "@/components/BadgeFromState";
 import { useAuth } from "@/contexts/auth";
+import { LoggerServerSideProps } from "@/core/logger-api";
 
 const MUST_HAVE = ["UUID", "Número de Processo", "Fonte", "ECLI", "URL", "Sumário", "Texto"]
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
+    LoggerServerSideProps(ctx);
     let { stringEcliOrNumber, EcliOrUUID, search: searchId } = ctx.query;
     if (!stringEcliOrNumber) throw new Error("Invalid request")
 

@@ -1,4 +1,5 @@
 import GenericPage from "@/components/genericPageStructure";
+import { LoggerServerSideProps } from "@/core/logger-api";
 import { authenticate, AuthenticateResponse } from "@/core/user/authenticate";
 import { createSession, validateSession } from "@/core/user/session";
 import { GetServerSideProps } from "next";
@@ -8,6 +9,7 @@ interface LoginProps {
 }
 
 export const getServerSideProps : GetServerSideProps<LoginProps> = async (ctx) => {
+    LoggerServerSideProps(ctx);
     let redirect = Array.isArray(ctx.query.redirect) ? ctx.query.redirect[0] : ctx.query.redirect || `/admin`
     if( ctx.req.method === "POST" ){
         let requestPostDataParams = await new Promise<URLSearchParams>((resolve) => {

@@ -1,4 +1,5 @@
 import GenericPage from "@/components/genericPageStructure";
+import { LoggerServerSideProps } from "@/core/logger-api";
 import { authenticate, AuthenticateResponse, withAuthentication } from "@/core/user/authenticate";
 import { createSession, deleteSession, deleteUserSession, updateSession, validateSession } from "@/core/user/session";
 import { deleteUser, readUser, updateUser, User } from "@/core/user/usercrud";
@@ -8,6 +9,7 @@ import Link from "next/link";
 
 
 export const getServerSideProps = withAuthentication<UpdateProps>(async (ctx) => {
+    LoggerServerSideProps(ctx);
     if( ctx.req.method === "POST" ){
         let requestPostDataParams = await new Promise<URLSearchParams>((resolve) => {
             let _data = ""

@@ -1,4 +1,5 @@
 import GenericPage from "@/components/genericPageStructure"
+import { LoggerServerSideProps } from "@/core/logger-api";
 import { withAuthentication } from "@/core/user/authenticate"
 import { readUser, User } from "@/core/user/usercrud";
 import { SearchHit } from "@elastic/elasticsearch/lib/api/types";
@@ -9,6 +10,7 @@ interface UserIndexProps {
 }
 
 export const getServerSideProps = withAuthentication<UserIndexProps>(async (ctx) => {
+    LoggerServerSideProps(ctx);
     let user = ctx.req.cookies["user"]!;
     
     

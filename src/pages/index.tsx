@@ -2,8 +2,12 @@ import Head from 'next/head'
 import GenericPage from '@/components/genericPageStructure'
 import Link from 'next/link'
 import { GetServerSideProps } from 'next'
+import { LoggerServerSideProps } from '@/core/logger-api'
 
-export const getServerSideProps: GetServerSideProps = async (ctx) => ({redirect: {destination: "/pesquisa"}, props: {}})
+export const getServerSideProps: GetServerSideProps = async (ctx) => {
+  LoggerServerSideProps(ctx);
+  return {redirect: {destination: "/pesquisa"}, props: {}}
+}
 
 export default function Home() {
   return (

@@ -1,11 +1,13 @@
 import GenericPage, { GenericPageWithForm } from "@/components/genericPageStructure"
 import search, { createQueryDslQueryContainer, DEFAULT_AGGS, getSearchedArray, parseSort, populateFilters, RESULTS_PER_PAGE } from "@/core/elasticsearch";
+import { LoggerServerSideProps } from "@/core/logger-api";
 import { authenticatedHandler } from "@/core/user/authenticate";
 import { AggregationsMaxAggregate, AggregationsMinAggregate, long, SearchTotalHits, SortCombinations } from "@elastic/elasticsearch/lib/api/types";
 import { GetServerSideProps } from "next";
 import Head from "next/head"
 
 export const getServerSideProps: GetServerSideProps<EstatisticaProps> = async (ctx) => {
+    LoggerServerSideProps(ctx);
     const sfilters = {pre: [], after: []};
     const filtersUsed = populateFilters(sfilters, ctx.query)
     const sort: SortCombinations[] = [];

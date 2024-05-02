@@ -14,7 +14,10 @@ import { GetResponse, WriteResponseBase } from "@elastic/elasticsearch/lib/api/t
 import { KeysContext, useKeysFromContext } from "@/contexts/keys";
 import { JurisprudenciaKey } from "@/types/keys";
 
-export const getServerSideProps = withAuthentication(async (ctx) => ({ props: {} }))
+export const getServerSideProps = withAuthentication<{}>(async ctx => {
+    LoggerServerSideProps(ctx);
+    return {props: {}}
+})
 
 interface UpdateProps {
     id: string
