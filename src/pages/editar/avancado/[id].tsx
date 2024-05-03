@@ -13,6 +13,7 @@ import { useFetch } from "@/components/useFetch";
 import { GetResponse, WriteResponseBase } from "@elastic/elasticsearch/lib/api/types";
 import { KeysContext, useKeysFromContext } from "@/contexts/keys";
 import { JurisprudenciaKey } from "@/types/keys";
+import { LoggerServerSideProps } from "@/core/logger-api";
 
 export const getServerSideProps = withAuthentication<{}>(async ctx => {
     LoggerServerSideProps(ctx);
