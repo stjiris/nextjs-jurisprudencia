@@ -61,7 +61,7 @@ services:
       ES_PASS: elasticsearch
       RSS_FOLDER: /rss
       RSS_LINK: ${RSS_LINK:-http://localhost:3000/jurisprudencia}
-      RSS_MAX_FEED_SIZE: 1000
+      RSS_MAX_FEED_SIZE: 200
     volumes:
       - rss_data:/rss 
   elasticsearch:
