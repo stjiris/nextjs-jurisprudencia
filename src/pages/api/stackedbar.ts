@@ -1,4 +1,5 @@
 import search, { aggs, createQueryDslQueryContainer, populateFilters, SearchFilters } from '@/core/elasticsearch';
+import LoggerApi from '@/core/logger-api';
 import { authenticatedHandler } from '@/core/user/authenticate';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
@@ -33,7 +34,7 @@ export function barChartAggregation(termsList: string[]): Record<string, any> {
   return sortedAggs;
 }
   
-export default async function stackedBarHandler(
+export default LoggerApi(async function stackedBarHandler(
     req: NextApiRequest,
     res: NextApiResponse
   ) {
@@ -59,4 +60,4 @@ export default async function stackedBarHandler(
       console.error(error);
       return res.status(500);
     }
-}
+});

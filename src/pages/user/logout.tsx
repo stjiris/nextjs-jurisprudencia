@@ -1,4 +1,5 @@
 import GenericPage from "@/components/genericPageStructure";
+import { LoggerServerSideProps } from "@/core/logger-api";
 import { authenticate, AuthenticateResponse } from "@/core/user/authenticate";
 import { createSession, deleteSession, validateSession } from "@/core/user/session";
 import { GetServerSideProps } from "next";
@@ -6,7 +7,7 @@ import Link from "next/link";
 
 
 export const getServerSideProps : GetServerSideProps<{}> = async (ctx) => {
-    
+    LoggerServerSideProps(ctx);
     let user = ctx.req.cookies["user"]
     let session = ctx.req.cookies["session"]
 

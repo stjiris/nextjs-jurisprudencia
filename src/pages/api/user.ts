@@ -1,8 +1,9 @@
+import LoggerApi from "@/core/logger-api";
 import { authenticatedHandler } from "@/core/user/authenticate";
 import { readUser, updateUser } from "@/core/user/usercrud";
 import { NextApiRequest, NextApiResponse } from "next";
 
-export default async function docApiHandler(
+export default LoggerApi(async function docApiHandler(
     req: NextApiRequest,
     res: NextApiResponse
 ){
@@ -17,4 +18,4 @@ export default async function docApiHandler(
     }
 
     return res.status(405).json(null)
-}
+});

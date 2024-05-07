@@ -1,11 +1,12 @@
 import { getKey, updateKey } from "@/core/keys";
+import LoggerApi from "@/core/logger-api";
 import { authenticatedHandler } from "@/core/user/authenticate";
 import { JurisprudenciaKey } from "@/types/keys";
 import { JurisprudenciaDocumentKey } from "@stjiris/jurisprudencia-document";
 
 import { NextApiRequest, NextApiResponse } from "next";
 
-export default async function getExcelHandler(
+export default LoggerApi(async function getExcelHandler(
     req: NextApiRequest,
     res: NextApiResponse<JurisprudenciaKey | null>
     ){
@@ -19,4 +20,4 @@ export default async function getExcelHandler(
     
     await updateKey(key, {[attr]: JSON.parse(req.body)} )
     return res.json(await getKey(key))
-}
+});

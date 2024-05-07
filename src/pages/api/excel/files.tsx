@@ -4,13 +4,14 @@ import { authenticatedHandler } from "@/core/user/authenticate";
 import { EXCEL_AGG_PATH, EXCEL_ALL_PATH, EXCEL_IMP_PATH, EXCEL_RES_PATH } from "@/core/excel";
 import { readdir } from "fs/promises";
 import { basename } from "path";
+import LoggerApi from "@/core/logger-api";
 
-export default async function excelStatusHandler(
+export default LoggerApi(async function excelStatusHandler(
     req: NextApiRequest,
     res: NextApiResponse<ExcelFile[]>
 ){
     return authenticatedHandler(req).then(r => r ? listExcelFiles().then(res.json) : res.status(400).json([]));
-}
+});
 
 function logErr(e: Error): string[]{
     console.error(e);

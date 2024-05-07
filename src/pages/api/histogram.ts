@@ -1,4 +1,5 @@
 import search, { aggs, createQueryDslQueryContainer, populateFilters, SearchFilters } from '@/core/elasticsearch';
+import LoggerApi from '@/core/logger-api';
 import { authenticatedHandler } from '@/core/user/authenticate';
 import { AggregationsAggregationContainer } from '@elastic/elasticsearch/lib/api/types';
 import type { NextApiRequest, NextApiResponse } from 'next';
@@ -29,7 +30,7 @@ function histogramAggregation(key: string, value: string): Record<string, Aggreg
     }
 }
 
-export default async function histogramHandler(
+export default LoggerApi(async function histogramHandler(
   req: NextApiRequest,
   res: NextApiResponse<any>
 ) {
@@ -41,4 +42,4 @@ export default async function histogramHandler(
     const filters = populateFilters(sfilters, req.query, []);
     const authed = await authenticatedHandler(req);
     return search(createQueryDslQueryContainer(req.query.q), sfilters, 0, histogramAggregation(aggKey, value), 0, {}, authed).then( r => res.json(r.aggregations))
-}
+});

@@ -3,8 +3,12 @@ import { DashboardGenericPage } from "@/components/genericPageStructure"
 import { withAuthentication } from "@/core/user/authenticate";
 import Link from "next/link";
 import { ReactNode } from "react";
+import { LoggerServerSideProps } from "@/core/logger-api";
 
-export const getServerSideProps: GetServerSideProps<{}> = withAuthentication(async (ctx) => ({ props: {} }))
+export const getServerSideProps = withAuthentication<{}>(async ctx => {
+    LoggerServerSideProps(ctx);
+    return {props: {}}
+})
 
 export default function IndexPage() {
     return <DashboardGenericPage>

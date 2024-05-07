@@ -18,6 +18,7 @@ import AreaChart from "@/components/AreaChart";
 import StackedBarChart from "@/components/StackedBar";
 import "@/types/dashboard"
 import { debounce } from "debounce";
+import { LoggerServerSideProps } from "@/core/logger-api";
 
 // Define the type for selected filters
 type SelectedFilters = string[];
@@ -678,7 +679,7 @@ const saveToLS = debounce((key: string, value: any) => {
 const ReactGridLayout = WidthProvider(RGL);
 
 export const getServerSideProps = withForm<FormProps>(async (ctx, formProps) => {
-  
+  LoggerServerSideProps(ctx);
   return {
     ...formProps,
   }

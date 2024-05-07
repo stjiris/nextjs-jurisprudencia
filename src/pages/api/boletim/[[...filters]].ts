@@ -1,10 +1,11 @@
 import search, { getElasticSearchClient, padZero } from '@/core/elasticsearch';
+import LoggerApi from '@/core/logger-api';
 import { SearchTotalHits } from '@elastic/elasticsearch/lib/api/types';
 import { PartialJurisprudenciaDocument } from '@stjiris/jurisprudencia-document';
 import { ChildProcessWithoutNullStreams, spawn } from 'child_process';
 import type { NextApiRequest, NextApiResponse } from 'next'
 
-export default async function datalistHandler(
+export default LoggerApi(async function datalistHandler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
@@ -68,7 +69,7 @@ export default async function datalistHandler(
     }
     
     return await new Promise(resolve => pandoc.stdout.on("end", resolve))
-}
+})
 
 function convert(title: string, format: string){
     let proc: ChildProcessWithoutNullStreams;

@@ -13,6 +13,7 @@ import { useFetch } from "@/components/useFetch";
 import { JurisprudenciaKey } from "@/types/keys";
 import { useKeysFromContext } from "@/contexts/keys";
 import indicesCsvHandler from "./api/indices.csv";
+import { LoggerServerSideProps } from "@/core/logger-api";
 
 interface IndicesPageProps extends FormProps {
     term: string
@@ -21,6 +22,7 @@ interface IndicesPageProps extends FormProps {
 }
 
 export const getServerSideProps = withForm<IndicesPageProps>(async (ctx, formProps) => {
+    LoggerServerSideProps(ctx);
     const limits = Array.isArray(ctx.query.LIMIT_ROWS) ? parseInt(ctx.query.LIMIT_ROWS[0]) : parseInt(ctx.query.LIMIT_ROWS || "5000") || 5000;
     const term = Array.isArray(ctx.query.term) ? ctx.query.term[0] : ctx.query.term  || "Área";
     let group = "Secção";

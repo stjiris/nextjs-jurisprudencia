@@ -1,11 +1,12 @@
 import { EXCEL_FILES_PATH } from "@/core/excel";
+import LoggerApi from "@/core/logger-api";
 import { createReadStream } from "fs";
 import { stat } from "fs/promises";
 
 import { NextApiRequest, NextApiResponse } from "next";
 import { join } from "path";
 
-export default async function getExcelHandler(
+export default LoggerApi(async function getExcelHandler(
     req: NextApiRequest,
     res: NextApiResponse
 ){
@@ -27,4 +28,4 @@ export default async function getExcelHandler(
         rs.pipe(res)
         rs.on("end", resolve)
     })
-}
+});

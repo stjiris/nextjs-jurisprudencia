@@ -5,8 +5,9 @@ import { INDICES_OTHERS } from "@/types/indices";
 import { listAggregation } from "@/components/indices-helpers";
 import { stream } from "exceljs";
 import { authenticatedHandler } from "@/core/user/authenticate";
+import LoggerApi from "@/core/logger-api";
 
-export default async function indicesXlsxHandler(
+export default LoggerApi(async function indicesXlsxHandler(
     req: NextApiRequest,
     res: NextApiResponse<string>
 ) {
@@ -99,4 +100,4 @@ export default async function indicesXlsxHandler(
     return new Promise(resolve => {
         res.on("finish", resolve)
     })
-}
+});

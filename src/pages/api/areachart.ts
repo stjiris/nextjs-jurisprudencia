@@ -1,4 +1,5 @@
 import search, { aggs, createQueryDslQueryContainer, populateFilters, SearchFilters } from '@/core/elasticsearch';
+import LoggerApi from '@/core/logger-api';
 import { authenticatedHandler } from '@/core/user/authenticate';
 import type { NextApiRequest, NextApiResponse } from 'next';
 export function areachartAggregation(key: string): Record<string, any> {
@@ -58,7 +59,7 @@ export function preprocessAreaChartData( aggs: any): { years: number[]; yearCoun
 }
 
 
-export default async function areachartHandler(
+export default LoggerApi(async function areachartHandler(
   req: NextApiRequest,
   res: NextApiResponse<any>
 ) {
@@ -84,4 +85,4 @@ export default async function areachartHandler(
     console.error(error);
     return res.status(500);
   }
-}
+});

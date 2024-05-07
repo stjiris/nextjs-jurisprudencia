@@ -8,6 +8,7 @@ import { NextRouter, useRouter } from "next/router";
 import 'react-quill/dist/quill.snow.css';
 import Createable from "react-select/creatable";
 import { useFetch } from "./useFetch";
+import { createFilter } from "react-select";
 export const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
 
 export type UpdateObject = PartialJurisprudenciaDocument;
@@ -245,7 +246,22 @@ export function TokenSelection({ accessKey, doc }: SimpleInputProps) {
     let defaultValue = initialValue ? initialValue.split("\n").map(v => ({ value: v, label: v })) : [];
 
     return <InputRow accessKey={accessKey} toSave={toSave}>
-        <Createable placeholder="Selectione..." defaultValue={defaultValue} loadingMessage={lbl => "A carregar..."} formatCreateLabel={lbl => `Novo ${accessKey.name}: "${lbl}"`} className="w-75" isMulti options={optionsList} onChange={(evt) => update(evt.map(v => v.value).join("\n"))} />
+        <Createable
+            placeholder="Selectione..."
+            defaultValue={defaultValue}
+            loadingMessage={lbl => "A carregar..."}
+            formatCreateLabel={lbl => `Novo ${accessKey.name}: "${lbl}"`}
+            className="w-75"
+            isMulti
+            options={optionsList}
+            onChange={(evt) => update(evt.map(v => v.value).join("\n"))}
+            createOptionPosition="first"
+            filterOption={createFilter({
+                matchFrom: "start",
+                ignoreCase: false,
+                ignoreAccents: false,
+            })}
+        />
     </InputRow>;
 }
 

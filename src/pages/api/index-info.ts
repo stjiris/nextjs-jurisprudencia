@@ -1,9 +1,10 @@
 import search, { PUBLIC_STATES, createQueryDslQueryContainer, getElasticSearchClient } from '@/core/elasticsearch';
+import LoggerApi from '@/core/logger-api';
 import { AggregationsAggregationContainer, AggregationsCumulativeCardinalityAggregate } from '@elastic/elasticsearch/lib/api/types';
 import { JurisprudenciaVersion } from '@stjiris/jurisprudencia-document';
 import type { NextApiRequest, NextApiResponse } from 'next'
 
-export default async function getLastReport(
+export default LoggerApi(async function getLastReport(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
@@ -14,4 +15,4 @@ export default async function getLastReport(
     mostRecent: mostRecentAgg.value_as_string,
     publicStates: PUBLIC_STATES,
   })
-}
+});

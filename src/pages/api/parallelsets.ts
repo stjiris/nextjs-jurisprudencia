@@ -1,4 +1,5 @@
 import search, { aggs, createQueryDslQueryContainer, getElasticSearchClient, populateFilters, SearchFilters } from '@/core/elasticsearch';
+import LoggerApi from '@/core/logger-api';
 import { authenticatedHandler } from '@/core/user/authenticate';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
@@ -16,7 +17,7 @@ export function parallelSetsAggregation(terms: string[], numAggs: number): Recor
     return aggregation;
 }
 
-export default async function parallelSetsHandler(
+export default LoggerApi(async function parallelSetsHandler(
     req: NextApiRequest,
     res: NextApiResponse
   ) {
@@ -37,4 +38,4 @@ export default async function parallelSetsHandler(
       console.error(error);
       return res.status(500);
     }
-}
+});

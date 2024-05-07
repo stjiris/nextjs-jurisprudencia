@@ -12,8 +12,12 @@ import Link from "next/link";
 import { useRouter as useNavRouter } from "next/navigation";
 import { useRouter } from "next/router";
 import { getSimpleEditorDefaults } from "@/components/simpleEditorDefaults";
+import { LoggerServerSideProps } from "@/core/logger-api";
 
-export const getServerSideProps = withAuthentication(async (ctx) => ({ props: {} }))
+export const getServerSideProps = withAuthentication<{}>(async ctx => {
+    LoggerServerSideProps(ctx);
+    return {props: {}}
+})
 
 export default function CreatePage() {
     return <DashboardGenericPage>
