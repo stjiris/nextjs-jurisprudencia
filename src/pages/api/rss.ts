@@ -1,9 +1,12 @@
 import { aggs } from "@/core/elasticsearch";
+import LoggerApi from "@/core/logger-api";
 import { createReadStream } from "fs";
 import { NextApiRequest, NextApiResponse } from "next";
 import path from "path";
 
-export default async function docApiHandler(
+
+
+export default LoggerApi (async function docApiHandler(
     req: NextApiRequest,
     res: NextApiResponse
 ){
@@ -20,4 +23,4 @@ export default async function docApiHandler(
     })
     stream.pipe(res)
 
-}
+});
