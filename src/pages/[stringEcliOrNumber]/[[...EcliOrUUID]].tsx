@@ -20,7 +20,14 @@ const MUST_HAVE = ["UUID", "Número de Processo", "Fonte", "ECLI", "URL", "Sumá
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
     LoggerServerSideProps(ctx);
     let { stringEcliOrNumber, EcliOrUUID, search: searchId } = ctx.query;
-    if (!stringEcliOrNumber) throw new Error("Invalid request")
+    if (!stringEcliOrNumber){
+        return {
+            redirect: {
+                destination: "/",
+                permanent: false
+            },
+        }
+    }
 
     if (searchId) {
         await trackClickedDocument(searchId as string, EcliOrUUID as string)
@@ -29,7 +36,14 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
 
     let must = [];
     if (stringEcliOrNumber == "ecli") {
-        if (!EcliOrUUID) throw new Error("Invalid request")
+        if (!EcliOrUUID){
+            return {
+                redirect: {
+                    destination: "/",
+                    permanent: false
+                },
+            }
+        }
         let ecli = Array.isArray(EcliOrUUID) ? EcliOrUUID[0] : EcliOrUUID
         must.push({ term: { ECLI: ecli } })
     }
