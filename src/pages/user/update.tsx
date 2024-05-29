@@ -1,10 +1,9 @@
 import GenericPage from "@/components/genericPageStructure";
 import { LoggerServerSideProps } from "@/core/logger-api";
 import { authenticate, AuthenticateResponse, withAuthentication } from "@/core/user/authenticate";
-import { createSession, deleteSession, deleteUserSession, updateSession, validateSession } from "@/core/user/session";
-import { deleteUser, readUser, updateUser, User } from "@/core/user/usercrud";
+import { deleteUserSession } from "@/core/user/session";
+import { readUser, updateUser, User } from "@/core/user/usercrud";
 import { SearchHit } from "@elastic/elasticsearch/lib/api/types";
-import { GetServerSideProps } from "next";
 import Link from "next/link";
 
 
