@@ -3,6 +3,7 @@ volumes:
   elasticsearch_data: {}
   excel_data: {}
   rss_data: {}
+  redis_data: {}
 
 services:
   server:
@@ -26,6 +27,8 @@ services:
     depends_on:
       elasticsearch:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: unless-stopped
   server-dev:
     build:
@@ -48,6 +51,8 @@ services:
       - rss_data:/rss
     depends_on:
       elasticsearch:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     restart: unless-stopped
     profiles:
@@ -101,3 +106,16 @@ services:
     restart: always
     profiles:
       - kibana
+  redis:
+    image: redis:6.2-bookworm
+    ports:
+      - "127.0.0.1:6379:6379"
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: redis-cli ping
+      interval: 10s
+      timeout: 30s
+      retries: 15
+      start_period: 10s

@@ -1,116 +1,89 @@
-import { getElasticSearchClient } from "../elasticsearch";
+import { createClient } from "redis";
 
 import crypto from "crypto";
 
 export const sha256 = (msg: string) => crypto.createHash("sha256").update(msg).digest("hex");
 const saltGen = (size: number=16) => crypto.randomBytes(size).toString("hex");
 
-export const SESSION_INDEX = "sessions.0.0"
+export const SESSION_KEY = "redis-sessions.0.0"
+export const SESSION_EXPIRE = 15*60;
 
-export async function getClient(){
-    let client = await getElasticSearchClient();
-    if( !(await client.indices.exists({index: SESSION_INDEX})) ){
-        await client.indices.create({
-            index: SESSION_INDEX,
-            mappings: {
-                properties: {
-                    "username": {
-                        type: 'keyword'
-                    },
-                    "session": {
-                        type: 'keyword'
-                    },
-                    "until": {
-                        type: 'keyword',
-                        index: false
-                    }
-                }
-            },
-            settings: {
-                number_of_shards: 1,
-                number_of_replicas: 0,
-                max_result_window: 550000
-            }
-        }).catch(e => {
-            console.log(e)
-        });
-    }
-    return client;
-}
-
-export type Session = {
-    username: string,
-    session: string,
-    until: string
-}
-
-export async function listSessions(from: number=0){
-    let client = await getClient();
-    return await client.search<Session>({index: SESSION_INDEX, from: from, track_total_hits: true})
-}
-
-export function dateIn(minutes: number, from?: Date){
-    let start = from || new Date();
-
-    return new Date(start.getTime() + minutes*60000)
+export function getClient(){
+    return createClient({
+        url: "redis://redis:6379/0",
+    }).connect();
 }
 
 export async function createSession(user: string){
     let client = await getClient();
-    let sessionId: string | null = null;
-    while( !sessionId ){
-        sessionId = saltGen(24);
-        // assert session doesn't exist
-        let r = await client.search<Session>({index: SESSION_INDEX, query: {bool: {must: [{term: {username: user}},{term:{session: sessionId}}]}},terminate_after: 1});
-        if( r.hits.hits.length > 0 ){
-            sessionId = null;
+    try{
+        let tries = 3;
+        let sessionId: string | null = null;
+        while( !sessionId ){
+            sessionId = saltGen(24);
+            // assert session doesn't exist
+            const r = await client.set(`${SESSION_KEY}:${sessionId}`, user, { NX: true, EX: SESSION_EXPIRE })
+            if( r !== "OK" ){
+                sessionId = null;
+            }
+            tries--;
+            if( tries == 0 ){
+                break;
+            }
+        }
+        if( sessionId ){
+            return sessionId;
+        }
+        else{
+            return "";
         }
     }
-    
-    let r = await client.index({
-        index: SESSION_INDEX,
-        document: {
-            username: user,
-            session: sessionId,
-            until: dateIn(15).toString()
-        },
-        refresh: "wait_for"
-    })
-    if( r.result === "created" ){
-        return sessionId;
-    }
-    else{
-        return "";
+    finally{
+        await client.quit();
     }
 }
 
 export async function validateSession(user: string, session: string){
     let client = await getClient();
-    let r = await client.search<Session>({index: SESSION_INDEX, query: {bool: {must: [{term: {username: user}},{term:{session: session}}]}}});
-    if( r.hits.hits.length == 0 ) return false;
-
-    let sessionObj = r.hits.hits[0]
-    if( new Date().getTime() - new Date(sessionObj._source?.until!).getTime() > 0 ){
-        await deleteSession(user, session);
-        return false;
-    }
-    else{
-        await updateSession(user, session);
+    try{
+        const sessionUser = await client.get(`${SESSION_KEY}:${session}`);
+        if( !sessionUser ){
+            return false;
+        }
+        if( sessionUser !== user ){
+            return false;
+        }
+        await client.expire(`${SESSION_KEY}:${session}`, SESSION_EXPIRE);
         return true;
     }
-}
-
-export async function updateSession(user: string, session: string){
-    let client = await getClient();
-    return await client.updateByQuery({index: SESSION_INDEX, query: {bool: {must: [{term: {username: user}},{term:{session: session}}]}}, script: `ctx._source.until = "${dateIn(15).toString()}"`, conflicts: "proceed"});
+    finally{
+        await client.quit();
+    }
 }
 
 export async function deleteSession(user: string, session: string){
     let client = await getClient();
-    return await client.deleteByQuery({index: SESSION_INDEX, query: {bool: {must: [{term: {username: user}},{term:{session: session}}]}}, conflicts: "proceed"});
+    try{
+        return await client.del(`${SESSION_KEY}:${session}`);
+    }
+    finally{
+        await client.quit();
+    }
 }
 
 export async function deleteUserSession(user: string){
     let client = await getClient();
-    return await client.deleteByQuery({index: SESSION_INDEX, query: {bool: {must: [{term: {username: user}}]}}, conflicts: "proceed"});
+    try{
+        const sessions = await client.keys(`${SESSION_KEY}:*`);
+        for( let session of sessions ){
+            const sessionUser = await client.get(session);
+            if( sessionUser == user ){
+                await client.del(session);
+            }
+        }
+        return true;
+    }
+    finally{
+        await client.quit();
+    }
 }
