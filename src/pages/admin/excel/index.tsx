@@ -93,7 +93,7 @@ export default function ExcelPage(){
         }
     }
 
-    return <DashboardGenericPage>
+    return <DashboardGenericPage title="Jurisprudência STJ - Excel">
         <div className="row justify-content-sm-center">
             <div className="col-sm-12 col-md-8 col-xl-6">
                 <div className="card shadow">

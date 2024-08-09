@@ -41,13 +41,7 @@ type EstatisticaProps = {
 }
 
 export default function Estatistica(props: EstatisticaProps){
-    return <GenericPageWithForm filtersUsed={props.filtersUsed} minAno={props.minAno} maxAno={props.maxAno} count={props.total}>
-        <Head>
-            <title>Jurisprudência STJ - Estatística</title>
-            <meta name="description" content="Permite explorar, pesquisar e filtrar os acórdãos publicados pelo Supremo Tribunal de Justiça na DGSI.pt." />
-            <meta name="viewport" content="width=device-width, initial-scale=1" />
-            <link rel="icon" href="/favicon.ico" />
-        </Head>
+    return <GenericPageWithForm filtersUsed={props.filtersUsed} minAno={props.minAno} maxAno={props.maxAno} count={props.total} title="Jurisprudência STJ - Estatística">
         <div className="alert alert-warning">
             Sem estatísticas ainda
         </div>

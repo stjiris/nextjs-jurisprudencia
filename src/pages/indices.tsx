@@ -40,13 +40,7 @@ export const getServerSideProps = withForm<IndicesPageProps>(async (ctx, formPro
 });
 
 export default function Indices(props: IndicesPageProps){
-    return <GenericPageWithForm escapeChildren={<HistogramModal />} {...props}>
-        <Head>
-            <title>Jurisprudência STJ - Índices</title>
-            <meta name="description" content="Permite explorar, pesquisar e filtrar os acórdãos publicados pelo Supremo Tribunal de Justiça na DGSI.pt." />
-            <meta name="viewport" content="width=device-width, initial-scale=1" />
-            <link rel="icon" href="/favicon.ico" />
-        </Head>
+    return <GenericPageWithForm escapeChildren={<HistogramModal />} {...props} title="Jurisprudência STJ - Índices">
         <Script src="https://cdn.plot.ly/plotly-2.12.1.min.js" />
         <TermInfo term={props.term}/>
         <IndicesTable {...props}/>

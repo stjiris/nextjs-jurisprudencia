@@ -2,7 +2,7 @@ import { JurisprudenciaDocumentStateValue } from "@stjiris/jurisprudencia-docume
 
 export function BadgeFromState({ state }: { state?: JurisprudenciaDocumentStateValue; }) {
     let color = colorFromState(state);
-    return <div className={`badge bg-${color}`}>{state || "(estado)"}</div>;
+    return <span className={`badge bg-${color}`}>{state || "(estado)"}</span>;
 }
 
 export function colorFromState(state?: JurisprudenciaDocumentStateValue) {

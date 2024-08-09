@@ -20,7 +20,7 @@ export const getServerSideProps = withAuthentication<{}>(async ctx => {
 })
 
 export default function CreatePage() {
-    return <DashboardGenericPage>
+    return <DashboardGenericPage title="Jurisprudência STJ - Criar Documento">
         <Link href="/editar/avancado/criar">Mudar para modo avançado</Link>
         <Create />
     </DashboardGenericPage>

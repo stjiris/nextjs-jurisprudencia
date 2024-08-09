@@ -36,7 +36,7 @@ type UpdateProps = {
 }
 
 export default function Update({user, success}: UpdateProps){
-    return <GenericPage>
+    return <GenericPage title="Jurisprudência STJ - Alterar palavra-passe">
         <div className="row justify-content-sm-center">
             <div className="col-sm-12 col-md-6 col-xl-4">
                 <div className="card shadow">

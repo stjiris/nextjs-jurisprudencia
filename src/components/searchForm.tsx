@@ -159,7 +159,7 @@ function SwapableFilterList({filtersUsed}: {filtersUsed: Record<string, string[]
     return <div data-key="-2" className="border-top">
         <div className="d-flex my-1 pb-1 align-items-baseline">
             <small className="pe-1 text-white"><i className="bi bi-dash"></i></small>
-            <label role="button" className={"bg-white flex-grow border-0 " + (target !== undefined && selected !== undefined || rest!==0 ? "": "text-muted")} onDragOver={dragOver} onClick={(e) => {e.preventDefault(); rest!==0 ? all() : null;}} data-key="-1"><i className="bi bi-eye"></i> Esconder / Repor ({rest})</label>
+            <a role="button" className={"bg-white flex-grow border-0 text-dark " + (target !== undefined && selected !== undefined || rest!==0 ? "": "text-muted")} onDragOver={dragOver} onClick={(e) => {e.preventDefault(); rest!==0 ? all() : null;}} data-key="-1"><i className="bi bi-eye"></i> Esconder / Repor ({rest})</a>
         </div>
         {sort.map((k,i) => k && <div data-key={i} key={i} draggable onDragOver={dragOver} onDragStart={dragStart} onDragEnd={dragEnd} className={"d-flex align-items-baseline " +( selected === i || target === i ? "shadow" : "")}>
             <small className={`pe-1 ${target!==i ? "text-muted" : ""} cursor-move`} style={{cursor: "move"}}><i className="bi bi-list"></i></small>

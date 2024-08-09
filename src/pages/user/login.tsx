@@ -44,7 +44,7 @@ export const getServerSideProps : GetServerSideProps<LoginProps> = async (ctx) =
 
 
 export default function Login(props: LoginProps){
-    return <GenericPage keys_to_remove={["redirect"]}>
+    return <GenericPage keys_to_remove={["redirect"]} title="Jurisprudência STJ - Autenticação">
         <div className="row justify-content-sm-center">
             <div className="col-sm-12 col-md-6 col-xl-4">
                 <div className="card shadow">

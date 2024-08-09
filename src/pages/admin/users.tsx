@@ -16,7 +16,7 @@ export const getServerSideProps: GetServerSideProps<UsersPageProps> = withAuthen
 
 export default function UsersPage({users}: UsersPageProps){
 
-    return <DashboardGenericPage>
+    return <DashboardGenericPage title="Jurisprudência STJ - Usuários">
         <table>
             <thead>
                 <tr>

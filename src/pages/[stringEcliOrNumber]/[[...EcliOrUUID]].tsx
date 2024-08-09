@@ -84,7 +84,7 @@ export default function MaybeDocumentPage(props: { doc?: JurisprudenciaDocument 
     }
 
 
-    return <GenericPage keys_to_remove={["stringEcliOrNumber", "EcliOrUUID", "search"]}>
+    return <GenericPage keys_to_remove={["stringEcliOrNumber", "EcliOrUUID", "search"]} title="">
         {Comp}
     </GenericPage>
 }

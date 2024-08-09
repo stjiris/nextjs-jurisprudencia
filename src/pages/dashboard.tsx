@@ -235,13 +235,7 @@ export default function Dashboard(props: FormProps){
 
   return (
     <div ref={containerRef}>
-      <GenericPageWithForm {...props}>
-        <Head>
-              <title>Jurisprudência STJ - Dashboard</title>
-              <meta name="description" content="Permite explorar, pesquisar e filtrar os acórdãos publicados pelo Supremo Tribunal de Justiça na DGSI.pt." />
-              <meta name="viewport" content="width=device-width, initial-scale=1" />
-              <link rel="icon" href="/favicon.ico" />
-        </Head>
+      <GenericPageWithForm {...props} title="Jurisprudência STJ - Dashboard">
         <Script src="https://cdn.plot.ly/plotly-2.12.1.min.js" />
     
         <div>

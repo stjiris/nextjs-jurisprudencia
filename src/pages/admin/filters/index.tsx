@@ -20,7 +20,7 @@ export default function ExcelPage() {
     let [bell, setBell] = useState(0);
     let update = () => setBell(b => b + 1)
     let keys = useKeys([bell]) || [];
-    return <DashboardGenericPage>
+    return <DashboardGenericPage title="Jurisprudência STJ - Filtros">
         <div className="card shadow">
             <div className="card-body">
                 <table className="table table-hover">

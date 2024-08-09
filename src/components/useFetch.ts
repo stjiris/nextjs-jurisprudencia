@@ -11,7 +11,7 @@ export function useFetch<T>(relativeUrl: string, otherDeps: any[]){
             .then(r => r.json() )
             .then(setResp)
             .catch(e => console.error(e))
-        return () => abort.abort()
+        return () => abort.abort("Component unmounted")
     },[relativeUrl, router.basePath, ...otherDeps])
 
     return resp;

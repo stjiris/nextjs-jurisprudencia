@@ -30,7 +30,7 @@ export default function UpdatePage() {
     let id = searchParams.get("id");
     let response = useFetch<GetResponse<JurisprudenciaDocument>>(`/api/doc/${id}`, [id]);
 
-    return <DashboardGenericPage>
+    return <DashboardGenericPage title="Jurisprudência STJ - Editar Documento">
         {response && response._source && <Update doc={response._source} id={id} />}
         {!response && <Loading text="A carregar documento" />}
         {response && !response._source && <div className="alert alert-danger">

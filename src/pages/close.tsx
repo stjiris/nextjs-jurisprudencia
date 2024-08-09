@@ -7,7 +7,7 @@ export const getServerSideProps: GetServerSideProps = async ctx => {
     return {props: {}}
 }
 export default function ClosePageAfterPopupLogin() {
-    return <DashboardGenericPage>
+    return <DashboardGenericPage title="Estabelecer sessão">
         <div className="container">Sessão restabelecida com sucesso. Pode fechar esta janela.</div>
     </DashboardGenericPage>
 }

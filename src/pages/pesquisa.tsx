@@ -41,13 +41,7 @@ export default function Pesquisa(props: PesquisaProps){
     const searchParams = useSearchParams();
     const results = useFetch<SearchHandlerResponse>(`/api/search?${searchParams}`,[])
 
-    return <GenericPageWithForm {...props}>
-        <Head>
-            <title>Jurisprudência STJ - Pesquisa</title>
-            <meta name="description" content="Permite explorar, pesquisar e filtrar os acórdãos publicados pelo Supremo Tribunal de Justiça na DGSI.pt." />
-            <meta name="viewport" content="width=device-width, initial-scale=1" />
-            <link rel="icon" href="/favicon.ico" />
-        </Head>
+    return <GenericPageWithForm {...props} title="Jurisprudência STJ - Pesquisa">
         {results ? 
             results.length > 0 ? 
                 <ShowResults results={results} searchParams={searchParams} searchInfo={props}/> :
@@ -80,7 +74,7 @@ function ShowResults({results, searchParams, searchInfo}: {results: SearchHandle
                 <option value="asc">Data Ascendente</option>
                 <option value="des">Data Descendente</option>
             </SelectNavigate></b>
-            {searchInfo.searchId ? <i className="bi bi-share" role="button" onClick={onClickShare} data-id={searchInfo.searchId}></i>:""}
+            {searchInfo.searchId ? <i className="bi bi-share" title="Partilhar" role="button" onClick={onClickShare} data-id={searchInfo.searchId}></i>:""}
             <div className="d-inline float-end d-print-none">
                 {searchInfo.searchedArray.length > 0 ? 
                     ["Termos da pesquisa destacados:", searchInfo.searchedArray.map( (s,i) => <span key={i} className="badge bg-white text-dark" style={{border: `3px solid var(--highlight-${i}, var(--primary-gold))`}}>{s}</span>)]
@@ -95,14 +89,14 @@ function ShowResults({results, searchParams, searchInfo}: {results: SearchHandle
                         <NavLink page={0} icon="bi-chevron-double-left" searchParams={searchParams}/>
                     </li>
                     <li className="page-item">
-                        {page > 0 ? <NavLink page={page-1} icon="bi-chevron-left" searchParams={searchParams}/> : <a className="page-link"><i className="bi bi-chevron-left disabled"></i></a> }
+                        {page > 0 ? <NavLink page={page-1} icon="bi-chevron-left" searchParams={searchParams}/> : <span className="page-link"><i className="bi bi-chevron-left disabled"></i></span> }
                     </li>
                         
                     <li className="page-item w-25">
-                        <a className="page-link"><small>Página {page+1}/{searchInfo.pages}</small></a>
+                        <span className="page-link"><small>Página {page+1}/{searchInfo.pages}</small></span>
                     </li>
                     <li className="page-item">
-                        {page < searchInfo.pages-1 ? <NavLink page={page+1} icon="bi-chevron-right" searchParams={searchParams}/>: <a className="page-link"><i className="bi bi-chevron-right disabled"></i></a> }
+                        {page < searchInfo.pages-1 ? <NavLink page={page+1} icon="bi-chevron-right" searchParams={searchParams}/>: <span className="page-link"><i className="bi bi-chevron-right disabled"></i></span> }
                     </li>
                     <li className="page-item">
                         <NavLink page={searchInfo.pages-1} icon="bi-chevron-double-right" searchParams={searchParams}/>
@@ -117,8 +111,7 @@ function ShowResults({results, searchParams, searchInfo}: {results: SearchHandle
 function NavLink({page, icon, searchParams}: {page: number, icon: string, searchParams: ReadonlyURLSearchParams}){
     const tmp = new URLSearchParams(searchParams);
     tmp.set("page", page.toString())
-    return <Link className="page-link" href={`?${tmp.toString()}`}><i className={`bi ${icon}`}></i></Link>
-
+    return <Link className="page-link" href={`?${tmp.toString()}`} title={`Ir para a página ${page+1}`}><i className={`bi ${icon}`}></i></Link>
 }
 
 const scoreColor = (per:number) => per < 0.2 ? '#E3D5A1' : per < 0.4 ? '#CEB65E' : per < 0.6 ? '#B49936' : per < 0.8 ? '#8C752C' : '#6C5A22';

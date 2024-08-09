@@ -51,7 +51,7 @@ export default function ModalSobre() {
                                 alt="Banner cofinanciamento, STJ e INESC-ID" className="w-100 h-auto"></Image>
                             <hr />
                         </div>
-                        <div><small><sup>1</sup> Ver todas os operadores de pesquisa suportados <a href="https://www.elastic.co/guide/en/elasticsearch/reference/8.4/query-dsl-simple-query-string-query.html#simple-query-string-syntax" target="_blank">aqui</a></small></div>
+                        <div><small><sup>1</sup> Ver todas os operadores de pesquisa suportados na <a href="https://www.elastic.co/guide/en/elasticsearch/reference/8.4/query-dsl-simple-query-string-query.html#simple-query-string-syntax" target="_blank">documentação</a> do ElasticSearch.</small></div>
                         <div><small>Documentos Google Drive:&nbsp;
                             <a href="https://docs.google.com/document/d/1WSDh_b0Y4XtMVoMuDiaVfWmFsW5ktbTaUI2CGHMdcys/edit?usp=sharing" target="_blank"> Notas Jurisprudência</a>
                             &nbsp;

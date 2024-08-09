@@ -4,12 +4,23 @@ import Header, { AdminHeader } from "./header";
 import SearchForm from "./searchForm";
 import { KeysProvider } from "@/contexts/keys";
 import { AuthProvider } from "@/contexts/auth";
+import Head from "next/head";
 
 const BootScript = () => <Script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossOrigin="anonymous"/>
+const MetaHead = ({title}: {title: string}) => <Head>
+    {title && <title>{title}</title>}
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <link rel="icon" href="/favicon.ico"/>
+    <meta name="description" content="Permite explorar, pesquisar e filtrar os acórdãos publicados pelo Supremo Tribunal de Justiça na DGSI.pt."/>
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link rel="preconnect" href="https://fonts.gstatic.com"/>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net"/>
+</Head>
 
-export default function GenericPage(props: {keys_to_remove?: string[], children: React.ReactNode}){
+export default function GenericPage(props: {keys_to_remove?: string[], children: React.ReactNode, title: string}){
     return <KeysProvider>
         <AuthProvider>
+            <MetaHead title={props.title}/>
             <Header keys_to_remove={props.keys_to_remove || []}></Header>
             <main className='container-fluid'>
                 {props.children}
@@ -19,9 +30,10 @@ export default function GenericPage(props: {keys_to_remove?: string[], children:
     </KeysProvider>
 }
 
-export function GenericPageWithForm(props: {keys_to_remove?: string[], count: number, children: React.ReactNode, filtersUsed: Record<string, string[]>, minAno: number, maxAno: number, escapeChildren?: React.ReactNode}){
+export function GenericPageWithForm(props: {keys_to_remove?: string[], count: number, children: React.ReactNode, title: string, filtersUsed: Record<string, string[]>, minAno: number, maxAno: number, escapeChildren?: React.ReactNode}){
     return <KeysProvider>
         <AuthProvider>
+            <MetaHead title={props.title}/>
             <Header keys_to_remove={props.keys_to_remove || []}></Header>
             <main className='container-fluid'>
                 <div className="row">
@@ -39,9 +51,10 @@ export function GenericPageWithForm(props: {keys_to_remove?: string[], count: nu
     </KeysProvider>
 }
 
-export function DashboardGenericPage(props: {children: React.ReactNode}){
+export function DashboardGenericPage(props: {children: React.ReactNode, title: string}){
     return <KeysProvider>
         <AuthProvider>
+            <MetaHead title={props.title}/>
             <AdminHeader/>
             <main className='container-fluid'>
                 {props.children}

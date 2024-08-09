@@ -18,7 +18,7 @@ export const getServerSideProps = withAuthentication<UserIndexProps>(async (ctx)
 })
 
 export default function UserIndex({user}: UserIndexProps){
-    return <GenericPage>
+    return <GenericPage title="Jurisprudência STJ - Utilizador">
         <div className="row justify-content-sm-center">
             <div className="col-sm-12 col-md-6 col-xl-4">
                 <div className="card shadow">

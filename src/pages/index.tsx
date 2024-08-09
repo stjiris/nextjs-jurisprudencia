@@ -11,13 +11,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
 
 export default function Home() {
   return (
-    <GenericPage>
-      <Head>
-        <title>Jurisprudência STJ - Página Inicial</title>
-        <meta name="description" content="Permite explorar, pesquisar e filtrar os acórdãos publicados pelo Supremo Tribunal de Justiça na DGSI.pt." />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.ico" />
-      </Head>
+    <GenericPage title="Jurisprudência STJ - Página Inicial">
       <div className="d-flex">
         <div className="card m-1 p-1">
           <div className="card-body">
