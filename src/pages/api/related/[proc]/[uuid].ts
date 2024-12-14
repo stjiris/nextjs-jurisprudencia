@@ -1,25 +1,28 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 import search from '@/core/elasticsearch';
-import { JurisprudenciaDocument } from '@/core/jurisprudencia'
+import LoggerApi from '@/core/logger-api';
+import { authenticatedHandler } from '@/core/user/authenticate';
+import { PartialJurisprudenciaDocument } from '@stjiris/jurisprudencia-document'
 import type { NextApiRequest, NextApiResponse } from 'next'
 
-export default function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<JurisprudenciaDocument[]>
+export default LoggerApi(async function handler(
+    req: NextApiRequest,
+    res: NextApiResponse<PartialJurisprudenciaDocument[]>
 ) {
-    let {proc, uuid} = req.query;
-    if( !proc || Array.isArray(proc)) throw new Error("Invalid request")
-    
-    let m = proc.match(/(?<base>[^/]+\/\w+\.\w+)(-\w+)?\./); 
-    if( !m ){
+    let { proc, uuid: quuid } = req.query;
+    if (!proc || Array.isArray(proc)) throw new Error("Invalid request")
+    let uuid = Array.isArray(quuid) ? quuid[0] : quuid || "";
+
+    let m = proc.match(/(?<base>[^/]+\/\w+\.\w+)(-\w+)?\./);
+    if (!m) {
         return res.status(200).json([]);
     }
-
-    return search({wildcard: {"Número de Processo": `${m.groups?.base}*`}}, {pre:[], after:[]}, 0, {}, 100, {_source: ['Número de Processo', "UUID", "Data"]}).then( related => {
-        return related.hits.hits.map( hit => hit._source ? ({
+    const authed = await authenticatedHandler(req);
+    return await search({ wildcard: { "Número de Processo": `${m.groups?.base}*` } }, { pre: [], after: [] }, 0, {}, 100, { _source: ['Número de Processo', "UUID", "Data"] }, authed).then(related => {
+        return related.hits.hits.map(hit => hit._source ? ({
             "Número de Processo": hit._source["Número de Processo"],
             UUID: hit._source.UUID,
             Data: hit._source.Data
-        }) : {}).filter( hit => hit.UUID.indexOf(uuid) != 0);
-    }).then( l => res.status(200).json(l))
-}
+        }) : {}).filter(hit => hit.UUID && hit.UUID.indexOf(uuid) != 0);
+    }).then(l => res.status(200).json(l))
+});

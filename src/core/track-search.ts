@@ -1,4 +1,5 @@
 import { getElasticSearchClient } from "./elasticsearch";
+
 import crypto from "crypto";
 
 const SAVED_SEARCH_INDEX = "saved-searches.0.1"

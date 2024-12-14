@@ -1,75 +1,47 @@
-import GenericPage, { GenericPageWithForm } from "@/components/genericPageStructure"
-import SearchForm from "@/components/searchForm"
+import { BadgeFromState } from "@/components/BadgeFromState"
+import { GenericPageWithForm } from "@/components/genericPageStructure"
+import { Loading } from "@/components/loading"
+import { FormProps, withForm } from "@/components/pageWithForm"
 import { modifySearchParams, SelectNavigate } from "@/components/select-navigate"
+import { useFetch } from "@/components/useFetch"
+import { useKeysFromContext } from "@/contexts/keys"
 import search, { createQueryDslQueryContainer, DEFAULT_AGGS, getSearchedArray, parseSort, populateFilters, RESULTS_PER_PAGE } from "@/core/elasticsearch"
-import { JurisprudenciaDocument } from "@/core/jurisprudencia"
+import { LoggerServerSideProps } from "@/core/logger-api"
 import { saveSearch } from "@/core/track-search"
+import { JurisprudenciaKey } from "@/types/keys"
 import { HighlightFragment, SearchHandlerResponse, SearchHandlerResponseItem } from "@/types/search"
-import { AggregationsAggregate, long, SearchHit, SearchResponse, SortCombinations } from "@elastic/elasticsearch/lib/api/types"
-import { AggregationsMaxAggregate, AggregationsMinAggregate, SearchTotalHits } from "@elastic/elasticsearch/lib/api/typesWithBodyKey"
-import { GetServerSideProps } from "next"
+import { SearchHit } from "@elastic/elasticsearch/lib/api/types"
+import { JurisprudenciaDocument, JurisprudenciaDocumentGenericKey, JurisprudenciaDocumentGenericKeys } from "@stjiris/jurisprudencia-document"
 import Head from "next/head"
 import Link from "next/link"
 import { ReadonlyURLSearchParams, useSearchParams } from "next/navigation"
-import { useEffect, useState, MouseEventHandler } from "react"
+import { MouseEventHandler, ReactNode, useEffect, useMemo, useState } from "react"
 
-export const getServerSideProps: GetServerSideProps<SearchInfo> = async (ctx) => {
-
-    const sfilters = {pre: [], after: []};
-    const filtersUsed = populateFilters(sfilters, ctx.query)
-    const sort: SortCombinations[] = [];
-    parseSort(Array.isArray(ctx.query?.sort) ? ctx.query.sort[0] : ctx.query.sort, sort)
-    const page = parseInt(Array.isArray(ctx.query.page) ? ctx.query.page[0] : ctx.query.page || "" ) || 0
-    const queryObj = createQueryDslQueryContainer(ctx.query.q);
-    const result = await search(queryObj, sfilters, page, DEFAULT_AGGS, 0, {sort, track_scores: true, _source: []})
-    let total = 0;
-    if( result.hits.total ){
-        if( Number.isInteger(result.hits.total) ){
-            total = result.hits.total as long;
-        }
-        else{
-            total = (result.hits.total as SearchTotalHits).value;
-        }
-    }
-
-    return {props: {
-        searchId: await saveSearch(ctx.resolvedUrl),
-        pages:  Math.ceil(total / RESULTS_PER_PAGE),
-        searchedArray: await getSearchedArray(Array.isArray(ctx.query.q) ? ctx.query.q.join(" ") : (ctx.query.q || "")),
-        total: total,
-        filtersUsed: filtersUsed,
-        minAno: parseInt((result.aggregations?.MinAno as AggregationsMinAggregate).value_as_string || "") || 0,
-        maxAno: parseInt((result.aggregations?.MaxAno as AggregationsMaxAggregate).value_as_string || "") || Infinity
-    }}
-}
-
-interface SearchInfo{
+interface PesquisaProps extends FormProps{
     searchedArray: string[]
     searchId?: string
     pages: number
-    total: number
-    filtersUsed: Record<string, string[]>
-    minAno: number
-    maxAno: number
 }
 
-export default function Pesquisa(props: SearchInfo){
-    const [results, setResults] = useState<SearchHandlerResponse>()
-    const searchParams = useSearchParams()
+export const getServerSideProps = withForm<PesquisaProps>(async (ctx, formProps) => {
+    LoggerServerSideProps(ctx);
+    let searchId = await saveSearch(ctx.resolvedUrl)
+    let searchedArray = await getSearchedArray(Array.isArray(ctx.query.q) ? ctx.query.q.join(" ") : ctx.query.q || "")
+    let pages = Math.ceil(formProps.count / RESULTS_PER_PAGE)
 
-    useEffect(() => {
-        fetch(`./api/search/?${searchParams}`)
-            .then( r => r.json())
-            .then(l => setResults(l))
-    }, [searchParams])
+    return {
+        ...formProps,
+        searchedArray,
+        pages,
+        searchId
+    }
+})
 
-    return <GenericPageWithForm count={props.total} filtersUsed={props.filtersUsed} minAno={props.minAno} maxAno={props.maxAno}>
-        <Head>
-            <title>Jurisprudência STJ - Pesquisa</title>
-            <meta name="description" content="Permite explorar, pesquisar e filtrar os acórdãos publicados pelo Supremo Tribunal de Justiça na DGSI.pt." />
-            <meta name="viewport" content="width=device-width, initial-scale=1" />
-            <link rel="icon" href="/favicon.ico" />
-        </Head>
+export default function Pesquisa(props: PesquisaProps){
+    const searchParams = useSearchParams();
+    const results = useFetch<SearchHandlerResponse>(`/api/search?${searchParams}`,[])
+
+    return <GenericPageWithForm {...props} title="Jurisprudência STJ - Pesquisa">
         {results ? 
             results.length > 0 ? 
                 <ShowResults results={results} searchParams={searchParams} searchInfo={props}/> :
@@ -91,7 +63,7 @@ const onClickShare: MouseEventHandler<HTMLElement> = (event) => {
     }
 }
 
-function ShowResults({results, searchParams, searchInfo}: {results: SearchHandlerResponse, searchParams: ReadonlyURLSearchParams, searchInfo: SearchInfo}){
+function ShowResults({results, searchParams, searchInfo}: {results: SearchHandlerResponse, searchParams: ReadonlyURLSearchParams, searchInfo: PesquisaProps}){
     const sort = searchParams.get("sort") || "des"
     const page = parseInt(searchParams.get("page") || "0")
     return <>
@@ -102,7 +74,7 @@ function ShowResults({results, searchParams, searchInfo}: {results: SearchHandle
                 <option value="asc">Data Ascendente</option>
                 <option value="des">Data Descendente</option>
             </SelectNavigate></b>
-            {searchInfo.searchId ? <i className="bi bi-share" role="button" onClick={onClickShare} data-id={searchInfo.searchId}></i>:""}
+            {searchInfo.searchId ? <i className="bi bi-share" title="Partilhar" role="button" onClick={onClickShare} data-id={searchInfo.searchId}></i>:""}
             <div className="d-inline float-end d-print-none">
                 {searchInfo.searchedArray.length > 0 ? 
                     ["Termos da pesquisa destacados:", searchInfo.searchedArray.map( (s,i) => <span key={i} className="badge bg-white text-dark" style={{border: `3px solid var(--highlight-${i}, var(--primary-gold))`}}>{s}</span>)]
@@ -117,14 +89,14 @@ function ShowResults({results, searchParams, searchInfo}: {results: SearchHandle
                         <NavLink page={0} icon="bi-chevron-double-left" searchParams={searchParams}/>
                     </li>
                     <li className="page-item">
-                        {page > 0 ? <NavLink page={page-1} icon="bi-chevron-left" searchParams={searchParams}/> : <a className="page-link"><i className="bi bi-chevron-left disabled"></i></a> }
+                        {page > 0 ? <NavLink page={page-1} icon="bi-chevron-left" searchParams={searchParams}/> : <span className="page-link"><i className="bi bi-chevron-left disabled"></i></span> }
                     </li>
                         
                     <li className="page-item w-25">
-                        <a className="page-link"><small>Página {page+1}/{searchInfo.pages}</small></a>
+                        <span className="page-link"><small>Página {page+1}/{searchInfo.pages}</small></span>
                     </li>
                     <li className="page-item">
-                        {page < searchInfo.pages-1 ? <NavLink page={page+1} icon="bi-chevron-right" searchParams={searchParams}/>: <a className="page-link"><i className="bi bi-chevron-right disabled"></i></a> }
+                        {page < searchInfo.pages-1 ? <NavLink page={page+1} icon="bi-chevron-right" searchParams={searchParams}/>: <span className="page-link"><i className="bi bi-chevron-right disabled"></i></span> }
                     </li>
                     <li className="page-item">
                         <NavLink page={searchInfo.pages-1} icon="bi-chevron-double-right" searchParams={searchParams}/>
@@ -139,41 +111,42 @@ function ShowResults({results, searchParams, searchInfo}: {results: SearchHandle
 function NavLink({page, icon, searchParams}: {page: number, icon: string, searchParams: ReadonlyURLSearchParams}){
     const tmp = new URLSearchParams(searchParams);
     tmp.set("page", page.toString())
-    return <Link className="page-link" href={`?${tmp.toString()}`}><i className={`bi ${icon}`}></i></Link>
-
+    return <Link className="page-link" href={`?${tmp.toString()}`} title={`Ir para a página ${page+1}`}><i className={`bi ${icon}`}></i></Link>
 }
 
 const scoreColor = (per:number) => per < 0.2 ? '#E3D5A1' : per < 0.4 ? '#CEB65E' : per < 0.6 ? '#B49936' : per < 0.8 ? '#8C752C' : '#6C5A22';
 
 function JurisprudenciaItem({hit, searchId}:{hit: SearchHandlerResponseItem, searchId?: string}){
+    const keys = useKeysFromContext().records;
     const searchParam = searchId ? `?search=${searchId}` : ""
     return <article className="row border-top result">
         <div className="col-12 pt-1 d-flex flex-wrap">
             <small className="relevancia" style={{color: scoreColor(hit.score!/hit.max_score)}}>
                 {[0.2,0.4,0.6,0.8,1].map((b,i) => <i key={i} className={`bi bi-square${hit.score!/hit.max_score < b ? "" : "-fill"} me-1`}></i>)}
             </small>
-            <Link href={hit._source?.ECLI.startsWith("ECLI:PT:STJ:") ? `/a/ecli/${hit._source.ECLI}${searchParam}` : `/a/${encodeURIComponent(hit._source?.["Número de Processo"])}/${hit._source?.UUID}${searchParam}`} target="_blank">{hit._source?.["Número de Processo"]}</Link>
+            <Link href={hit._source?.ECLI?.startsWith("ECLI:PT:STJ:") ? `/ecli/${hit._source.ECLI}${searchParam}` : `/${encodeURIComponent(hit._source?.["Número de Processo"]!)}/${hit._source?.UUID}${searchParam}`} target="_blank">{hit._source?.["Número de Processo"]}</Link>
             <span>&nbsp;- {hit._source?.Data}</span>
-            {hit._source?.Área ? <span>&nbsp;- {hit._source.Área}</span> : ""}
-            {hit._source?.["Meio Processual"] ? <span>&nbsp;- {hit._source["Meio Processual"].join(" / ")}</span> : ""}
-            <span>&nbsp;- {hit._source?.["Relator Nome Profissional"]}</span>
-            <span>&nbsp;- {hit._source?.Secção}</span>
+            {hit._source?.Área && <span>&nbsp;- {hit._source.Área.Show}</span>}
+            {hit._source?.["Meio Processual"] && <span>&nbsp;- {hit._source["Meio Processual"].Show.join(" / ")}</span>}
+            <span>&nbsp;- {showOrOriginal(hit, "Relator Nome Profissional")}</span>
+            <span>&nbsp;- {showOrOriginal(hit, "Secção")}</span>
+            {keys?.STATE.active && hit._source.STATE ? <span className="px-1"><BadgeFromState state={hit._source["STATE"]} /></span> : <></>}
         </div>
         <div className="col-12 d-flex flex-wrap">
-            {hit._source?.["Votação - Decisão"]? <div className="mx-1"><b>Votação:&nbsp;</b><span>{hit._source?.["Votação - Decisão"]}</span></div> : ""}
-            {hit._source?.["Decisão"]? <div className="mx-1"><b>Votação:&nbsp;</b><span>{hit._source?.["Decisão"].join(" / ")}</span></div> : ""}
+            <ShowKey hit={hit} accessKey="Votação" Comp={(p) => <div className="mx-1"><b>{p.ak}:&nbsp;</b><span>{p.vs.join(" / ")}</span></div>} />
+            <ShowKey hit={hit} accessKey="Decisão" Comp={(p) => <div className="mx-1"><b>{p.ak}:&nbsp;</b><span>{p.vs.join(" / ")}</span></div>} />
         </div>
-        {Array.isArray(hit._source?.Descritores) ? <div className="col-12">
+        {hit._source?.Descritores ? <div className="col-12">
             <div className="mx-1">
-                <b>Descritores:&nbsp;</b>
-                {hit._source?.Descritores.flatMap(d => [" / ",hit.highlight?.Descritores && hit.highlight.Descritores.find(h => (h as string).includes(d))?<mark>{d}</mark>:d]).slice(1)}
+                <b>{keys?.Descritores.name}:&nbsp;</b>
+                <ShowKey hit={hit} accessKey="Descritores" Comp={(p) => <>{p.vs.flatMap(d => [" / ",hit.highlight?.Descritores && hit.highlight.Descritores.find(h => (h as string).includes(d))?<mark>{d}</mark>:d]).slice(1)}</>} />
             </div>
         </div>: ""}
         {hit._source?.Sumário? <details className="col-12">
             <summary className="d-flex align-items-center list-unstyled">
                 <span style={{width: "10%", flexShrink: 1}}>
                     <i className="bi bi-caret-downright-fill"></i>
-                    <b className="mouse-click">Sumário:</b>
+                    <b className="mouse-click">{keys?.Sumário.name}:</b>
                 </span>
                 {hit.highlight?.["SumárioMarks"] ? <div className="highlight">
                     <div className="highlight-bar" data-key="Sumário">
@@ -190,7 +163,7 @@ function JurisprudenciaItem({hit, searchId}:{hit: SearchHandlerResponseItem, sea
             <summary className="d-flex align-items-center list-unstyled">
                 <span style={{width: "10%", flexShrink: 1}}>
                     <i className="bi bi-caret-downright-fill"></i>
-                    <b className="mouse-click">Texto:</b>
+                    <b className="mouse-click">{keys?.Texto.name}:</b>
                 </span>
                 <div className="highlight">
                     <div className="highlight-bar" data-key="Texto">
@@ -219,8 +192,15 @@ function NoResults(){
     </div>
 }
 
-function Loading(){
-    return <div className="alert alert-info" role="alert">
-        <h4 className="alert-heading">A carregar resultados...</h4>
-    </div>
+function ShowKey({Comp, ...props}: {hit: SearchHandlerResponseItem, accessKey: JurisprudenciaDocumentGenericKey, Comp: (props: {vs: string[], ak: string}) => JSX.Element}){
+    let actual = showOrOriginal(props.hit, props.accessKey);
+    let showName = useKeysFromContext().records?.[props.accessKey].name || "";
+    return actual.length > 0 ? <Comp vs={actual} ak={showName} /> : <></>
+}
+
+function showOrOriginal(hit: SearchHandlerResponseItem, key: JurisprudenciaDocumentGenericKey){
+    let show = hit._source![key]?.Show;
+    if( show && show.length > 0 ) return show;
+    let original = hit._source![key]?.Original;
+    return original || [];
 }

@@ -2,3 +2,5 @@ Dockerfile
 .dockerignore
 node_modules
 .next
+files
+.env

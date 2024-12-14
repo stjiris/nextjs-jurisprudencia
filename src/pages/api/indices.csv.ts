@@ -1,10 +1,12 @@
 import { AggregationsAggregate, AggregationsAggregationContainer, AggregationsMaxAggregate, AggregationsMinAggregate, AggregationsStringTermsAggregate, AggregationsTermsAggregation, AggregationsTermsBucketBase, Indices, long, SearchTotalHits } from "@elastic/elasticsearch/lib/api/types";
-import search, { aggs, filterableProps, createQueryDslQueryContainer, populateFilters, sortBucketsAlphabetically } from "@/core/elasticsearch"
+import search, { aggs, filterableProps, createQueryDslQueryContainer, populateFilters, sortAlphabetically } from "@/core/elasticsearch"
 import { NextApiRequest, NextApiResponse } from "next";
 import { INDICES_OTHERS } from "@/types/indices";
 import { listAggregation } from "@/components/indices-helpers";
+import { authenticatedHandler } from "@/core/user/authenticate";
+import LoggerApi from "@/core/logger-api";
 
-export default async function indicesCsvHandler(
+export default LoggerApi(async function indicesCsvHandler(
     req: NextApiRequest,
     res: NextApiResponse<string>
 ) {
@@ -16,7 +18,8 @@ export default async function indicesCsvHandler(
 
     const sfilters = {pre: [], after: []};
     populateFilters(sfilters, req.query, []);
-    const result = await search(createQueryDslQueryContainer(req.query.q), sfilters, 0, listAggregation(term,group), 0)
+    const authed = await authenticatedHandler(req);
+    const result = await search(createQueryDslQueryContainer(req.query.q), sfilters, 0, listAggregation(term,group), 0, {}, authed)
 
     let total = 0;
     if( result.hits.total ){
@@ -41,7 +44,7 @@ export default async function indicesCsvHandler(
                 subbuckets.forEach(s => groupObj[s.key] = (groupObj[s.key]|| 0) +  s.doc_count)
             }
         })
-        sortedGroup = Object.entries(groupObj).sort((a,b) => sortBucketsAlphabetically({key: a[0], doc_count: a[1]}, {key: b[0], doc_count: b[1]}))
+        sortedGroup = Object.entries(groupObj).sort((a,b) => sortAlphabetically(a[0], b[0]))
         sortedGroup.slice(10).forEach( a => othersCount += groupObj[a[0]] )
         sortedGroup.splice(10)
         if( othersCount > 0 ){
@@ -58,10 +61,10 @@ export default async function indicesCsvHandler(
         sortedGroup
     }
     
-    return res.setHeader("Content-Type", "text/csv").send(`"#","Índice","${props.group}",${props.sortedGroup.map(([name, count],i) => `"${name}"`).join(",")},"Datas"
+    return res.setHeader("Content-Type", "text/csv; charset=utf-8").setHeader("Content-Disposition","attachment").send(`"#","Índice","${props.group}",${props.sortedGroup.map(([name, count],i) => `"${name}"`).join(",")},"Datas"
 ${props.termAggregation.buckets.length},"${props.term}",${(props.termAggregation.buckets as any[]).reduce((acc, b)=> acc+b.doc_count, 0)},${props.sortedGroup.map(([name,count], i) => count).join(",")},"de ... até"
 ${(props.termAggregation.buckets as any[]).map( (b, i) => bucketLine(i, b, props.sortedGroup)).join("\n")}\n`);
-}
+});
 
 
 

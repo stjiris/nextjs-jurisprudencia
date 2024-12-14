@@ -1,9 +1,8 @@
-import search, { aggs, createQueryDslQueryContainer, filterableProps, getElasticSearchClient, parseSort, populateFilters, RESULTS_PER_PAGE, SearchFilters, sortBucketsAlphabetically } from '@/core/elasticsearch';
-import { JurisprudenciaDocument, Properties, Index } from '@/core/jurisprudencia'
-import { DatalistObj, HighlightFragment, SearchHandlerResponse } from '@/types/search';
-import { AggregationsAggregationContainer, AggregationsAggregation, SearchHighlight, SearchHit, SearchResponse, SortCombinations, AggregationsTermsAggregationCollectMode, AggregationsStringTermsAggregate, AggregationsBucketAggregationBase } from '@elastic/elasticsearch/lib/api/types';
-import { AggregationsTermsAggregateBase, AggregationsTermsAggregation } from '@elastic/elasticsearch/lib/api/typesWithBodyKey';
-import type { NextApiRequest, NextApiResponse } from 'next'
+import search, { aggs, createQueryDslQueryContainer, populateFilters, SearchFilters } from '@/core/elasticsearch';
+import LoggerApi from '@/core/logger-api';
+import { authenticatedHandler } from '@/core/user/authenticate';
+import { AggregationsAggregationContainer } from '@elastic/elasticsearch/lib/api/types';
+import type { NextApiRequest, NextApiResponse } from 'next';
 
 function histogramAggregation(key: string, value: string): Record<string, AggregationsAggregationContainer> {
     const termFieldName = aggs[key].terms?.field!;
@@ -31,7 +30,7 @@ function histogramAggregation(key: string, value: string): Record<string, Aggreg
     }
 }
 
-export default async function histogramHandler(
+export default LoggerApi(async function histogramHandler(
   req: NextApiRequest,
   res: NextApiResponse<any>
 ) {
@@ -41,6 +40,6 @@ export default async function histogramHandler(
     
     const sfilters: SearchFilters = {pre: [], after: []};
     const filters = populateFilters(sfilters, req.query, []);
-
-    return search(createQueryDslQueryContainer(req.query.q), sfilters, 0, histogramAggregation(aggKey, value), 0).then( r => res.json(r.aggregations))
-}
+    const authed = await authenticatedHandler(req);
+    return search(createQueryDslQueryContainer(req.query.q), sfilters, 0, histogramAggregation(aggKey, value), 0, {}, authed).then( r => res.json(r.aggregations))
+});

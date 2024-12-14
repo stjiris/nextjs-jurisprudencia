@@ -1,11 +1,15 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 import search, { createQueryDslQueryContainer, filterableProps, parseSort, populateFilters, RESULTS_PER_PAGE } from '@/core/elasticsearch';
-import { JurisprudenciaDocument, Properties } from '@/core/jurisprudencia'
+import LoggerApi from '@/core/logger-api';
+import { authenticatedHandler } from '@/core/user/authenticate';
 import { HighlightFragment, SearchHandlerResponse } from '@/types/search';
-import { AggregationsAggregate, SearchHighlight, SearchHit, SearchResponse, SortCombinations } from '@elastic/elasticsearch/lib/api/types';
+import { SearchHighlight, SortCombinations } from '@elastic/elasticsearch/lib/api/types';
+import { JurisprudenciaDocumentKey } from '@stjiris/jurisprudencia-document';
 import type { NextApiRequest, NextApiResponse } from 'next'
 
-export default async function searchHandler(
+const useSource: JurisprudenciaDocumentKey[] = ["ECLI","Número de Processo","UUID","Data","Área","Meio Processual","Relator Nome Profissional","Secção","Votação","Decisão","Descritores","Sumário","Texto","STATE"]
+       
+export default LoggerApi(async function searchHandler(
   req: NextApiRequest,
   res: NextApiResponse<SearchHandlerResponse>
 ) {
@@ -17,7 +21,7 @@ export default async function searchHandler(
     const queryObj = createQueryDslQueryContainer(req.query.q);
     const highlight: SearchHighlight = {
         fields: {
-            "Descritores": {
+            "Descritores.Show": {
                 type: "unified",
                 highlight_query: {
                     bool: {
@@ -53,13 +57,14 @@ export default async function searchHandler(
         },
         max_analyzed_offset: 1000000
     }
-    const result = await search(queryObj, sfilters, page, {}, RESULTS_PER_PAGE, {sort, highlight, track_scores: true, _source: [...filterableProps, "Data", "Sumário", "Texto"]})
+    const authed = await authenticatedHandler(req);
+    const result = await search(queryObj, sfilters, page, {}, RESULTS_PER_PAGE, {sort, highlight, track_scores: true, _source: useSource}, authed)
     const r: SearchHandlerResponse = [];
     for( let hit of result.hits.hits ){
         const {Texto, "Relator Nome Completo": _completo, HASH: _HASH, ...rest} = hit._source!
         if(hit.highlight){
             let highlight: Record<string, (string | HighlightFragment)[]> = {
-                Descritores: hit.highlight.Descritores,
+                Descritores: hit.highlight["Descritores.Show"],
                 Sumário: hit.highlight.Sumário
             };
             let SumárioMarks = undefined;
@@ -73,7 +78,7 @@ export default async function searchHandler(
                             textFragment: m[0],
                             textMatch: mat,
                             offset: m.index || 0,
-                            size: hit._source?.Sumário.length
+                            size: hit._source?.Sumário?.length || 0
                         })
                     }
                 }
@@ -88,8 +93,8 @@ export default async function searchHandler(
                     highlight.Texto.push({
                         textFragment: text.replace(/<[^>]+>/g, "").replace(/MARK_START/g, "<mark>").replace(/MARK_END/g, "</mark>").replace(/<\/?\w*$/, ""),
                         textMatch: mat,
-                        offset: hit._source?.Texto.indexOf(text.substring(0, text.indexOf("MARK_START"))) || 0,
-                        size: hit._source?.Texto.length || 0,
+                        offset: hit._source?.Texto?.indexOf(text.substring(0, text.indexOf("MARK_START"))) || 0,
+                        size: hit._source?.Texto?.length || 0,
                     })
                 }
             }
@@ -113,4 +118,4 @@ export default async function searchHandler(
 
     res.status(200).json(r);
 
-}
+});

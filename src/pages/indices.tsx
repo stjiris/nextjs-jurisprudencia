@@ -1,123 +1,131 @@
-import { AggregationsAggregate, AggregationsAggregationContainer, AggregationsMaxAggregate, AggregationsMinAggregate, AggregationsStringTermsAggregate, AggregationsTermsAggregation, AggregationsTermsBucketBase, Indices, long, SearchTotalHits } from "@elastic/elasticsearch/lib/api/types";
-import search, { aggs, filterableProps, createQueryDslQueryContainer, populateFilters, sortBucketsAlphabetically } from "@/core/elasticsearch"
-import { GetServerSideProps } from "next";
 import { GenericPageWithForm } from "@/components/genericPageStructure";
-import { ChangeEvent, useEffect, useRef, useState } from "react";
-import { ReadonlyURLSearchParams, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { ReadonlyURLSearchParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { AggregationsTermsAggregateBase } from "@elastic/elasticsearch/lib/api/typesWithBodyKey";
-import { count } from "console";
 import { addSearchParams, modifySearchParams, SelectNavigate } from "@/components/select-navigate";
 import Head from "next/head";
 import Script from "next/script";
-import { getServerSidePropsHelper } from "@/components/indices-helpers";
+import { FormProps, withForm } from "@/components/pageWithForm";
+import { useRouter } from "next/router";
 import { IndicesProps, INDICES_OTHERS } from "@/types/indices";
+import { Loading, SmallSpinner } from "@/components/loading";
+import { useFetch } from "@/components/useFetch";
+import { JurisprudenciaKey } from "@/types/keys";
+import { useKeysFromContext } from "@/contexts/keys";
+import indicesCsvHandler from "./api/indices.csv";
+import { LoggerServerSideProps } from "@/core/logger-api";
 
-export const getServerSideProps = getServerSidePropsHelper;
+interface IndicesPageProps extends FormProps {
+    term: string
+    group: string
+    limits: number
+}
 
-export default function Indices(props: IndicesProps){
-    const [termInfo, setTermInfo] = useState<string>("A carregar informação...");
-    const searchParams = useSearchParams();
-    if( !Array.isArray(props.termAggregation.buckets) ) throw new Error("Invalid bucket")
+export const getServerSideProps = withForm<IndicesPageProps>(async (ctx, formProps) => {
+    LoggerServerSideProps(ctx);
+    const limits = Array.isArray(ctx.query.LIMIT_ROWS) ? parseInt(ctx.query.LIMIT_ROWS[0]) : parseInt(ctx.query.LIMIT_ROWS || "5000") || 5000;
+    const term = Array.isArray(ctx.query.term) ? ctx.query.term[0] : ctx.query.term  || "Área";
+    let group = "Secção";
+    if( "group" in ctx.query ){
+        group = Array.isArray(ctx.query.group) ? ctx.query.group[0] : ctx.query.group!;
+    }
+    
+    return {
+        ...formProps,
+        term,
+        group,
+        limits
+    }
+    
+});
 
-    useEffect(() => {
-        fetch(`./api/terms-info?term=${encodeURIComponent(props.term)}`).then( r => r.status == 200 ? r.text() : "Sem informação..." ).then(setTermInfo)
-    }, [props.term])
-
-    return <GenericPageWithForm escapeChildren={<HistogramModal />} count={props.total} filtersUsed={props.filtersUsed} minAno={props.minAno} maxAno={props.maxAno}>
-        <Head>
-            <title>Jurisprudência STJ - Índices</title>
-            <meta name="description" content="Permite explorar, pesquisar e filtrar os acórdãos publicados pelo Supremo Tribunal de Justiça na DGSI.pt." />
-            <meta name="viewport" content="width=device-width, initial-scale=1" />
-            <link rel="icon" href="/favicon.ico" />
-        </Head>
+export default function Indices(props: IndicesPageProps){
+    return <GenericPageWithForm escapeChildren={<HistogramModal />} {...props} title="Jurisprudência STJ - Índices">
         <Script src="https://cdn.plot.ly/plotly-2.12.1.min.js" />
-        {(props.termAggregation.sum_other_doc_count || 0) > 0 ? <div className="alert alert-warning" role="alert">
+        <TermInfo term={props.term}/>
+        <IndicesTable {...props}/>
+    </GenericPageWithForm>
+}
+
+function IndicesTable(props: IndicesPageProps){
+    let router = useRouter()
+    let searchParams = useSearchParams();
+    let state = useFetch<IndicesProps>(`/api/indices?${searchParams.toString()}`,[])
+
+    if( !state ){
+        return <Loading />
+    }
+
+    let {sortedGroup, termAggregation} = state;
+    if( !Array.isArray(termAggregation.buckets) ){
+        return <div className="alert alert-danger">Erro: Esperada lista, recebido objeto</div>;
+    }
+    // Gold no highlight retirar o texto
+    return <>
+        {(termAggregation.sum_other_doc_count || 0) > 0 && <div className="alert alert-warning" role="alert">
             <h5 className="alert-heading">
                 <strong><i className="bi bi-exclamation-circle"></i> Atenção:</strong> 
             </h5>
             <ul>
-                <li>Existem {props.termAggregation.sum_other_doc_count} outros valores não listados.</li>
+                <li>Existem {termAggregation.sum_other_doc_count} outros valores não listados.</li>
             </ul>
-        </div> : ""}
-        {termInfo ? <div className="alert alert-info m-1 p-1" role="alert"><p className="m-0" dangerouslySetInnerHTML={{__html: termInfo}}></p></div> : ""}
+        </div>}
         <table className="table table-sm" style={{width: "fit-content"}}>
             <thead>
                 <tr>
                     <th>#</th>
-                    <th>Índice <Link href={`./api/indices.csv?${searchParams.toString()}`} className="ms-1"><i className="bi bi-filetype-csv"></i></Link></th>
+                    <th>Índice <a href={`${router.basePath}/api/indices.csv?${searchParams.toString()}`} className="ms-1" download="indices.csv"><i className="bi bi-filetype-csv"></i></a><a href={`${router.basePath}/api/indices.xlsx?${searchParams.toString()}`} className="ms-1" download="indices.xlsx"><i className="bi bi-filetype-xlsx"></i></a></th>
                     <th className="text-end-border-end">
                         <SelectGroup group={props.group}/>
                     </th>
-                    {props.sortedGroup.map(([name, count],i) => <td key={i} className="text-end border-end">{name == INDICES_OTHERS || props.group in props.filtersUsed ? name : <Link href={`?${modifySearchParams(searchParams, props.group, `"${name}"`)}`}>{name}</Link>}</td>)}
+                    {sortedGroup.map(([name, count],i) => <td key={i} className="text-end border-end">{name == INDICES_OTHERS || props.group in props.filtersUsed ? name : <Link href={`?${modifySearchParams(searchParams, props.group, `"${name}"`)}`}>{name}</Link>}</td>)}
                     <th></th>
                     <th className="text-start">Datas</th>
                 </tr>
                 <tr>
-                    <th>{props.termAggregation.buckets.length}</th>
+                    <th>{termAggregation.buckets.length}</th>
                     <th>
                         <SelectTerm term={props.term}/>
                     </th>
-                    <th className="text-end border-end"><Link href={`/pesquisa?${searchParams.toString()}`}>{props.termAggregation.buckets.reduce((acc, b)=> acc+b.doc_count, 0)}</Link></th>
-                    {props.sortedGroup.map(([name,count], i) => <td key={i} className="text-end border-end"><Link href={`/pesquisa?${modifySearchParams(searchParams, props.group, `"${name}"`)}`}>{count}</Link></td>)}
+                    <th className="text-end border-end"><Link href={`/pesquisa?${searchParams.toString()}`}>{termAggregation.buckets.reduce((acc, b)=> acc+b.doc_count, 0)}</Link></th>
+                    {sortedGroup.map(([name,count], i) => <td key={i} className="text-end border-end"><Link href={`/pesquisa?${modifySearchParams(searchParams, props.group, `"${name}"`)}`}>{count}</Link></td>)}
                     <th></th>
                     <th className="text-start">de ... até</th>
                 </tr>
             </thead>
-            {props.termAggregation.buckets.length <= props.LIMIT_ROWS ? <tbody>
-                {props.termAggregation.buckets.map( (b, i) => <ShowBucketRow key={i} index={i} bucket={b} filtersUsed={props.filtersUsed} searchParams={searchParams} term={props.term} group={props.group} sortedGroup={props.sortedGroup} />)}
-            </tbody>: ""}
+            <tbody>
+                {termAggregation.buckets.length <= props.limits && termAggregation.buckets.map( (b, i) => <ShowBucketRow key={i} index={i} bucket={b} filtersUsed={props.filtersUsed} searchParams={searchParams} term={props.term} group={props.group} sortedGroup={sortedGroup} />)}
+            </tbody>
         </table>
-        {props.termAggregation.buckets.length > props.LIMIT_ROWS ? <div className="d-flex flex-wrap">
-            {props.termAggregation.buckets.map( (b, i) => <ShowBucketLine key={i} index={i} bucket={b} filtersUsed={props.filtersUsed} searchParams={searchParams} term={props.term} group={props.group} sortedGroup={props.sortedGroup} />)}
-        </div> : ""}
-    </GenericPageWithForm>
+        {termAggregation.buckets.length > props.limits && <div className="d-flex flex-wrap">
+            {termAggregation.buckets.map( (b, i) => <ShowBucketLine key={i} index={i} bucket={b} filtersUsed={props.filtersUsed} searchParams={searchParams} term={props.term} group={props.group} sortedGroup={sortedGroup} />)}
+        </div>}
+    </>
 }
 
 function SelectGroup(props: {group: string}){
+    let values = useKeysFromContext().keys.filter(k => k.indicesGroup) || [{key: props.group, name: props.group}];
     return <SelectNavigate name="group" defaultValue={props.group} valueToHref={(v, params) => `?${modifySearchParams(params, "group", v).toString()}`}>
         <option value="" label="(total)"/>
-        <option value="Área" label="Área"/>
-        <option value="Secção" label="Secção"/>
-    </SelectNavigate>
-}
-function SelectTerm(props: {term: string}){
-    return <SelectNavigate name="group" defaultValue={props.term} valueToHref={(v, params) => `?${modifySearchParams(params, "term", v).toString()}`}>
-            <option value="Jurisprudência" label="Jurisprudência"/>
-            <option value="Área" label="Área"/>
-            <option value="Secção" label="Secção"/>
-            <option value="Relator Nome Profissional" label="Relator"/>
-            <option value="Meio Processual" label="Meio Processual"/>
-            <option value="Decisão" label="Decisão"/>
-            <option value="Decisão (textual)" label="Decisão (textual)"/>
-            <option value="Votação - Decisão" label="Votação - Decisão"/>
-            <option value="Votação - Vencidos" label="Votação - Vencidos"/>
-            <option value="Votação - Declarações" label="Votação - Declarações"/>
-            <option value="Descritores" label="Descritores"/>
-            <option value="Tribunal de Recurso" label="Tribunal de Recurso"/>
-            <option value="Tribunal de Recurso - Processo" label="Tribunal de Recurso - Processo"/>
-            <option value="Área Temática" label="Área Temática"/>
-            <option value="Jurisprudência Estrangeira" label="Jurisprudência Estrangeira"/>
-            <option value="Jurisprudência Internacional" label="Jurisprudência Internacional"/>
-            <option value="Doutrina" label="Doutrina"/>
-            <option value="Jurisprudência Nacional" label="Jurisprudência Nacional"/>
-            <option value="Legislação Comunitária" label="Legislação Comunitária"/>
-            <option value="Legislação Estrangeira" label="Legislação Estrangeira"/>
-            <option value="Legislação Nacional" label="Legislação Nacional"/>
-            <option value="Referências Internacionais" label="Referências Internacionais"/>
-            <option value="Referência de publicação" label="Referência de publicação"/>
-            <option value="Indicações Eventuais" label="Indicações Eventuais"/>
+        {values.map(k => <option key={k.key} label={k.name} value={k.key}/>)}
     </SelectNavigate>
 }
 
+function SelectTerm(props: {term: string}){
+    let values = useKeysFromContext().keys.filter(k => k.indicesList) || [{key: props.term, name: props.term}];
+    return <SelectNavigate name="group" defaultValue={props.term} valueToHref={(v, params) => `?${modifySearchParams(params, "term", v).toString()}`}>
+        {values?.map(k => <option key={k.key} label={k.name} value={k.key}/>)}
+    </SelectNavigate>    
+}
+
 function ShowBucketRow(props: {bucket: any, index: number, term: string, group: string, filtersUsed: Record<string, string[]>, searchParams: ReadonlyURLSearchParams, sortedGroup: [string, number][]}){
-    const othersCount = props.bucket.Group.sum_other_doc_count + props.bucket.Group.buckets.reduce((acc:number, b: any) => acc + (props.sortedGroup.find(([s,n]) => s == b.key) != null ? 0 : b.doc_count), 0)
+    const othersCount = props.bucket.Group ? props.bucket.Group.sum_other_doc_count + props.bucket.Group.buckets.reduce((acc:number, b: any) => acc + (props.sortedGroup.find(([s,n]) => s == b.key) != null ? 0 : b.doc_count), 0) : 0;
     return <tr>
         <td className="text-muted">{props.index+1}</td>
-        <td className="text-nowrap" style={{width: "0px"}}>{props.term in props.filtersUsed ? props.bucket.key : <Link href={`?${modifySearchParams(props.searchParams, props.term, `"${props.bucket.key}"`)}`}>{props.bucket.key}</Link>}</td>
-        <td className="text-end border-end text-nowrap" style={{width: "0px"}}><Link href={`/pesquisa?${modifySearchParams(props.searchParams, props.term, `"${props.bucket.key}"`)}`}>{props.bucket.doc_count}</Link></td>
+        <td className="text-nowrap" style={{width: "0px"}}>{props.term in props.filtersUsed ? (props.filtersUsed[props.term].find( f => f.substring(1,f.length-1) === props.bucket.key) ? <b>{props.bucket.key}</b> : props.bucket.key) : <Link href={`?${modifySearchParams(props.searchParams, props.term, `"${props.bucket.key}"`)}`}>{props.bucket.key}</Link>}</td>
+        <td className="text-end border-end text-nowrap" style={{width: "0px"}}><Link href={`/pesquisa?${addSearchParams(props.searchParams, props.term, `"${props.bucket.key}"`)}`}>{props.bucket.doc_count}</Link></td>
         {props.sortedGroup.map(([groupKey, groupValue], i) => <td key={i} className="text-end border-end text-nowrap">
-            <Link href={`/pesquisa?${modifySearchParams(modifySearchParams(props.searchParams, props.term, `"${props.bucket.key}"`), props.group, `"${groupKey}"`)}`}><HideZero n={groupKey == INDICES_OTHERS ? othersCount : props.bucket.Group.buckets.find((b:any) => b.key === groupKey)?.doc_count || 0}/></Link>
+            <Link href={`/pesquisa?${modifySearchParams(addSearchParams(props.searchParams, props.term, `"${props.bucket.key}"`), props.group, `"${groupKey}"`)}`}><HideZero n={groupKey == INDICES_OTHERS ? othersCount : props.bucket.Group.buckets.find((b:any) => b.key === groupKey)?.doc_count || 0}/></Link>
         </td>)}
         <td></td>
         <td className="text-start text-nowrap">
@@ -209,4 +217,20 @@ function HistogramModal(){
             </div>
         </div>
     </div>
+}
+
+function TermInfo(props: {term: string}){
+    let termInfo = useFetch<JurisprudenciaKey>(`/api/keys/${encodeURIComponent(props.term)}`, [])
+
+    return <>
+        {termInfo !== undefined ? 
+            <div className="alert alert-info m-1 p-1" role="alert" dangerouslySetInnerHTML={{__html: termInfo.description}}></div>
+            :
+            <div className="alert alert-info m-1 p-1" role="alert">
+                <p className="m-0">
+                    <SmallSpinner />&nbsp;A carregar informação...
+                </p>
+            </div>
+        }
+    </>
 }

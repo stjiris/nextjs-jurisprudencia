@@ -1,21 +1,74 @@
 version: '3.9'
 volumes:
   elasticsearch_data: {}
+  excel_data: {}
+  rss_data: {}
+  redis_data: {}
 
 services:
   server:
     build:
       context: .
       dockerfile: ./Dockerfile
+      args:
+        NEXT_BASE_PATH: ${NEXT_BASE_PATH}
     environment:
       ES_URL: http://elasticsearch:9200
+      ES_USER: elastic
+      ES_PASS: elasticsearch
+      NEXT_BASE_PATH: ${NEXT_BASE_PATH}
+      PUBLIC_STATES: ${PUBLIC_STATES}
+      RSS_FOLDER: /rss
     ports:
-      - "80:3000"
+      - "${SERVER_HOST:-0.0.0.0}:${SERVER_PORT:-3000}:3000"
+    volumes:
+      - excel_data:/usr/src/app/files
+      - rss_data:/rss
     depends_on:
       elasticsearch:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: unless-stopped
-
+  server-dev:
+    build:
+      context: .
+      dockerfile: ./Dockerfile_dev
+      args:
+        NEXT_BASE_PATH: ${NEXT_DEV_BASE_PATH}
+    environment:
+      ES_URL: http://elasticsearch:9200
+      ES_USER: elastic
+      ES_PASS: elasticsearch
+      NEXT_BASE_PATH: ${NEXT_DEV_BASE_PATH}
+      PUBLIC_STATES: ${PUBLIC_STATES}
+      RSS_FOLDER: /rss
+    ports:
+      - "${SERVER_DEV_HOST:-127.0.0.1}:${SERVER_DEV_PORT:-3000}:3000"
+    volumes:
+      - excel_data:/usr/src/app/files
+      - .:/usr/src/app
+      - rss_data:/rss
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles:
+      - dev
+  clitools:
+    build:
+      context: ./compose/clitools
+    environment:
+      ES_URL: http://elasticsearch:9200
+      ES_USER: elastic
+      ES_PASS: elasticsearch
+      RSS_FOLDER: /rss
+      RSS_LINK: ${RSS_LINK:-http://localhost:3000/jurisprudencia}
+      RSS_MAX_FEED_SIZE: 200
+    volumes:
+      - rss_data:/rss 
   elasticsearch:
     build:
       context: ./compose/elasticsearch
@@ -25,10 +78,15 @@ services:
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
     environment:
-      xpack.security.enabled: false
+      xpack.security.enabled: true
+      xpack.security.http.ssl.enabled: false
       discovery.type: single-node
+      ES_JAVA_OPTS: ${ES_JAVA_OPTS}
+      ELASTIC_PASSWORD: elasticsearch
+      # to use kibana set the kibana_system password to elasticsearch with:
+      # $ elasticsearch-reset-password -u kibana_system -i
     healthcheck:
-      test: curl --write-out 'HTTP %{http_code}' --fail --silent --output /dev/null http://localhost:9200
+      test: curl --write-out 'HTTP %{http_code}' --fail --silent --output /dev/null http://elastic:elasticsearch@localhost:9200
       interval: 10s
       timeout: 30s
       retries: 15
@@ -42,5 +100,22 @@ services:
     ports:
       - "127.0.0.1:5601:5601"
     environment:
-      ELASTICSEARCH_HOSTS: '["http://elasticsearch:9200"]'
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+      ELASTICSEARCH_USERNAME: kibana_system
+      ELASTICSEARCH_PASSWORD: elasticsearch
     restart: always
+    profiles:
+      - kibana
+  redis:
+    image: redis:6.2-bookworm
+    ports:
+      - "127.0.0.1:6379:6379"
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: redis-cli ping
+      interval: 10s
+      timeout: 30s
+      retries: 15
+      start_period: 10s
