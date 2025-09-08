@@ -17,6 +17,7 @@ export type JurisprudenciaKey = {
     editorEnabled?: boolean
     editorSuggestions?: boolean
     editorRestricted?: boolean
+    editorOriginalOnly?: boolean
 }
 
 export const KEYS_INFO_INDEX_VERSION = "keys-info.0.0"
@@ -36,6 +37,7 @@ export const KEYS_INFO_PROPERTIES: Record<keyof JurisprudenciaKey, MappingProper
     editorEnabled: { type: "boolean" },
     editorSuggestions: { type: "boolean" },
     editorRestricted: { type: "boolean" },
+    editorOriginalOnly: { type: "boolean" },
 }
 
 export function canBeActive(key: JurisprudenciaDocumentKey) {
@@ -67,6 +69,10 @@ export function makeValidValue(jurisprudenciaKey: JurisprudenciaKey): Jurisprude
     if (!obj.editorEnabled) {
         obj.editorRestricted = false;
         obj.editorSuggestions = false;
+        obj.editorOriginalOnly = false;
+    }
+    if( !isJurisprudenciaDocumentGenericKey(key) ){
+        obj.editorOriginalOnly = false;
     }
     return obj;
 }

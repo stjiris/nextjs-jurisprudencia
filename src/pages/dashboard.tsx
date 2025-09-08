@@ -339,7 +339,6 @@ export default function Dashboard(props: FormProps){
     </div>  
   );
 };
-  
 
 function ParallelSets(layout: any){
     let router = useRouter();
@@ -473,13 +472,13 @@ function Matrix() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { selectedFilters, setSelectedFilters } = useSelectedFilters();
-    const [matrixData, setMatrixData] = useState({});
+    const [matrixData, setMatrixData] = useState<Record<string, any>>({});
     const [selectedTermMatrix1, setSelectedTermMatrix1] = useState((router.query.termMatrix1 || "Área") as string);
     const [selectedTermMatrix2, setSelectedTermMatrix2] = useState((router.query.termMatrix2 || "Secção") as string);
     const [selected1, setSelected1] = useState("");
     const [selected2, setSelected2] = useState("");
 
-    const handleDataSelect = (term1: string, term2: string) => {
+    function handleDataSelect(term1: string, term2: string) {
       setSelected1(term1);
       setSelected2(term2);
       const filterStrings = [`${selectedTermMatrix1}:${term1}`, `${selectedTermMatrix2}:${term2}`];
@@ -526,9 +525,32 @@ function Matrix() {
         });
     }, [searchParams, router.basePath, selectedTermMatrix1, selectedTermMatrix2, selected1, selected2, selectedFilters]);
 
-  
+    let xTermsArr: string[] = [];
+    let yTermsArr: string[] = [];
+
+    // If the backend already provides arrays, prefer them
+    if (Array.isArray((matrixData as any).xTerms) && Array.isArray((matrixData as any).yTerms)) {
+      xTermsArr = (matrixData as any).xTerms;
+      yTermsArr = (matrixData as any).yTerms;
+    } else {
+      const keys = Object.keys(matrixData);
+      if (keys.length > 0) {
+        xTermsArr = keys;
+        const ySet = new Set<string>();
+        for (const k of keys) {
+          const row = matrixData[k] as Record<string, any>; // <-- narrow here
+          if (row && typeof row === 'object') {
+            for (const y of Object.keys(row)) {
+              ySet.add(y);
+            }
+          }
+        }
+        yTermsArr = Array.from(ySet);
+      }
+    }
+
     return (
-      <div style={{ overflow: 'hidden'}}>
+      <div style={{ overflow: 'hidden' }}>
         <select value={selectedTermMatrix1} onChange={(event) => setSelectedTermMatrix1(event.target.value)}>
           <DahboardTerms/>
         </select>
@@ -536,8 +558,17 @@ function Matrix() {
         <select value={selectedTermMatrix2} onChange={(event) => setSelectedTermMatrix2(event.target.value)}>
           <DahboardTerms/>
         </select>
-          {Object.keys(matrixData).length > 0 && 
-          <MatrixChart data={matrixData} onDataSelect={handleDataSelect}/>}
+
+        {Object.keys(matrixData).length > 0 && (
+          <MatrixChart
+            data={matrixData}
+            xTerms={xTermsArr}
+            yTerms={yTermsArr}
+            xField={selectedTermMatrix1}
+            yField={selectedTermMatrix2}
+            onDataSelect={handleDataSelect}
+          />
+        )}
       </div>
     );
 }

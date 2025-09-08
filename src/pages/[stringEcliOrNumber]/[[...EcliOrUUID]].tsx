@@ -120,6 +120,23 @@ function MultipleDocumentPage(props: { docs: JurisprudenciaDocument[], ids: stri
     </>
 }
 
+// Add styles for the text container
+const styles = `
+.acordao-text-container {
+    max-width: 900px;
+    margin: 0 auto;
+    font-size: 1.1rem;
+    line-height: 1.6;
+}
+
+.sumario-text-container {
+    font-size: 1.35rem;
+    line-height: 1.7;
+    margin-top: 0.25rem;
+    padding-top: 0;
+}
+`;
+
 function DocumentPage(props: { doc: JurisprudenciaDocument, id: string, keys: JurisprudenciaKey[] }) {
     let auth = useAuth();
     let proc = props.doc["Número de Processo"]!;
@@ -129,6 +146,7 @@ function DocumentPage(props: { doc: JurisprudenciaDocument, id: string, keys: Ju
     return <>
         <Head>
             <title>{`${proc} - Jurisprudência - STJ`}</title>
+            <style>{styles}</style>
         </Head>
         {auth &&
             <div className="border border-dark container-fluid mb-1">
@@ -157,10 +175,10 @@ function DocumentPage(props: { doc: JurisprudenciaDocument, id: string, keys: Ju
                 <></>}
             {props.keys.filter(k => k.documentShow && !MUST_HAVE.includes(k.key)).map(k => <DefaultRow key={k.key} doc={props.doc} showkey={k.name} accessKey={k.key} noLink={!k.indicesList} />)}
         </div>
-        <h6 className="border-top border-2 mt-2"><b>Sumário</b></h6>
-        <div className="p-2" dangerouslySetInnerHTML={{ __html: props.doc.Sumário! }}></div>
+        <h6 className="border-top border-2 mt-2 mb-1"><b>Sumário</b></h6>
+        <div className="p-2 sumario-text-container" dangerouslySetInnerHTML={{ __html: props.doc.Sumário! }}></div>
         <h6 className="border-top border-2 mt-2"><b>Decisão Texto Integral</b></h6>
-        <div className="p-2" dangerouslySetInnerHTML={{ __html: props.doc.Texto! }}></div>
+        <div className="p-2 acordao-text-container" dangerouslySetInnerHTML={{ __html: props.doc.Texto! }}></div>
     </>
 }
 

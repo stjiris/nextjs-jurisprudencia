@@ -50,9 +50,20 @@ export default function StackedBarChart({ sData, onDataSelect }: {sData: Stacked
       if (data && chartRef.current) {
         //const container = d3.select(chartRef.current!);
         const parentContainerWidth = chartRef.current.clientWidth;
+        // --- NEW: Dynamically set chart height ---
+        const numBars = data.length;
+        const minBarHeight = 32;
+        const maxBarHeight = 60;
+        const defaultChartHeight = 420;
+        const availableHeight = chartRef.current.clientHeight || defaultChartHeight;
+        let barHeight = Math.max(minBarHeight, Math.min(maxBarHeight, Math.floor((availableHeight - 60) / numBars)));
+        // If there are few bars, make them bigger to fill the space
+        if (numBars * maxBarHeight < availableHeight - 60) {
+          barHeight = Math.floor((availableHeight - 60) / numBars);
+        }
         const margin = { top: 30, right: 200, bottom: 30, left: 200 };
         const width = parentContainerWidth - 2 * margin.left - margin.right;
-        const height = 95 - margin.top - margin.bottom;
+        const height = barHeight;
         const xDomain: any[] = [];
 
         // Iterate over each term in the data and calculate xDomain
@@ -75,7 +86,7 @@ export default function StackedBarChart({ sData, onDataSelect }: {sData: Stacked
             .range([margin.left - 10, 0]);       
 
         const totalWidth = width + margin.left + margin.right;
-        const totalHeight = height * data.length + margin.top + margin.bottom;
+        const totalHeight = barHeight * data.length + margin.top + margin.bottom;
     
         // Create the main chart container
         const mainContainer = select(chartRef.current)
@@ -111,7 +122,7 @@ export default function StackedBarChart({ sData, onDataSelect }: {sData: Stacked
             const termContainer = container
             .append("g")
             //.attr("transform", `translate(${i % 2 === 2 ? 0 : width + margin.left + margin.right}, ${Math.floor(i / 2) * height})`);
-            .attr("transform", `translate(${0}, ${Math.floor(i) * height})`);
+            .attr("transform", `translate(${0}, ${i * barHeight})`);
           // Event handler for totalBar mouseover
             const handleTotalBarMouseover = (event: MouseEvent | any, d: any) => {
                 const term = select(event.currentTarget).attr("data-term");

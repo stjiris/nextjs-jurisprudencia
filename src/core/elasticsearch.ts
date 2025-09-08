@@ -89,7 +89,7 @@ export default function search(
         size: rpp,
         from: page * rpp,
         track_total_hits: true,
-        _source: filterableProps.concat("Sumário"),
+        _source: (filterableProps as any[]).concat("Sumário"),
         ...extras // Allows 
     }))
 }
@@ -119,9 +119,21 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
             let should = filtersUsed[aggName].filter(o => !o.startsWith("not:"))
             let must_not = filtersUsed[aggName].filter(o => o.startsWith("not:")).map(o => o.substring(4))
             let must_or_should = !isJurisprudenciaDocumentGenericKey(aggName) || body["_should"]?.includes(aggName) ? "should" : "must"  // AND or OR - if a signle value use alawys OR else default OR but flag for AND
+
+            // Detect advanced operators in any value
+            const hasAdvanced = (arr: string[]) => arr.some(v => /[\(\)\"\bAND\b|\bOR\b|\bNOT\b]/i.test(v));
+            if (should.length && hasAdvanced(should)) {
+                filters[when].push({
+                    query_string: {
+                        query: should.join(" "),
+                        fields: [fieldName],
+                        default_operator: "OR"
+                    }
+                });
+            } else if (should.length) {
             filters[when].push({
                 bool: {
-                    [must_or_should]: should.map(o => (o.startsWith("\"") && o.endsWith("\"") ? {
+                        [must_or_should]: should.map(o => (o.startsWith("\"") && o.endsWith("\"")) ? {
                         term: {
                             [fieldName.replace("keyword", "raw")]: { value: `${o.slice(1, -1)}` }
                         }
@@ -129,8 +141,28 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
                         wildcard: {
                             [fieldName]: { value: `*${o}*` }
                         }
-                    })),
-                    must_not: must_not.map(o => (o.startsWith("\"") && o.endsWith("\"") ? {
+                        }),
+                    }
+                });
+            }
+            if (must_not.length && hasAdvanced(must_not)) {
+                filters[when].push({
+                    bool: {
+                        must_not: [
+                            {
+                                query_string: {
+                                    query: must_not.join(" "),
+                                    fields: [fieldName],
+                                    default_operator: "OR"
+                                }
+                            }
+                        ]
+                    }
+                });
+            } else if (must_not.length) {
+                filters[when].push({
+                    bool: {
+                        must_not: must_not.map(o => (o.startsWith("\"") && o.endsWith("\"")) ? {
                         term: {
                             [fieldName.replace("keyword", "raw")]: { value: `${o.slice(1, -1)}` }
                         }
@@ -138,9 +170,10 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
                         wildcard: {
                             [fieldName]: { value: `*${o}*` }
                         }
-                    }))
+                        })
                 }
             });
+            }
         }
     }
 
@@ -149,42 +182,25 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
     let minAno = Array.isArray(body.MinAno) ? body.MinAno[0] : body.MinAno
     let maxAno = Array.isArray(body.MaxAno) ? body.MaxAno[0] : body.MaxAno
 
-    if (minAno && maxAno) {
-
+    if (minAno || maxAno) {
+        const rangeQuery: any = {
+            range: {
+                [DATA_FIELD]: {
+                    format: "yyyy-MM-dd||dd/MM/yyyy"
+                }
+            }
+        };
+        if (minAno) {
+            rangeQuery.range[DATA_FIELD].gte = minAno;
         filtersUsed.MinAno = [minAno];
+        }
+        if (maxAno) {
+            rangeQuery.range[DATA_FIELD].lte = maxAno;
         filtersUsed.MaxAno = [maxAno];
-        filters[dateWhen].push({
-            range: {
-                [DATA_FIELD]: {
-                    gte: padZero(minAno),
-                    lt: padZero((parseInt(maxAno) || new Date().getFullYear()) + 1),
-                    format: "yyyy"
                 }
-            }
-        });
+        filters[dateWhen].push(rangeQuery);
     }
-    else if (minAno) {
-        filtersUsed.MinAno = [minAno];
-        filters[dateWhen].push({
-            range: {
-                [DATA_FIELD]: {
-                    gte: padZero(minAno),
-                    format: "yyyy"
-                }
-            }
-        });
-    }
-    else if (maxAno) {
-        filtersUsed.MaxAno = [maxAno];
-        filters[dateWhen].push({
-            range: {
-                [DATA_FIELD]: {
-                    lt: padZero((parseInt(maxAno) || new Date().getFullYear()) + 1),
-                    format: "yyyy"
-                }
-            }
-        });
-    }
+    
     if (body.notHasField) {
         filtersUsed.notHasField = (Array.isArray(body.notHasField) ? body.notHasField : [body.notHasField]).filter(o => o.length > 0);
         filtersUsed.notHasField.forEach(field => {
@@ -230,6 +246,21 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
             }
         });
     }
+    //Lógica backend do calendário
+    if (body.DataExata) {
+        const selectedDate = Array.isArray(body.DataExata) ? body.DataExata[0] : body.DataExata;
+        if (selectedDate) {
+            // Converter yyyy-MM-dd para dd/MM/yyyy 
+            const [year, month, day] = selectedDate.split('-');
+            const formattedDate = `${day}/${month}/${year}`;
+            filtersUsed["Data"] = [formattedDate];
+            filters.pre.push({
+                term: {
+                    [DATA_FIELD]: formattedDate
+                }
+            });
+        }
+    }
     return filtersUsed;
 }
 
@@ -262,11 +293,11 @@ export function createQueryDslQueryContainer(string?: string | string[]): QueryD
             match_all: {}
         };
     }
+    // Use query_string to support AND, OR, NOT, and parentheses in free text search
     return [{
-        simple_query_string: {
+        query_string: {
             query: Array.isArray(string) ? string.join(" ") : string,
-            fields: ["*"],
-            default_operator: 'OR'
+            fields: ["*"]
         }
     }];
 }

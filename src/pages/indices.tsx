@@ -78,7 +78,7 @@ function IndicesTable(props: IndicesPageProps){
                     <th className="text-end-border-end">
                         <SelectGroup group={props.group}/>
                     </th>
-                    {sortedGroup.map(([name, count],i) => <td key={i} className="text-end border-end">{name == INDICES_OTHERS || props.group in props.filtersUsed ? name : <Link href={`?${modifySearchParams(searchParams, props.group, `"${name}"`)}`}>{name}</Link>}</td>)}
+                    {sortedGroup.map(([name, count],i) => <td key={i} className="text-end border-end">{name == INDICES_OTHERS || props.group in props.filtersUsed ? name : <Link href={`?${modifySearchParams(new URLSearchParams(searchParams.toString()), props.group, `"${name}"`)}`}>{name}</Link>}</td>)}
                     <th></th>
                     <th className="text-start">Datas</th>
                 </tr>
@@ -88,72 +88,73 @@ function IndicesTable(props: IndicesPageProps){
                         <SelectTerm term={props.term}/>
                     </th>
                     <th className="text-end border-end"><Link href={`/pesquisa?${searchParams.toString()}`}>{termAggregation.buckets.reduce((acc, b)=> acc+b.doc_count, 0)}</Link></th>
-                    {sortedGroup.map(([name,count], i) => <td key={i} className="text-end border-end"><Link href={`/pesquisa?${modifySearchParams(searchParams, props.group, `"${name}"`)}`}>{count}</Link></td>)}
+                    {sortedGroup.map(([name,count], i) => <td key={i} className="text-end border-end"><Link href={`/pesquisa?${modifySearchParams(new URLSearchParams(searchParams.toString()), props.group, `"${name}"`)}`}>{count}</Link></td>)}
                     <th></th>
                     <th className="text-start">de ... até</th>
                 </tr>
             </thead>
             <tbody>
-                {termAggregation.buckets.length <= props.limits && termAggregation.buckets.map( (b, i) => <ShowBucketRow key={i} index={i} bucket={b} filtersUsed={props.filtersUsed} searchParams={searchParams} term={props.term} group={props.group} sortedGroup={sortedGroup} />)}
+                {termAggregation.buckets.length <= props.limits && termAggregation.buckets.map( (b, i) => <ShowBucketRow key={i} index={i} bucket={b} filtersUsed={props.filtersUsed} searchParams={new URLSearchParams(searchParams.toString())} term={props.term} group={props.group} sortedGroup={sortedGroup} />)}
             </tbody>
         </table>
         {termAggregation.buckets.length > props.limits && <div className="d-flex flex-wrap">
-            {termAggregation.buckets.map( (b, i) => <ShowBucketLine key={i} index={i} bucket={b} filtersUsed={props.filtersUsed} searchParams={searchParams} term={props.term} group={props.group} sortedGroup={sortedGroup} />)}
+            {termAggregation.buckets.map( (b, i) => <ShowBucketLine key={i} index={i} bucket={b} filtersUsed={props.filtersUsed} searchParams={new URLSearchParams(searchParams.toString())} term={props.term} group={props.group} sortedGroup={sortedGroup} />)}
         </div>}
     </>
 }
 
 function SelectGroup(props: {group: string}){
-    let values = useKeysFromContext().keys.filter(k => k.indicesGroup) || [{key: props.group, name: props.group}];
-    return <SelectNavigate name="group" defaultValue={props.group} valueToHref={(v, params) => `?${modifySearchParams(params, "group", v).toString()}`}>
+    let searchParams = useSearchParams();
+    let router = useRouter();
+    let keys = useKeysFromContext();
+    return <SelectNavigate name="group" defaultValue={props.group} valueToHref={(v, params) => `?${modifySearchParams(new URLSearchParams(params), "group", v).toString()}`}>
         <option value="" label="(total)"/>
-        {values.map(k => <option key={k.key} label={k.name} value={k.key}/>)}
+        {keys.keys.filter(k => k.indicesGroup).map(k => <option key={k.key} label={k.name} value={k.key}/>)}
     </SelectNavigate>
 }
 
 function SelectTerm(props: {term: string}){
-    let values = useKeysFromContext().keys.filter(k => k.indicesList) || [{key: props.term, name: props.term}];
-    return <SelectNavigate name="group" defaultValue={props.term} valueToHref={(v, params) => `?${modifySearchParams(params, "term", v).toString()}`}>
-        {values?.map(k => <option key={k.key} label={k.name} value={k.key}/>)}
+    let searchParams = useSearchParams();
+    let router = useRouter();
+    let keys = useKeysFromContext();
+    return <SelectNavigate name="group" defaultValue={props.term} valueToHref={(v, params) => `?${modifySearchParams(new URLSearchParams(params), "term", v).toString()}`}>
+        {keys.keys.filter(k => k.indicesList).map(k => <option key={k.key} label={k.name} value={k.key}/>)}
     </SelectNavigate>    
 }
 
-function ShowBucketRow(props: {bucket: any, index: number, term: string, group: string, filtersUsed: Record<string, string[]>, searchParams: ReadonlyURLSearchParams, sortedGroup: [string, number][]}){
-    const othersCount = props.bucket.Group ? props.bucket.Group.sum_other_doc_count + props.bucket.Group.buckets.reduce((acc:number, b: any) => acc + (props.sortedGroup.find(([s,n]) => s == b.key) != null ? 0 : b.doc_count), 0) : 0;
+function ShowBucketRow(props: {bucket: any, index: number, term: string, group: string, filtersUsed: Record<string, string[]>, searchParams: URLSearchParams, sortedGroup: [string, number][]}){
+    let group = props.bucket.Group;
+    const othersCount = group ? group.sum_other_doc_count + group.buckets.reduce((acc: number, b: any) => acc + (props.sortedGroup.find(([s, n]) => s == b.key) != null ? 0 : b.doc_count), 0) : 0;
     return <tr>
         <td className="text-muted">{props.index+1}</td>
-        <td className="text-nowrap" style={{width: "0px"}}>{props.term in props.filtersUsed ? (props.filtersUsed[props.term].find( f => f.substring(1,f.length-1) === props.bucket.key) ? <b>{props.bucket.key}</b> : props.bucket.key) : <Link href={`?${modifySearchParams(props.searchParams, props.term, `"${props.bucket.key}"`)}`}>{props.bucket.key}</Link>}</td>
-        <td className="text-end border-end text-nowrap" style={{width: "0px"}}><Link href={`/pesquisa?${addSearchParams(props.searchParams, props.term, `"${props.bucket.key}"`)}`}>{props.bucket.doc_count}</Link></td>
+        <td className="text-nowrap" style={{width: "0px"}}>{props.term in props.filtersUsed ? (props.filtersUsed[props.term].find( f => f.substring(1,f.length-1) === props.bucket.key) ? <b>{props.bucket.key}</b> : props.bucket.key) : <Link href={`?${modifySearchParams(new URLSearchParams(props.searchParams), props.term, `"${props.bucket.key}"`)}`}>{props.bucket.key}</Link>}</td>
+        <td className="text-end border-end text-nowrap" style={{width: "0px"}}><Link href={`/pesquisa?${addSearchParams(new URLSearchParams(props.searchParams), props.term, `"${props.bucket.key}"`)}`}>{props.bucket.doc_count}</Link></td>
         {props.sortedGroup.map(([groupKey, groupValue], i) => <td key={i} className="text-end border-end text-nowrap">
-            <Link href={`/pesquisa?${modifySearchParams(addSearchParams(props.searchParams, props.term, `"${props.bucket.key}"`), props.group, `"${groupKey}"`)}`}><HideZero n={groupKey == INDICES_OTHERS ? othersCount : props.bucket.Group.buckets.find((b:any) => b.key === groupKey)?.doc_count || 0}/></Link>
+            <Link href={`/pesquisa?${modifySearchParams(addSearchParams(new URLSearchParams(props.searchParams), props.term, `"${props.bucket.key}"`), props.group, `"${groupKey}"`)}`}><HideZero n={groupKey == INDICES_OTHERS ? othersCount : group.buckets.find((b:any) => b.key === groupKey)?.doc_count || 0}/></Link>
         </td>)}
         <td></td>
-        <td className="text-start text-nowrap">
-            {props.bucket.MinAno.value_as_string == props.bucket.MaxAno.value_as_string ?
-                props.bucket.MaxAno.value_as_string
-            :
-            props.bucket.doc_count <= 2 ? 
-                <>{props.bucket.MinAno.value_as_string} ... {props.bucket.MaxAno.value_as_string}</>
-            :
-            <Link href="#histogram" data-bs-toggle="modal" data-bs-target="#modal-histogram" data-key={props.term} data-value={props.bucket.key} data-query={`./api/histogram?${modifySearchParams(props.searchParams, "term", props.term)}&histogram_value=${encodeURIComponent(props.bucket.key)}`}>
-                {props.bucket.MinAno.value_as_string} ... {props.bucket.MaxAno.value_as_string}
-            </Link>
-            }
+        <td className="text-end text-nowrap">
+            {props.bucket.MinAno && props.bucket.MaxAno ?
+                props.group != "" ?
+                    <>{props.bucket.MinAno.value_as_string} ... {props.bucket.MaxAno.value_as_string}</>
+                    :
+                    <Link href="#histogram" data-bs-toggle="modal" data-bs-target="#modal-histogram" data-key={props.term} data-value={props.bucket.key} data-query={`./api/histogram?${modifySearchParams(new URLSearchParams(props.searchParams), "term", props.term)}&histogram_value=${encodeURIComponent(props.bucket.key)}`}>
+                        {props.bucket.MinAno.value_as_string} ... {props.bucket.MaxAno.value_as_string}
+                    </Link>
+                : ""}
         </td>
     </tr>
 }
 
-
-function ShowBucketLine(props: {bucket: any, index: number, term: string, group: string, filtersUsed: Record<string, string[]>, searchParams: ReadonlyURLSearchParams, sortedGroup: [string, number][]}){
+function ShowBucketLine(props: {bucket: any, index: number, term: string, group: string, filtersUsed: Record<string, string[]>, searchParams: URLSearchParams, sortedGroup: [string, number][]}){
     return <div className="mx-2">
-        <Link href={`/indices?${addSearchParams(props.searchParams, props.term, `"${props.bucket.key}"`)}`}>{props.bucket.key}</Link> ({props.bucket.doc_count})
+        <Link href={`/indices?${addSearchParams(new URLSearchParams(props.searchParams), props.term, `"${props.bucket.key}"`)}`}>{props.bucket.key}</Link> ({props.bucket.doc_count})
     </div>
 }
 
 function HideZero({n}:{n:number}){
     return <>{n>0?n:""}</>
 }
-
 
 const INITIAL_STATE = {key:"Termo",value:"Valor",query:"/api/histogram"};
 function HistogramModal(){

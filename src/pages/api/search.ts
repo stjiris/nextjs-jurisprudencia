@@ -58,7 +58,17 @@ export default LoggerApi(async function searchHandler(
         max_analyzed_offset: 1000000
     }
     const authed = await authenticatedHandler(req);
-    const result = await search(queryObj, sfilters, page, {}, RESULTS_PER_PAGE, {sort, highlight, track_scores: true, _source: useSource}, authed)
+    // Read rpp (results per page) from query, support 'all' as a special value
+    let rpp = 10;
+    if (typeof req.query.rpp === 'string') {
+        if (req.query.rpp === 'all') {
+            rpp = 10000; // Arbitrary high number for 'all'
+        } else {
+            const parsed = parseInt(req.query.rpp);
+            if (!isNaN(parsed) && parsed > 0) rpp = parsed;
+        }
+    }
+    const result = await search(queryObj, sfilters, page, {}, rpp, {sort, highlight, track_scores: true, _source: useSource}, authed)
     const r: SearchHandlerResponse = [];
     for( let hit of result.hits.hits ){
         const {Texto, "Relator Nome Completo": _completo, HASH: _HASH, ...rest} = hit._source!

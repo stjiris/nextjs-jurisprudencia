@@ -2,7 +2,7 @@
 import { scaleSequential } from 'd3-scale';
 import { select, selectAll } from 'd3-selection'
 import { max } from 'd3-array'
-import { interpolateReds } from 'd3-scale-chromatic';
+import { interpolateBlues, interpolateBuGn } from 'd3-scale-chromatic';
 
 interface CellData {
   source: string;
@@ -73,9 +73,20 @@ const fade = (d: any) => {
     select('.tooltip').style("opacity", 0);
 }
 
-const MatrixChart = ( { data, onDataSelect }: { data: any,  onDataSelect: any } ) => {
+const DEFAULT_TERM_LIMIT = 20;
+
+interface MatrixChartProps {
+  data: any;
+  xTerms: string[];
+  yTerms: string[];
+  xField: string;
+  yField: string;
+  onDataSelect: any;
+}
+const MatrixChart = ({ data, xTerms, yTerms, xField, yField, onDataSelect }: MatrixChartProps) => {
   const svgRef = useRef(null);
   const chartRef = useRef(null);
+
   const reorderMatrixByCount = (matrixData: MatrixAggregationBucket[]) => {
     if (!matrixData || matrixData.length === 0) {
       return [[], [], []]; 
@@ -84,6 +95,7 @@ const MatrixChart = ( { data, onDataSelect }: { data: any,  onDataSelect: any } 
     const terms1 = matrixData
       .map((bucket) => ({ key: bucket.key, count: bucket.doc_count }))
       .sort((a, b) => b.count - a.count)
+      .slice(0, DEFAULT_TERM_LIMIT)
       .map((bucket) => bucket.key);
   
     const allBuckets = matrixData.flatMap((bucket) => bucket.matrix.buckets);
@@ -178,32 +190,39 @@ const MatrixChart = ( { data, onDataSelect }: { data: any,  onDataSelect: any } 
     };
   };
   useEffect(() => {
-    const margin = { top: 200, right: 50, bottom: 50, left: 200 };
+    // Calculate dynamic top margin based on longest X-axis term
+    const fontSize = 14; // px
+    const padding = 32; // px
+    const longestTermLength = Math.max(...(xTerms.map(t => t.length)));
+    const dynamicTopMargin = Math.max(120, fontSize * longestTermLength + padding);
+    const margin = { top: 160, right: 50, bottom: 30, left: 200 };
     const svg = select(svgRef.current);
     if (!data || !data.matrix|| !data.matrix.buckets) {
       console.error('Invalid data format');
       return;
     }
-
     const matrixData = data.matrix.buckets;
-    if (!Array.isArray(matrixData)) {
-      console.error('Invalid matrix data format');
-      return;
-    }
-
-    const [terms1, terms2, x] = reorderFunction(matrixData) as [string[], string[], number[][]];;
-
+    const terms1 = yTerms;
+    const terms2 = xTerms;
+    const x: number[][] = terms1.map(term1 =>
+      terms2.map(term2 => {
+        const bucket = matrixData.find(
+          (b: any) => b.key === term1 && b.matrix.buckets.find((bucket: any) => bucket.key === term2)
+        );
+        return bucket ? bucket.matrix.buckets.find((bucket: any) => bucket.key === term2)?.doc_count || 0 : 0;
+      })
+    );
     const rowCount = terms1.length;
     const colCount = terms2.length;
+    const cellSize = 40;
     const chartW = colCount * cellSize;
     const chartH = rowCount * cellSize;
     const resultdata = layout(terms1, terms2, x);
-    const color = scaleSequential(interpolateReds)
-    .domain([0,max(resultdata, d => d.value)]);
-
+    const color = scaleSequential(interpolateBlues)
+      .domain([0, max(resultdata, d => d.value)]);
     svg.attr("width", chartW + margin.left + margin.right)
     .attr("height", chartH + margin.top + margin.bottom);
-
+    svg.selectAll('*').remove();
     const chart = svg.append('g').attr('transform', `translate(${margin.left}, ${margin.top})`);
 
     const tooltip = svg.append("g")
@@ -228,8 +247,18 @@ const MatrixChart = ( { data, onDataSelect }: { data: any,  onDataSelect: any } 
         .attr("height", (d) => d.h * 0.95)
         .attr("width", (d) => d.w * 0.95)
         .style("fill", (d) => (d.value ? color(d.value) : "white"))
+        .style("stroke", "#fff")
+        .style("cursor", d => d.value ? 'pointer' : 'default')
         .on("mouseover", highlight)
-        .on("mouseout", fade);
+        .on("mouseout", fade)
+        .on("click", function(event, d) {
+          if (!d.value) return;
+          // Open search with both metadata filters
+          const params = new URLSearchParams();
+          params.append(yField, d.source);
+          params.append(xField, d.target);
+          window.open(`/pesquisa?${params.toString()}`, '_blank');
+        });
 
     cell.append("text")
         .attr("class", "value")
@@ -292,12 +321,13 @@ const MatrixChart = ( { data, onDataSelect }: { data: any,  onDataSelect: any } 
       .enter()
       .append("text")
       .attr("class",'target')
-      .attr("transform", (d, i) => `translate(${d.x + 2}, ${-10}) rotate(-90)`)
+      .attr("transform", (d, i) => `translate(${d.x + cellSize/2}, ${-1}) rotate(-45)`)
       .attr("text-anchor", "start")
-      .attr("dominant-baseline", "text-before-edge")
+      .attr("dominant-baseline", "middle")
+      .style("font-size", fontSize + "px")
       .text((d,i) => terms2[i])
       .append('title')
-      .text((d, i) => terms2[i]); ;
+      .text((d, i) => terms2[i]);
 
     tooltip.append("rect")
         .style("fill", 'white')
@@ -312,16 +342,10 @@ const MatrixChart = ( { data, onDataSelect }: { data: any,  onDataSelect: any } 
         svg.selectAll("text.source").remove();
         svg.selectAll("text.target").remove();
     }; 
-  }, [data, reorderFunction]);
+  }, [data, xTerms, yTerms, xField, yField, onDataSelect]);
 
-  return <div>
-    <button onClick={handleReorderCount} className="apply-button">
-        Ordenar por contagem
-    </button>
-    <button onClick={handleReorderName} className="apply-button">
-        Ordenar alfabéticamente
-    </button>
-    <div ref={chartRef} >
+  return <div style={{overflowX: 'auto', maxWidth: '100%'}}>
+    <div ref={chartRef}>
       <svg ref={svgRef} />
     </div>  
 </div>

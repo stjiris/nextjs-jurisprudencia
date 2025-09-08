@@ -285,6 +285,45 @@ export function GenericInputSimple({ accessKey, doc }: InputProps<Jurisprudencia
     </InputRow>;
 }
 
+export function GenericInputOriginalOnly({ accessKey, doc }: InputProps<JurisprudenciaDocumentGenericKey>) {
+    let [, setUpdateObject] = useContext(UpdateContext);
+    let initialValue = doc[accessKey.key] || { Original: [], Show: [], Index: [] };
+    let [toSave, setToSave] = useState<boolean>(false);
+
+    let originalRef = useRef<HTMLTextAreaElement>(null);
+
+    let update = () => {
+        if (!originalRef.current) return;
+        // Keep the existing Show and Index values, only update Original
+        let toBeNewValue = { 
+            Original: originalRef.current.value.split("\n"), 
+            Show: initialValue.Show, 
+            Index: initialValue.Index 
+        };
+        if (JSON.stringify(toBeNewValue, ["Original", "Show", "Index"]) === JSON.stringify(initialValue, ["Original", "Show", "Index"])) {
+            setUpdateObject(({ [accessKey.key]: _key_to_remove, ...old }) => ({ ...old }));
+            setToSave(false);
+        }
+        else {
+            setUpdateObject((old) => ({ ...old, [accessKey.key]: toBeNewValue }));
+            setToSave(true);
+        }
+    };
+
+    let toSaveString = toSave ? "*" : "";
+
+    return <>
+        <div className="input-group">
+            <small className="input-group-text w-25">{accessKey.name}{toSaveString}</small>
+            <div className="form-control w-75">
+                <div className="col-12">
+                    <textarea ref={originalRef} className="form-control" defaultValue={initialValue.Original.join("\n")} rows={initialValue.Original.length} onInput={(evt) => update()} />
+                </div>
+            </div>
+        </div>
+    </>
+}
+
 function InputRow({ accessKey, toSave, children }: { accessKey: JurisprudenciaKey, toSave: boolean, children: React.ReactNode }) {
     return <div className="input-group">
         <small className={"input-group-text w-25 " + (toSave ? "fw-bold" : "")}>{accessKey.name}{toSave ? "*" : ""}</small>

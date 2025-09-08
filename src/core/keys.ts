@@ -105,6 +105,7 @@ export async function updateKey(key: JurisprudenciaDocumentKey, update: Partial<
     if (update.filtersSuggest || update.filtersShow || update.indicesList) update.active = true;
     if (update.editorRestricted) update.editorSuggestions = true;
     if (update.editorSuggestions) update.editorEnabled = true;
+    if (update.editorOriginalOnly) update.editorEnabled = true;
 
     // Can never update internal key
     update = makeValidValue({ ...hit._source!, ...update, key: key })

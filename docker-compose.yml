@@ -30,33 +30,6 @@ services:
       redis:
         condition: service_healthy
     restart: unless-stopped
-  server-dev:
-    build:
-      context: .
-      dockerfile: ./Dockerfile_dev
-      args:
-        NEXT_BASE_PATH: ${NEXT_DEV_BASE_PATH}
-    environment:
-      ES_URL: http://elasticsearch:9200
-      ES_USER: elastic
-      ES_PASS: elasticsearch
-      NEXT_BASE_PATH: ${NEXT_DEV_BASE_PATH}
-      PUBLIC_STATES: ${PUBLIC_STATES}
-      RSS_FOLDER: /rss
-    ports:
-      - "${SERVER_DEV_HOST:-127.0.0.1}:${SERVER_DEV_PORT:-3000}:3000"
-    volumes:
-      - excel_data:/usr/src/app/files
-      - .:/usr/src/app
-      - rss_data:/rss
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    restart: unless-stopped
-    profiles:
-      - dev
   clitools:
     build:
       context: ./compose/clitools

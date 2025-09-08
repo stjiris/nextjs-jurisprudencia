@@ -5,6 +5,7 @@ import { getAllKeys } from "@/core/keys";
 import { LoggerServerSideProps } from "@/core/logger-api";
 import { withAuthentication } from "@/core/user/authenticate";
 import { JurisprudenciaKey, canBeActive, canHaveSuggestions } from "@/types/keys";
+import { isJurisprudenciaDocumentGenericKey } from "@stjiris/jurisprudencia-document";
 import dynamic from "next/dynamic";
 import { NextRouter, useRouter } from "next/router";
 import { CSSProperties, useEffect, useState } from "react";
@@ -32,7 +33,7 @@ export default function ExcelPage() {
                             <th className="text-center" colSpan={2}>Filtros</th>
                             <th className="text-center" colSpan={2}>Indices</th>
                             <th className="text-center" colSpan={1}>Documento</th>
-                            <th className="text-center" colSpan={3}>Edição Simples</th>
+                            <th className="text-center" colSpan={4}>Edição Simples</th>
                         </tr>
                         <tr>
                             <th className="text-center table-secondary">#</th>
@@ -54,6 +55,7 @@ export default function ExcelPage() {
                             <th className="text-center">Ativo</th>
                             <th className="text-center">Sugestões</th>
                             <th className="text-center">Restrito</th>
+                            <th className="text-center">Apenas Original</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -89,6 +91,7 @@ function ShowFilterRow({ innitialKey, update: updateOrder }: { innitialKey: Juri
     let disableEditorSuggestions = !canHaveSuggestions(jurisprudenciaKey.key);
     let EditorSuggestions = () => disableEditorSuggestions ? <></> : <BooleanInput attr="editorSuggestions" />
     let EditorRestricted = () => disableEditorSuggestions ? <></> : <BooleanInput attr="editorRestricted" />
+    let EditorOriginalOnly = () => !isJurisprudenciaDocumentGenericKey(jurisprudenciaKey.key) ? <></> : <BooleanInput attr="editorOriginalOnly" />
 
     return <>
         <tr className="align-middle">
@@ -110,6 +113,7 @@ function ShowFilterRow({ innitialKey, update: updateOrder }: { innitialKey: Juri
             <td className="text-center"><BooleanInput attr="editorEnabled" /></td>
             <td className="text-center"><EditorSuggestions /></td>
             <td className="text-center"><EditorRestricted /></td>
+            <td className="text-center"><EditorOriginalOnly /></td>
         </tr>
         {edit && <tr style={{ "--bs-table-accent-bg": "initial" } as CSSProperties}>
             <td colSpan={9}><ReactQuill theme="snow" value={desc} onChange={setDesc} /></td>
