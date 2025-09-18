@@ -102,7 +102,7 @@ export const padZero = (num: number | string, size: number = 4) => {
     return s;
 }
 
-export function populateFilters(filters: SearchFilters, body: Partial<Record<string, string | string[]>> = {}, afters = ["MinAno", "MaxAno"]) {
+export function populateFilters(filters: SearchFilters, body: Partial<Record<string, string | string[]>> = {}, afters = ["MinDate", "MaxDate"]) {
     const filtersUsed = {} as Record<string, string[]>;
     for (let key in aggs) {
         let aggName = key;
@@ -178,29 +178,35 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
     }
 
     let dateWhen = "pre" as keyof SearchFilters;
-    if (afters.indexOf("MinAno") >= 0 || afters.indexOf("MaxAno") >= 0) dateWhen = "after";
-    let minAno = Array.isArray(body.MinAno) ? body.MinAno[0] : body.MinAno
-    let maxAno = Array.isArray(body.MaxAno) ? body.MaxAno[0] : body.MaxAno
+    if (afters.indexOf("MinDate") >= 0 || afters.indexOf("MaxDate") >= 0) dateWhen = "after";
+    let minDate = Array.isArray(body.MinDate) ? body.MinDate[0] : body.MinDate;
+    let maxDate = Array.isArray(body.MaxDate) ? body.MaxDate[0] : body.MaxDate;
 
-    if (minAno || maxAno) {
+    if (minDate || maxDate) {
         const rangeQuery: any = {
-            range: {
-                [DATA_FIELD]: {
-                    format: "yyyy-MM-dd||dd/MM/yyyy"
-                }
+        range: {
+            [DATA_FIELD]: {
+            format: "dd/MM/yyyy"
             }
-        };
-        if (minAno) {
-            rangeQuery.range[DATA_FIELD].gte = minAno;
-        filtersUsed.MinAno = [minAno];
         }
-        if (maxAno) {
-            rangeQuery.range[DATA_FIELD].lte = maxAno;
-        filtersUsed.MaxAno = [maxAno];
-                }
+        };
+        if (minDate) {
+            const [year, month, day] = minDate.split('-');
+            const formattedMinDate = `${day}/${month}/${year}`;
+
+            rangeQuery.range[DATA_FIELD].gte = formattedMinDate;
+            filtersUsed.MinDate = [formattedMinDate];
+        }
+        if (maxDate) {
+            const [year, month, day] = maxDate.split('-');
+            const formattedMaxDate = `${day}/${month}/${year}`;
+
+            rangeQuery.range[DATA_FIELD].lte = formattedMaxDate;
+            filtersUsed.MaxDate = [formattedMaxDate];
+        }
         filters[dateWhen].push(rangeQuery);
     }
-    
+
     if (body.notHasField) {
         filtersUsed.notHasField = (Array.isArray(body.notHasField) ? body.notHasField : [body.notHasField]).filter(o => o.length > 0);
         filtersUsed.notHasField.forEach(field => {
@@ -245,21 +251,6 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
                 }
             }
         });
-    }
-    //Lógica backend do calendário
-    if (body.DataExata) {
-        const selectedDate = Array.isArray(body.DataExata) ? body.DataExata[0] : body.DataExata;
-        if (selectedDate) {
-            // Converter yyyy-MM-dd para dd/MM/yyyy 
-            const [year, month, day] = selectedDate.split('-');
-            const formattedDate = `${day}/${month}/${year}`;
-            filtersUsed["Data"] = [formattedDate];
-            filters.pre.push({
-                term: {
-                    [DATA_FIELD]: formattedDate
-                }
-            });
-        }
     }
     return filtersUsed;
 }

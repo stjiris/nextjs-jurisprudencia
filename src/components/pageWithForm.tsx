@@ -1,20 +1,20 @@
 import { AggregationsMaxAggregate, AggregationsMinAggregate, long, SearchTotalHits } from "@elastic/elasticsearch/lib/api/types";
 import { GetServerSideProps, GetServerSidePropsContext, PreviewData } from "next";
-import search, { createQueryDslQueryContainer, DEFAULT_AGGS, populateFilters } from "@/core/elasticsearch"
+import search, { createQueryDslQueryContainer, DEFAULT_AGGS, populateFilters, SearchFilters } from "@/core/elasticsearch"
 import { ParsedUrlQuery } from "querystring";
 import { authenticatedHandler } from "@/core/user/authenticate";
+import { ReadonlyURLSearchParams } from "next/navigation";
 
 export interface FormProps {
     count: number,
     filtersUsed: Record<string, string[]>,
-    minAno: number,
-    maxAno: number
 }
 
 export function withForm<
     Props extends FormProps,
     Params extends ParsedUrlQuery = ParsedUrlQuery,
     Preview extends PreviewData = PreviewData>(sub: (ctx: GetServerSidePropsContext, formProps: FormProps) => Promise<Props>): GetServerSideProps<Props, Params, Preview>{
+
     return async (ctx) => {
         const sfilters = {pre: [], after: []};
         const filtersUsed = populateFilters(sfilters, ctx.query)
@@ -30,12 +30,10 @@ export function withForm<
                 total = (result.hits.total as SearchTotalHits).value;
             }
         }
-        
+
         let formProps = {
             count: total,
             filtersUsed: filtersUsed,
-            minAno: parseInt((result.aggregations?.MinAno as AggregationsMinAggregate).value_as_string || "") || 0,
-            maxAno: parseInt((result.aggregations?.MaxAno as AggregationsMaxAggregate).value_as_string || "") || Infinity
         }
         return {props: await sub(ctx, formProps)}
     }

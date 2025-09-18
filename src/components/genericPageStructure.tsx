@@ -30,7 +30,7 @@ export default function GenericPage(props: {keys_to_remove?: string[], children:
     </KeysProvider>
 }
 
-export function GenericPageWithForm(props: {keys_to_remove?: string[], count: number, children: React.ReactNode, title: string, filtersUsed: Record<string, string[]>, minAno: number, maxAno: number, escapeChildren?: React.ReactNode}){
+export function GenericPageWithForm(props: {keys_to_remove?: string[], count: number, children: React.ReactNode, title: string, filtersUsed: Record<string, string[]>, escapeChildren?: React.ReactNode}){
     return <KeysProvider>
         <AuthProvider>
             <MetaHead title={props.title}/>
@@ -38,7 +38,7 @@ export function GenericPageWithForm(props: {keys_to_remove?: string[], count: nu
             <main className='container-fluid'>
                 <div className="row">
                     <div className="col-12 col-sm-4 col-md-3 col-xl-2 d-print-none infofilters">
-                        <SearchForm count={props.count} filtersUsed={props.filtersUsed} minAno={props.minAno} maxAno={props.maxAno}></SearchForm>
+                        <SearchForm count={props.count} filtersUsed={props.filtersUsed}></SearchForm>
                     </div>
                     <div className="col-12 col-sm-8 col-md-9 col-xl-10" id="main">
                         {props.children}

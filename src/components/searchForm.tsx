@@ -28,34 +28,86 @@ function submit(form: HTMLFormElement, router: AppRouterInstance) {
     router.push(`?${searchParams.toString()}`);
 }
 
-export default function SearchForm({ count, filtersUsed, minAno, maxAno }: { count: number, filtersUsed: Record<string, string[]>, minAno: number, maxAno: number }) {
-    const form = useRef<HTMLFormElement>(null);
-    const dataInicio = useRef<HTMLInputElement>(null);
-    const dataFim = useRef<HTMLInputElement>(null);
+function parseISOToLocalDate(iso?: string | null): Date | null {
+  if (!iso) return null;
+  const parts = iso.split("-");
+  if (parts.length !== 3) return null;
+  const [y, m, d] = parts.map(Number);
+  if ([y, m, d].some(n => Number.isNaN(n))) return null;
+  return new Date(y, m - 1, d);
+}
+
+function isoDateOnly(value?: string | null): string {
+  if (!value) return "";
+  return value.length >= 10 ? value.slice(0, 10) : value;
+}
+
+function firstFilter(filtersUsed: Record<string, string[]>, key: string): string | undefined {
+  return (filtersUsed && filtersUsed[key] && filtersUsed[key].length > 0) ? filtersUsed[key][0] : undefined;
+}
+
+export default function SearchForm({ count, filtersUsed }: { count: number, filtersUsed: Record<string, string[]>}) {
+    const form = useRef<HTMLFormElement | null>(null);
+    const dataInicio = useRef<HTMLInputElement | null>(null);
+    const dataFim = useRef<HTMLInputElement | null>(null);
     const router = useNavRouter();
-    let resetDatas = useCallback(() => {
+
+    const rawMin = firstFilter(filtersUsed, "MinDate") ?? firstFilter(filtersUsed, "MinData") ?? undefined;
+    const rawMax = firstFilter(filtersUsed, "MaxDate") ?? firstFilter(filtersUsed, "MaxData") ?? undefined;
+
+    const minDateStr = isoDateOnly(rawMin);
+    const maxDateStr = isoDateOnly(rawMax);
+
+    // If you need Date objects for logic:
+    const minDateObj = parseISOToLocalDate(minDateStr);
+    const maxDateObj = parseISOToLocalDate(maxDateStr);
+
+    const resetDatas = useCallback(() => {
         if (dataInicio.current) dataInicio.current.value = "";
         if (dataFim.current) dataFim.current.value = "";
     }, [dataFim, dataInicio]);
 
+    function validateStartEnd(): boolean {
+        const startVal = dataInicio.current?.value || "";
+        const endVal = dataFim.current?.value || "";
+
+        if (dataFim.current && 'setCustomValidity' in dataFim.current) {
+            (dataFim.current as HTMLInputElement).setCustomValidity("");
+        }
+
+        if (startVal && endVal && startVal > endVal) {
+            if (dataFim.current && 'setCustomValidity' in dataFim.current) {
+                (dataFim.current as HTMLInputElement).setCustomValidity("Data final deve ser igual ou posterior à data inicial");
+            }
+            return false;
+        }
+        return true;
+    }
+
     useEffect(() => {
         const element = form.current;
         const handleSubmit = () => {
+            const okDates = validateStartEnd();
+            if (!okDates) {
+                element?.reportValidity();
+                return;
+            }
+
             if (element?.checkValidity()) {
                 submit(element, router);
-                let valueDataInicio = dataInicio.current?.value;
-                let valueDataFim = dataFim.current?.value;
-                if (dataInicio.current && valueDataInicio) dataInicio.current.value = valueDataInicio;
-                if (dataFim.current && valueDataFim) dataFim.current.value = valueDataFim;
+                const valueDataInicio = dataInicio.current?.value;
+                const valueDataFim = dataFim.current?.value;
+                if (dataInicio.current && valueDataInicio)
+                    dataInicio.current.value = valueDataInicio;
+                if (dataFim.current && valueDataFim)
+                    dataFim.current.value = valueDataFim;
             } else {
                 element?.reportValidity();
             }
         };
         element?.addEventListener("change", handleSubmit);
-        return () => {
-            element?.removeEventListener("change", handleSubmit);
-        };
-    }, [form, router]);
+        return () => element?.removeEventListener("change", handleSubmit);
+    }, [form, router, minDateStr, maxDateStr]);
 
     const search = useSearchParams();
     const q = search.get("q");
@@ -215,37 +267,44 @@ export default function SearchForm({ count, filtersUsed, minAno, maxAno }: { cou
                     </div>
                 )}
                 <div className="d-flex my-1 pb-1 align-items-baseline">
-                    <small className="pe-1 text-white"><i className="bi bi-dash"></i></small>
+                    <small className="pe-1 text-white"><i className="bi bi-calendar3"></i></small>
                     <div className="input-group input-group-sm">
                         <div className="input-group-prepend flex-shrink">
                             <label htmlFor="data_inicio" className="input-group-text rounded-0 p-1">De:</label>
                         </div>
-                        <input id="data_inicio" type="number" className="form-control form-control-sm rounded-0 p-1" name="MinAno" min={minAno} max={maxAno} defaultValue={search.get("MinAno") || ""} step={1} placeholder={`${minAno}`} ref={dataInicio} />
+                        <input
+                            id="data_inicio"
+                            type="date"
+                            name="MinDate"
+                            min={minDateStr || undefined}
+                            max={maxDateStr || undefined}
+                            defaultValue={search.get("MinDate") || minDateStr || ""}
+                            ref={dataInicio as React.RefObject<HTMLInputElement>}
+                            onChange={() => { validateStartEnd(); }}
+                        />
                     </div>
-                    <div className="input-group input-group-sm">
-                        <div className="input-group-prepend flex-shrink">
-                            <label htmlFor="data_fim" className="input-group-text rounded-0 p-1">Até:</label>
-                        </div>
-                        <input id="data_fim" type="number" className="form-control form-control-sm rounded-0 p-1" name="MaxAno" min={minAno} max={maxAno} defaultValue={search.get("MaxAno") || ""} step={1} placeholder={`${maxAno}`} ref={dataFim} />
-                    </div>
+                    
                 </div>
-
-                {/* Calendário form para data especifica */}
                 <div className="d-flex my-1 pb-1 align-items-baseline">
                     <small className="pe-1 text-white"><i className="bi bi-calendar3"></i></small>
                     <div className="input-group input-group-sm">
                         <div className="input-group-prepend flex-shrink">
-                            <label htmlFor="data_ruling" className="input-group-text rounded-0 p-1">Data</label>
+                            <label htmlFor="data_fim" className="input-group-text rounded-0 p-1">Até:</label>
                         </div>
                         <input
-                            id="data_ruling"
+                            id="data_fim"
                             type="date"
-                            className="form-control form-control-sm rounded-0 p-1"
-                            name="DataExata"
-                            defaultValue={search.get("DataExata") || ""}
+                            name="MaxDate"
+                            min={minDateStr || undefined}
+                            max={maxDateStr || undefined}
+                            defaultValue={search.get("MaxDate") || maxDateStr || ""}
+                            ref={dataInicio as React.RefObject<HTMLInputElement>}
+                            onChange={() => { validateStartEnd(); }}
                         />
                     </div>
                 </div>
+
+            
                 <div className="d-flex align-items-baseline">
                     <small className="pe-1 text-white"><i className="bi bi-dash"></i></small>
                     <div className="my-1 pb-1 align-items-baseline form-check">
@@ -443,8 +502,9 @@ function InvertFilter({ accessKey, currValue }: { accessKey: string, currValue: 
     const searchParams = useSearchParams();
     const isNeg = currValue.startsWith("not:");
     const newValue = isNeg ? currValue.replace(/^not:/, "") : `not:${currValue}`;
+    const params = new URLSearchParams(searchParams.toString());
     return (
-        <Link className="text-body" href={`?${replaceSearchParams(searchParams, accessKey, newValue, currValue)}`}>
+        <Link className="text-body" href={`?${replaceSearchParams(params, accessKey, newValue, currValue)}`}>
             <i className={`mx-1 bi bi-dash-circle${isNeg ? "-fill" : ""}`}></i>
             <i className={`me-1 bi bi-plus-circle${!isNeg ? "-fill" : ""}`}></i>
         </Link>

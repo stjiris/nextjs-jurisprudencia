@@ -28,20 +28,20 @@ export const getServerSideProps: GetServerSideProps<EstatisticaProps> = async (c
     return {props: {
         total: total,
         filtersUsed: filtersUsed,
-        minAno: parseInt((result.aggregations?.MinAno as AggregationsMinAggregate).value_as_string || "") || 0,
-        maxAno: parseInt((result.aggregations?.MaxAno as AggregationsMaxAggregate).value_as_string || "") || Infinity
+        minDate: (result.aggregations?.MinDate as AggregationsMinAggregate).value_as_string || "",
+        maxDate: (result.aggregations?.MaxDate as AggregationsMaxAggregate).value_as_string || ""
     }}
 }
 
 type EstatisticaProps = {
     filtersUsed: Record<string, string[]>
-    minAno: number,
-    maxAno: number,
+    minDate: string,
+    maxDate: string,
     total: number
 }
 
 export default function Estatistica(props: EstatisticaProps){
-    return <GenericPageWithForm filtersUsed={props.filtersUsed} minAno={props.minAno} maxAno={props.maxAno} count={props.total} title="Jurisprudência STJ - Estatística">
+    return <GenericPageWithForm filtersUsed={props.filtersUsed} count={props.total} title="Jurisprudência STJ - Estatística">
         <div className="alert alert-warning">
             Sem estatísticas ainda
         </div>
