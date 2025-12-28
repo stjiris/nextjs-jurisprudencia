@@ -6,7 +6,7 @@ import { LoggerServerSideProps } from '@/core/logger-api'
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
   LoggerServerSideProps(ctx);
-  return {redirect: {destination: "/pesquisa"}, props: {}}
+  return {/* redirect: {destination: "/pesquisa"}, */ props: {}}
 }
 
 export default function Home() {

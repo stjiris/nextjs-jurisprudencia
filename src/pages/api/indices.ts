@@ -11,6 +11,7 @@ export default LoggerApi(async function indicesCsvHandler(
     req: NextApiRequest,
     res: NextApiResponse<IndicesProps>
 ) {
+
     const term = Array.isArray(req.query.term) ? req.query.term[0] : req.query.term || "Área";
     let group = "Secção";
     if ("group" in req.query) {
@@ -18,18 +19,20 @@ export default LoggerApi(async function indicesCsvHandler(
     }
 
     const authed = await authenticatedHandler(req);
+
     let keys = await getAllKeys(authed);
     let canGroup = keys.find(k => k.key === group)?.indicesGroup;
     let canAggre = keys.find(k => k.key === term)?.indicesList;
     if (!canGroup) {
         group = "";
     }
+
     if (!canAggre) {
         return res.json({ termAggregation: { buckets: [] }, sortedGroup: [] })
     }
-
     const sfilters = { pre: [], after: [] };
     populateFilters(sfilters, req.query, []);
+
     const result = await search(createQueryDslQueryContainer(req.query.q), sfilters, 0, listAggregation(term, group), 0, {}, authed)
 
 
@@ -54,6 +57,7 @@ export default LoggerApi(async function indicesCsvHandler(
             sortedGroup.push([INDICES_OTHERS, othersCount])
         }
     }
+
     return res.json({
         termAggregation: result.aggregations![term] as AggregationsStringTermsAggregate,
         sortedGroup

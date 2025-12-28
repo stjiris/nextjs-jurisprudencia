@@ -2,10 +2,10 @@ import { BadgeFromState } from "@/components/BadgeFromState"
 import { GenericPageWithForm } from "@/components/genericPageStructure"
 import { Loading } from "@/components/loading"
 import { FormProps, withForm } from "@/components/pageWithForm"
-import { modifySearchParams, SelectNavigate } from "@/components/select-navigate"
+import { modifySearchParams, SelectNavigate } from "@/components/SelectNavigate"
 import { useFetch } from "@/components/useFetch"
 import { useKeysFromContext } from "@/contexts/keys"
-import search, { createQueryDslQueryContainer, DEFAULT_AGGS, getSearchedArray, parseSort, populateFilters, RESULTS_PER_PAGE } from "@/core/elasticsearch"
+import search, { createQueryDslQueryContainer, DEFAULT_AGGS, DEFAULT_RESULTS_PER_PAGE, getSearchedArray, parseSort, populateFilters } from "@/core/elasticsearch"
 import { LoggerServerSideProps } from "@/core/logger-api"
 import { saveSearch } from "@/core/track-search"
 import { JurisprudenciaKey } from "@/types/keys"
@@ -27,7 +27,8 @@ export const getServerSideProps = withForm<PesquisaProps>(async (ctx, formProps)
     LoggerServerSideProps(ctx);
     let searchId = await saveSearch(ctx.resolvedUrl)
     let searchedArray = await getSearchedArray(Array.isArray(ctx.query.q) ? ctx.query.q.join(" ") : ctx.query.q || "")
-    let pages = Math.ceil(formProps.count / RESULTS_PER_PAGE)
+    let rpp = parseInt(ctx.query.rpp as string || "10")
+    let pages = Math.ceil(formProps.count / rpp)
 
     return {
         ...formProps,
@@ -39,106 +40,63 @@ export const getServerSideProps = withForm<PesquisaProps>(async (ctx, formProps)
 
 export default function Pesquisa(props: PesquisaProps){
     const searchParams = useSearchParams();
-    const [resultsPerPage, setResultsPerPage] = useState<string>("10");
-    const [page, setPage] = useState<number>(0);
-    const [showAdvanced, setShowAdvanced] = useState(false);
-    const [advancedRows, setAdvancedRows] = useState([{ op: "", term: "" }]);
-    const freeTextParam = searchParams.get("q") || "";
-    const [freeText, setFreeText] = useState(freeTextParam);
-    const results = useFetch<SearchHandlerResponse>(`/api/search?${searchParams}&rpp=${resultsPerPage}&page=${page}&q=${encodeURIComponent(freeText)}`,[])
-
-    function handleRppChange(e: React.ChangeEvent<HTMLSelectElement>) {
-        setResultsPerPage(e.target.value);
-        setPage(0); // Reset to first page when changing rpp
-    }
-
-    // Advanced search logic
-    function handleAdvancedChange(idx: number, field: "op" | "term", value: string) {
-        setAdvancedRows(rows => rows.map((row, i) => i === idx ? { ...row, [field]: value } : row));
-    }
-    function addAdvancedRow() {
-        setAdvancedRows(rows => [...rows, { op: "AND", term: "" }]);
-    }
-    function removeAdvancedRow(idx: number) {
-        setAdvancedRows(rows => rows.length > 1 ? rows.filter((_, i) => i !== idx) : rows);
-    }
-    function buildAdvancedQuery() {
-        return advancedRows.map((row, i) => `${i > 0 ? row.op : ""} ${row.term}`.trim()).join(" ").replace(/ +/g, " ");
-    }
-    function handleAdvancedApply() {
-        setFreeText(buildAdvancedQuery());
-    }
-    function handleFreeTextChange(e: React.ChangeEvent<HTMLInputElement>) {
-        setFreeText(e.target.value);
-    }
-
-    // Calculate number of pages based on resultsPerPage and props.count
-    const totalResults = props.count || 0;
-    const rpp = parseInt(resultsPerPage);
-    const pages = rpp > 0 ? Math.ceil(totalResults / rpp) : 1;
+    const results = useFetch<SearchHandlerResponse>(`/api/search?${searchParams}`,[])
 
     return <GenericPageWithForm {...props} title="Jurisprudência STJ - Pesquisa">
+        {results ? 
+            results.length > 0 ? 
+                <ShowResults results={results} searchParams={searchParams} searchInfo={props}/> :
+                <NoResults /> :
+            <Loading />
+        }
+    </GenericPageWithForm>
+}
+
+function ShowResults({results, searchParams, searchInfo}: {results: SearchHandlerResponse, searchParams: ReadonlyURLSearchParams, searchInfo: PesquisaProps}){
+
+    const sort = searchParams.get("sort") || "des"
+    let page = parseInt(searchParams.get("page") || "0")
+    const rpp = parseInt(searchParams.get("rpp") || "10")
+    
+    return <>
         <div className="mb-2 d-flex align-items-center gap-2">
-            <label htmlFor="rpp-select" className="mb-0"><b>Resultados por página:&nbsp;</b></label>
-            <select id="rpp-select" value={resultsPerPage} onChange={handleRppChange}>
+            <SelectNavigate name="rpp-select" className="me-1" defaultValue={rpp} valueToHref={(v, params) => {
+                                                                                                    const newParams = modifySearchParams(params, "rpp", v);
+                                                                                                    return `/pesquisa?${modifySearchParams(newParams, "page", "0")}`;
+                                                                                                } }>
                 <option value="10">10</option>
                 <option value="25">25</option>
                 <option value="50">50</option>
                 <option value="100">100</option>
-            </select>
-            <SelectNavigate name="sort" className="me-2" defaultValue={searchParams.get("sort") || "des"} valueToHref={(v, params) => `/pesquisa?${modifySearchParams(params, "sort", v)}` }>
+                <option value="500">500</option>
+            </SelectNavigate>
+            <SelectNavigate name="sort" className="me-2" defaultValue={sort} valueToHref={(v, params) => `/pesquisa?${modifySearchParams(params, "sort", v)}` }>
                 <option value="score">Relevância</option>
                 <option value="asc">Data Ascendente</option>
                 <option value="des">Data Descendente</option>
             </SelectNavigate>
-            {props.searchId ? <i className="bi bi-share" title="Partilhar" role="button" onClick={onClickShare} data-id={props.searchId}></i> : ""}
         </div>
-        <div className="row">
-            <div className="col-md-9">
-                {results ? 
-                    results.length > 0 ? 
-                        <ShowResults results={results} searchParams={searchParams} searchInfo={{...props, pages}} page={page} setPage={setPage} /> :
-                        <NoResults /> :
-                    <Loading />
-                }
-            </div>
-        </div>
-    </GenericPageWithForm>
-}
-
-const onClickShare: MouseEventHandler<HTMLElement> = (event) => {
-    let id = event.currentTarget.dataset.id;
-    let url = `./go/${id}`;
-    if( "canShare" in navigator && navigator.canShare({url})){
-        navigator.share({url});
-    }
-    else{
-        let text = window.location.href.replace(/\/pesquisa.*/,url.slice(1))
-        navigator.clipboard.writeText(text);
-    }
-}
-
-function ShowResults({results, searchParams, searchInfo, page, setPage}: {results: SearchHandlerResponse, searchParams: ReadonlyURLSearchParams, searchInfo: PesquisaProps & {pages: number}, page: number, setPage: (p: number) => void}){
-    return <>
-        {...results.map((h, i) => <JurisprudenciaItem key={i} hit={h} searchId={searchInfo.searchId}/>) }
+        {...results.map((h, i) => <JurisprudenciaItem key={i} hit={h} searchId={searchInfo.searchId}/>)}
         <article className="row d-print-none">
             <nav>
                 <ul className="pagination justify-content-center text-center">
                     <li className="page-item">
-                        <button className="page-link" onClick={() => setPage(0)} disabled={page === 0}><i className="bi bi-chevron-double-left"></i></button>
+                        <NavLink page={0} icon="bi-chevron-double-left" searchParams={searchParams}/>
                     </li>
                     <li className="page-item">
-                        <button className="page-link" onClick={() => setPage(page-1)} disabled={page === 0}><i className="bi bi-chevron-left"></i></button>
+                        {page > 0 ? <NavLink page={page-1} icon="bi-chevron-left" searchParams={searchParams}/> : <span className="page-link"><i className="bi bi-chevron-left disabled"></i></span> }
                     </li>
+                        
                     <li className="page-item w-25">
                         <span className="page-link"><small>Página {page+1}/{searchInfo.pages}</small></span>
                     </li>
                     <li className="page-item">
-                        <button className="page-link" onClick={() => setPage(page+1)} disabled={page >= searchInfo.pages-1}><i className="bi bi-chevron-right"></i></button>
+                        {page < searchInfo.pages-1 ? <NavLink page={page+1} icon="bi-chevron-right" searchParams={searchParams}/>: <span className="page-link"><i className="bi bi-chevron-right disabled"></i></span> }
                     </li>
                     <li className="page-item">
-                        <button className="page-link" onClick={() => setPage(searchInfo.pages-1)} disabled={page >= searchInfo.pages-1}><i className="bi bi-chevron-double-right"></i></button>
+                        <NavLink page={searchInfo.pages-1} icon="bi-chevron-double-right" searchParams={searchParams}/>
                     </li>
+
                 </ul>
             </nav>
         </article>
@@ -146,14 +104,11 @@ function ShowResults({results, searchParams, searchInfo, page, setPage}: {result
 }
 
 function NavLink({page, icon, searchParams}: {page: number, icon: string, searchParams: ReadonlyURLSearchParams}){
-    const tmp = new URLSearchParams(searchParams);
+    const tmp = new URLSearchParams(searchParams.toString());
     tmp.set("page", page.toString())
     return <Link className="page-link" href={`?${tmp.toString()}`} title={`Ir para a página ${page+1}`}><i className={`bi ${icon}`}></i></Link>
 }
 
-const scoreColor = (per:number) => per < 0.2 ? '#E3D5A1' : per < 0.4 ? '#CEB65E' : per < 0.6 ? '#B49936' : per < 0.8 ? '#8C752C' : '#6C5A22';
-
-// Add or update styles for the summary in search results
 const pesquisaSummaryStyles = `
 .pesquisa-sumario {
     font-size: 1.15rem;
@@ -233,7 +188,7 @@ function NoResults(){
         <h4 className="alert-heading">Sem resultados...</h4>
         <strong><i className="bi bi-lightbulb-fill"></i> Sugestões:</strong>
         <ol>
-            <li>Verifique os filtros utilizados (tribunais, relator, descritores, data)</li>
+            <li>Verifique os filtros utilizados (tribunais, relator, , data)</li>
             <li>Verifique o termo pesquisado</li>
         </ol>
     </div>

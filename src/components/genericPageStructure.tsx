@@ -1,7 +1,7 @@
 import Script from "next/script";
 import React, { useContext, useEffect } from "react";
 import Header, { AdminHeader } from "./header";
-import SearchForm from "./searchForm";
+import SearchForm from "./SearchForm";
 import { KeysProvider } from "@/contexts/keys";
 import { AuthProvider } from "@/contexts/auth";
 import Head from "next/head";

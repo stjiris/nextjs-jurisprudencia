@@ -1,4 +1,4 @@
-import {DashboardGenericPage} from "@/components/genericPageStructure";
+import { DashboardGenericPage } from "@/components/genericPageStructure";
 import { LoggerServerSideProps } from "@/core/logger-api";
 import { GetServerSideProps } from "next";
 

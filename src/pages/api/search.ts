@@ -1,5 +1,4 @@
-// Next.js API route support: https://nextjs.org/docs/api-routes/introduction
-import search, { createQueryDslQueryContainer, filterableProps, parseSort, populateFilters, RESULTS_PER_PAGE } from '@/core/elasticsearch';
+import search, { createQueryDslQueryContainer, DEFAULT_RESULTS_PER_PAGE, filterableProps, parseSort, populateFilters } from '@/core/elasticsearch';
 import LoggerApi from '@/core/logger-api';
 import { authenticatedHandler } from '@/core/user/authenticate';
 import { HighlightFragment, SearchHandlerResponse } from '@/types/search';
@@ -7,17 +6,18 @@ import { SearchHighlight, SortCombinations } from '@elastic/elasticsearch/lib/ap
 import { JurisprudenciaDocumentKey } from '@stjiris/jurisprudencia-document';
 import type { NextApiRequest, NextApiResponse } from 'next'
 
-const useSource: JurisprudenciaDocumentKey[] = ["ECLI","Número de Processo","UUID","Data","Área","Meio Processual","Relator Nome Profissional","Secção","Votação","Decisão","Descritores","Sumário","Texto","STATE"]
-       
+const useSource: JurisprudenciaDocumentKey[] = ["ECLI", "Número de Processo", "UUID", "Data", "Área", "Meio Processual", "Relator Nome Profissional", "Secção", "Votação", "Decisão", "Descritores", "Sumário", "Texto", "STATE"]
+
 export default LoggerApi(async function searchHandler(
-  req: NextApiRequest,
-  res: NextApiResponse<SearchHandlerResponse>
+    req: NextApiRequest,
+    res: NextApiResponse<SearchHandlerResponse>
 ) {
-    const sfilters = {pre: [], after: []};
+    const sfilters = { pre: [], after: [] };
     populateFilters(sfilters, req.query)
     const sort: SortCombinations[] = [];
     parseSort(Array.isArray(req.query?.sort) ? req.query.sort[0] : req.query.sort, sort)
-    const page = parseInt(Array.isArray(req.query.page) ? req.query.page[0] : req.query.page || "" ) || 0
+    const page = parseInt(Array.isArray(req.query.page) ? req.query.page[0] : req.query.page || "") || 0
+    const rpp = parseInt(Array.isArray(req.query.rpp) ? req.query.rpp[0] : req.query.rpp || "") || 10
     const queryObj = createQueryDslQueryContainer(req.query.q);
     const highlight: SearchHighlight = {
         fields: {
@@ -30,7 +30,7 @@ export default LoggerApi(async function searchHandler(
                 },
                 pre_tags: [""],
                 post_tags: [""],
-                number_of_fragments: 0           
+                number_of_fragments: 0
             },
             "Sumário": {
                 type: "fvh",
@@ -43,7 +43,7 @@ export default LoggerApi(async function searchHandler(
                 pre_tags: ["<mark>"],
                 post_tags: ["</mark>"]
             },
-            "Texto": { 
+            "Texto": {
                 type: "fvh",
                 highlight_query: {
                     bool: {
@@ -58,31 +58,21 @@ export default LoggerApi(async function searchHandler(
         max_analyzed_offset: 1000000
     }
     const authed = await authenticatedHandler(req);
-    // Read rpp (results per page) from query, support 'all' as a special value
-    let rpp = 10;
-    if (typeof req.query.rpp === 'string') {
-        if (req.query.rpp === 'all') {
-            rpp = 10000; // Arbitrary high number for 'all'
-        } else {
-            const parsed = parseInt(req.query.rpp);
-            if (!isNaN(parsed) && parsed > 0) rpp = parsed;
-        }
-    }
-    const result = await search(queryObj, sfilters, page, {}, rpp, {sort, highlight, track_scores: true, _source: useSource}, authed)
+    const result = await search(queryObj, sfilters, page, {}, rpp, { sort, highlight, track_scores: true, _source: useSource }, authed)
     const r: SearchHandlerResponse = [];
-    for( let hit of result.hits.hits ){
-        const {Texto, "Relator Nome Completo": _completo, HASH: _HASH, ...rest} = hit._source!
-        if(hit.highlight){
+    for (let hit of result.hits.hits) {
+        const { Texto, "Relator Nome Completo": _completo, HASH: _HASH, ...rest } = hit._source!
+        if (hit.highlight) {
             let highlight: Record<string, (string | HighlightFragment)[]> = {
                 Descritores: hit.highlight["Descritores.Show"],
                 Sumário: hit.highlight.Sumário
             };
             let SumárioMarks = undefined;
-            if( hit.highlight.Sumário ){
+            if (hit.highlight.Sumário) {
                 SumárioMarks = [] as HighlightFragment[];
                 let it = hit.highlight.Sumário[0].matchAll(/[^>]{0,100}<mark>(?<mat>\w+)<\/mark>[^<]{0,100}/g)
-                if( it ){
-                    for( let m of it ){
+                if (it) {
+                    for (let m of it) {
                         let mat = m.groups?.mat || ""
                         SumárioMarks.push({
                             textFragment: m[0],
@@ -95,9 +85,9 @@ export default LoggerApi(async function searchHandler(
                 highlight.SumárioMarks = SumárioMarks;
             }
 
-            if( hit.highlight.Texto ){
+            if (hit.highlight.Texto) {
                 highlight.Texto = []
-                for(let i = 0; i < hit.highlight.Texto.length; i++){
+                for (let i = 0; i < hit.highlight.Texto.length; i++) {
                     let text = hit.highlight.Texto[i];
                     let mat = text.match(/MARK_START(?<mat>.*?)MARK_END/)?.groups?.mat || "";
                     highlight.Texto.push({
@@ -116,7 +106,7 @@ export default LoggerApi(async function searchHandler(
                 max_score: result.hits.max_score || 1
             })
         }
-        else{
+        else {
             r.push({
                 _source: rest,
                 score: hit._score || 1,

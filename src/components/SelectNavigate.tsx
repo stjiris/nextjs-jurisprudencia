@@ -11,23 +11,31 @@ export function SelectNavigate({valueToHref,...selectProps}: {valueToHref: (valu
     </select>
 }
 
-export function modifySearchParams(searchParams: URLSearchParams, key: string, value: string){
-    const newParams = new URLSearchParams(searchParams);
-    newParams.set(key, value);
-    return newParams;
+type ParamsLike = ReadonlyURLSearchParams | URLSearchParams;
+
+function cloneParams(params: ParamsLike) {
+  return new URLSearchParams(
+    typeof params === "string" ? params : params.toString()
+  );
 }
 
-export function addSearchParams(searchParams: URLSearchParams, key: string, value: string){
-    const newParams = new URLSearchParams(searchParams);
-    newParams.append(key, value);
-    return newParams;
+export function modifySearchParams(params: ParamsLike, key: string, value: string): ParamsLike {
+  const p = cloneParams(params);
+  p.set(key, value);
+  return p;
+}
+
+export function addSearchParams(params: ParamsLike, key: string, value: string): ParamsLike {
+  const p = cloneParams(params);
+  p.append(key, value);
+  return p;
 }
 
 
-export function replaceSearchParams(searchParams: URLSearchParams, key: string, newValue: string, oldValue: string){
-    const newParams = new URLSearchParams(searchParams);
+export function replaceSearchParams(params: ParamsLike, key: string, newValue: string, oldValue: string): ParamsLike {
+    const newParams = cloneParams(params)
     newParams.delete(key);
-    for( let value of searchParams.getAll(key) ){
+    for( let value of params.getAll(key) ){
         if( value == oldValue ){
             newParams.append(key, newValue);
         }

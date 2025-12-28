@@ -4,3 +4,7 @@ node_modules
 .next
 files
 .env
+**/node_modules
+.git
+dist
+*.tgz

@@ -6,15 +6,15 @@ import { NextApiRequest, NextApiResponse } from "next";
 export default LoggerApi(async function docApiHandler(
     req: NextApiRequest,
     res: NextApiResponse
-){
+) {
     const authed = await authenticatedHandler(req);
-    if( !authed ){
-        return res.status(401).json(null);
+    if (!authed) {
+        return res.status(200).json(null);
     }
     let user = req.cookies["user"]!;
 
-    if( req.method === "GET"){
-        return res.json(await readUser(user).then(r => ({name: r?._source?.username})))
+    if (req.method === "GET") {
+        return res.json(await readUser(user).then(r => ({ name: r?._source?.username })))
     }
 
     return res.status(405).json(null)

@@ -12,6 +12,7 @@ import { useFetch } from "@/components/useFetch";
 import { GetResponse, WriteResponseBase } from "@elastic/elasticsearch/lib/api/types";
 import { useKeysFromContext } from "@/contexts/keys";
 import { LoggerServerSideProps } from "@/core/logger-api";
+import { JurisprudenciaKey } from "@/types/keys";
 
 export const getServerSideProps = withAuthentication<{}>(async ctx => {
     LoggerServerSideProps(ctx);
@@ -37,9 +38,27 @@ function ChipsCell({ value, onChange, suggestions, fetchSuggestions, fieldName }
     const router = useRouter();
 
     useEffect(() => { setChips(value || []); }, [value]);
-    useEffect(() => { if (editingIdx !== null && fetchSuggestions) fetchSuggestions().then(setSuggestionsList); }, [editingIdx]);
+    useEffect(() => {
+        if (editingIdx === null) return;
 
+        if (typeof fetchSuggestions !== "function") {
+            setSuggestionsList([]);
+            return;
+        }
 
+        const result = fetchSuggestions();
+        if (result && typeof result.then === "function") {
+            let cancelled = false;
+            result
+            .then(list => { if (!cancelled) setSuggestionsList(list || []); })
+            .catch(() => { if (!cancelled) setSuggestionsList([]); });
+            return () => { cancelled = true; };
+        } else {
+            setSuggestionsList(result || []);
+        }
+    }, [editingIdx, fetchSuggestions]);
+
+    
     function normalize(str) {
         return str.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
     }
@@ -400,7 +419,7 @@ function Update({ doc, id }: UpdateProps) {
     const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
     // Helper to fetch suggestions for a field and type
-    function fetchSuggestions(fieldKey, type) {
+    function fetchSuggestions(fieldKey: JurisprudenciaKey, type) {
         return fetch(`/api/datalist?agg=${encodeURIComponent(fieldKey)}`)
             .then(r => r.ok ? r.json() : [])
             .then(data => data.map(d => d.key));
@@ -440,14 +459,14 @@ function Update({ doc, id }: UpdateProps) {
                     <div className="card-body">
                         {genericKeys.length > 0 && (
                             <div className="mb-4">
-                                <div className="row mb-1"> 
+                                {/* <div className="row mb-1"> 
                                     <div className="col-12 col-md-6 text-center">
                                         <div className="panel-header panel-header-large dark-blue">Mostrar</div>
                                     </div>
                                     <div className="col-12 col-md-6 text-center">
                                         <div className="panel-header panel-header-large dark-blue">Índice</div>
                                     </div>
-                                </div>
+                                </div> */}
                                 <div className="row">
                                     {genericKeys.map((key, i) => {
                                         const value = doc[key.key] || { Show: [], Index: [] };
@@ -473,22 +492,22 @@ function Update({ doc, id }: UpdateProps) {
                                                         )}
                                                     </div>
                                                     <div className="row">
-                                                        <div className="col-12 col-md-6 mb-3 mb-md-0">
+                                                        <div className="col-12 mb-3 mb-md-0">
                                                             <ChipsCell
                                                                 value={value.Show}
-                                                                onChange={chips => setUpdateObject(old => ({ ...old, [key.key]: { ...value, Show: chips } }))}
-                                                                fetchSuggestions={() => fetchSuggestions(key.key, "Show")}
+                                                                onChange={chips => setUpdateObject(old => ({ ...old, [key.key]: { ...value, Show: chips , Index: chips} }))}
+                                                                fetchSuggestions={() => key.editorSuggestions ? fetchSuggestions(key.key, "Show") : undefined}
                                                                 fieldName={`${key.name} (Mostrar)`}
                                                             />
                                                         </div>
-                                                        <div className="col-12 col-md-6">
+                                                        {/* <div className="col-12 col-md-6">
                                                             <ChipsCell
                                                                 value={value.Index}
                                                                 onChange={chips => setUpdateObject(old => ({ ...old, [key.key]: { ...value, Index: chips } }))}
-                                                                fetchSuggestions={() => fetchSuggestions(key.key, "Index")}
+                                                                fetchSuggestions={() => key.editorSuggestions ? fetchSuggestions(key.key, "Index") : undefined}
                                                                 fieldName={`${key.name} (Índice)`}
                                                             />
-                                                        </div>
+                                                        </div> */}
                                                     </div>
                                                 </div>
                                             </div>
@@ -499,7 +518,7 @@ function Update({ doc, id }: UpdateProps) {
                         )}
                         {/* Render non-generic fields as before */}
                         <div className="row g-3">
-                            {nonGenericKeys.length === 0 && <div className="text-muted">Nenhum campo editável.</div>}
+                            {nonGenericKeys.length === 0 && genericKeys.length === 0 && <div className="text-muted">Nenhum campo editável.</div>}
                             {nonGenericKeys.map((key, i) => (
                                 <div className="col-12" key={i}>
                                     <FieldEditRow accessKey={key} doc={doc} updateObject={updateObject} focusedKey={focusedKey} setFocusedKey={setFocusedKey} />

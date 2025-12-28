@@ -16,7 +16,7 @@ WORKDIR /home/clitools
 RUN git clone https://github.com/stjiris/version-converter && cd version-converter && npm install && npm run build
 
 # update jurisprudencia
-RUN git clone https://github.com/stjiris/jurisprudencia-etl && cd jurisprudencia-etl && npm install && npm run build
+RUN git clone -b dev https://github.com/stjiris/jurisprudencia-etl && cd jurisprudencia-etl && npm install && npm run build
 #   https://crontab.guru/
 #   At minute 0 past every 3rd hour from 9 through 18 on every day-of-week from Monday through Friday.
 RUN (crontab -l; echo "0 9-18/3 * * 1-5 cd /home/clitools/jurisprudencia-etl && /usr/local/bin/node dist >> ../jurisprudencia-etl.stdout.log 2>> ../jurisprudencia-etl.stderr.log") | crontab -
@@ -36,5 +36,11 @@ RUN (crontab -l; echo "45 9-18/3 * * 1-5 cd /home/clitools/jurisprudencia-rss &&
 COPY entrypoint.sh .
 
 USER root
+
+RUN apt update && apt install -y locales apt-utils vim cron git && sed -i '/en_US.UTF-8/s/^# //' /etc/locale.gen && locale-gen en_US.UTF-8 && update-locale LANG=en_US.UTF-8
+
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US:en
+ENV LC_ALL=en_US.UTF-8
 
 ENTRYPOINT ["./entrypoint.sh"]

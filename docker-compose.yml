@@ -4,6 +4,9 @@ volumes:
   excel_data: {}
   rss_data: {}
   redis_data: {}
+networks:
+  juris-network:
+    external: true
 
 services:
   server:
@@ -12,6 +15,7 @@ services:
       dockerfile: ./Dockerfile
       args:
         NEXT_BASE_PATH: ${NEXT_BASE_PATH}
+        NEXT_PUBLIC_ANONIMIZADOR_URL: ${NEXT_PUBLIC_ANONIMIZADOR_URL}
     environment:
       ES_URL: http://elasticsearch:9200
       ES_USER: elastic
@@ -19,10 +23,12 @@ services:
       NEXT_BASE_PATH: ${NEXT_BASE_PATH}
       PUBLIC_STATES: ${PUBLIC_STATES}
       RSS_FOLDER: /rss
+      ANONIMIZADOR_SECRET: ${ANONIMIZADOR_SECRET}
+      ANONIMIZADOR_URL: ${ANONIMIZADOR_URL}
     ports:
       - "${SERVER_HOST:-0.0.0.0}:${SERVER_PORT:-3000}:3000"
     volumes:
-      - excel_data:/usr/src/app/files
+      - excel_data:/usr/src/app/files:rw
       - rss_data:/rss
     depends_on:
       elasticsearch:
@@ -30,6 +36,38 @@ services:
       redis:
         condition: service_healthy
     restart: unless-stopped
+    networks:
+      - juris-network
+  server-dev:
+    build:
+      context: .
+      dockerfile: ./Dockerfile_dev
+      args:
+        NEXT_BASE_PATH: ${NEXT_DEV_BASE_PATH}
+        NEXT_PUBLIC_ANONIMIZADOR_URL: ${NEXT_PUBLIC_ANONIMIZADOR_URL}
+    environment:
+      ES_URL: http://elasticsearch:9200
+      ES_USER: elastic
+      ES_PASS: elasticsearch
+      NEXT_BASE_PATH: ${NEXT_DEV_BASE_PATH}
+      PUBLIC_STATES: ${PUBLIC_STATES}
+      RSS_FOLDER: /rss
+      ANONIMIZADOR_SECRET: ${ANONIMIZADOR_SECRET}
+      ANONIMIZADOR_URL: ${ANONIMIZADOR_URL}
+    ports:
+      - "${SERVER_DEV_HOST:-127.0.0.1}:${SERVER_DEV_PORT:-3000}:3000"
+    volumes:
+      - excel_data:/usr/src/app/files
+      - .:/usr/src/app
+      - rss_data:/rss
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles:
+      - dev
   clitools:
     build:
       context: ./compose/clitools
@@ -41,7 +79,12 @@ services:
       RSS_LINK: ${RSS_LINK:-http://localhost:3000/jurisprudencia}
       RSS_MAX_FEED_SIZE: 200
     volumes:
+      - ../jurisprudencia-privada-etl:/home/clitools/jurisprudencia-privada-etl:rw
+      - ../jurisprudencia-etl:/home/clitools/jurisprudencia-etl:rw
+      - ../version-converter:/home/clitools/version-converter:rw
       - rss_data:/rss 
+    networks:
+      - juris-network
   elasticsearch:
     build:
       context: ./compose/elasticsearch
@@ -65,6 +108,8 @@ services:
       retries: 15
       start_period: 10s
     restart: unless-stopped
+    networks:
+      - juris-network
   kibana:
     image: docker.elastic.co/kibana/kibana:8.4.0
     depends_on:
@@ -79,6 +124,8 @@ services:
     restart: always
     profiles:
       - kibana
+    networks:
+      - juris-network
   redis:
     image: redis:6.2-bookworm
     ports:
@@ -92,3 +139,5 @@ services:
       timeout: 30s
       retries: 15
       start_period: 10s
+    networks:
+      - juris-network

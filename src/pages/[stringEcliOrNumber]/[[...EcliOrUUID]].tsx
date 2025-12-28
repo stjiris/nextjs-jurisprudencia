@@ -1,7 +1,7 @@
 import { GetServerSideProps } from "next";
 import search from "@/core/elasticsearch"
-import { GenericField, JurisprudenciaDocument, JurisprudenciaDocumentKey, JurisprudenciaDocumentStateValue, isJurisprudenciaDocumentStateKey } from "@stjiris/jurisprudencia-document";
-import React, { CSSProperties, HTMLAttributes, ReactNode, useEffect, useState } from "react";
+import { JurisprudenciaDocument, JurisprudenciaDocumentKey, JurisprudenciaDocumentStateValue, isJurisprudenciaDocumentStateKey } from "@stjiris/jurisprudencia-document";
+import React, { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
 import TargetBlankLink from "@/components/link";
 import Head from "next/head";
@@ -14,6 +14,7 @@ import { authenticatedHandler } from "@/core/user/authenticate";
 import { BadgeFromState } from "@/components/BadgeFromState";
 import { useAuth } from "@/contexts/auth";
 import { LoggerServerSideProps } from "@/core/logger-api";
+import EditionOptions from "@/components/EditionOptions";
 
 const MUST_HAVE = ["UUID", "Número de Processo", "Fonte", "ECLI", "URL", "Sumário", "Texto"]
 
@@ -152,9 +153,12 @@ function DocumentPage(props: { doc: JurisprudenciaDocument, id: string, keys: Ju
             <div className="border border-dark container-fluid mb-1">
                 <Row>
                     <div className="col-1"><b>Gestão:</b></div>
-                    <div className="col-11"><Link href={`/editar/avancado/${encodeURIComponent(props.id)}`}><i className="bi bi-pencil-square"></i> Abrir editor</Link></div>
+                    <div className="col-11 d-flex gap-3">
+                        <EditionOptions {...props} />
+                    </div>
                 </Row>
-            </div>}
+            </div>
+        }
         <div className="border border-dark container-fluid">
             <Row>
                 <div className="col-1"><b>N.º de Processo:</b></div>

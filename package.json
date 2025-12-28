@@ -3,14 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -H 0.0.0.0 -p 3000",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
     "@elastic/elasticsearch": "^8.9.0",
-    "@stjiris/jurisprudencia-document": "^11.1.4",
+    "@mdgf11/jurisprudencia-document": "^13.0.7",
+    "@stjiris/jurisprudencia-document": "npm:@mdgf11/jurisprudencia-document@^13.0.7",
     "brace": "^0.11.1",
     "d3": "^7.8.5",
     "d3-path": "^3.1.0",

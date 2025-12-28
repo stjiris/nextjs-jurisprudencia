@@ -1,6 +1,6 @@
 import { canBeActive } from "@/types/keys";
 import { Client } from "@elastic/elasticsearch";
-import { AggregationsAggregationContainer, AggregationsStringTermsBucket, AggregationsTermsAggregation, QueryDslQueryContainer, SearchRequest, SortCombinations } from "@elastic/elasticsearch/lib/api/types";
+import { AggregationsAggregate, AggregationsAggregationContainer, AggregationsStringTermsBucket, AggregationsTermsAggregation, QueryDslQueryContainer, SearchRequest, SearchResponse, SortCombinations } from "@elastic/elasticsearch/lib/api/types";
 import { isJurisprudenciaDocumentGenericKey, JurisprudenciaDocument, JurisprudenciaDocumentDateKey, JurisprudenciaDocumentDateKeys, JurisprudenciaDocumentKeys, JurisprudenciaDocumentProperties, JurisprudenciaDocumentStateValue, JurisprudenciaDocumentStateValues, JurisprudenciaVersion } from "@stjiris/jurisprudencia-document";
 
 export const filterableProps = JurisprudenciaDocumentKeys.filter(canBeActive);
@@ -50,7 +50,7 @@ export const DEFAULT_AGGS = {
     MaxAno: aggs.MaxAno,
     MinAno: aggs.MinAno
 };
-export const RESULTS_PER_PAGE = 10;
+export const DEFAULT_RESULTS_PER_PAGE = 10;
 
 export async function getElasticSearchClient() {
     return new Client({ node: process.env.ES_URL || "http://localhost:9200", auth: { username: "elastic", password: "elasticsearch" } })
@@ -61,18 +61,20 @@ export type SearchFilters = {
     after: QueryDslQueryContainer[];
 };
 
-export default function search(
+export default async function search(
     query: QueryDslQueryContainer | QueryDslQueryContainer[],
     filters: SearchFilters = { pre: [], after: [] },
     page: number = 0,
     saggs: Record<string, AggregationsAggregationContainer> = DEFAULT_AGGS,
-    rpp = RESULTS_PER_PAGE,
-    extras: Partial<SearchRequest> = {}, all: boolean = false) {
+    rpp = DEFAULT_RESULTS_PER_PAGE,
+    extras: Partial<SearchRequest> = {}, all: boolean = false): Promise<SearchResponse<JurisprudenciaDocument, Record<string, AggregationsAggregate>>> {
+
     const must = Array.isArray(query) ? query : [query];
     if (!all) {
         must.push({ terms: { STATE: _PUBLIC_STATES } })
     }
-    return getElasticSearchClient().then(client => client.search<JurisprudenciaDocument>({
+    const client = await getElasticSearchClient();
+    return await client.search<JurisprudenciaDocument>({
         index: JurisprudenciaVersion,
         query: {
             bool: {
@@ -80,7 +82,7 @@ export default function search(
                 filter: filters.pre
             }
         },
-        post_filter: { // Filter after aggregations
+        post_filter: {
             bool: {
                 filter: filters.after
             }
@@ -91,10 +93,10 @@ export default function search(
         track_total_hits: true,
         _source: (filterableProps as any[]).concat("Sumário"),
         ...extras // Allows 
-    }))
+    });
 }
 
-export const padZero = (num: number | string, size: number = 4) => {
+export function padZero(num: number | string, size: number = 4): string {
     let s = num.toString();
     while (s.length < size) {
         s = "0" + s;
@@ -131,16 +133,16 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
                     }
                 });
             } else if (should.length) {
-            filters[when].push({
-                bool: {
+                filters[when].push({
+                    bool: {
                         [must_or_should]: should.map(o => (o.startsWith("\"") && o.endsWith("\"")) ? {
-                        term: {
-                            [fieldName.replace("keyword", "raw")]: { value: `${o.slice(1, -1)}` }
-                        }
-                    } : {
-                        wildcard: {
-                            [fieldName]: { value: `*${o}*` }
-                        }
+                            term: {
+                                [fieldName.replace("keyword", "raw")]: { value: `${o.slice(1, -1)}` }
+                            }
+                        } : {
+                            wildcard: {
+                                [fieldName]: { value: `*${o}*` }
+                            }
                         }),
                     }
                 });
@@ -163,32 +165,33 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
                 filters[when].push({
                     bool: {
                         must_not: must_not.map(o => (o.startsWith("\"") && o.endsWith("\"")) ? {
-                        term: {
-                            [fieldName.replace("keyword", "raw")]: { value: `${o.slice(1, -1)}` }
-                        }
-                    } : {
-                        wildcard: {
-                            [fieldName]: { value: `*${o}*` }
-                        }
+                            term: {
+                                [fieldName.replace("keyword", "raw")]: { value: `${o.slice(1, -1)}` }
+                            }
+                        } : {
+                            wildcard: {
+                                [fieldName]: { value: `*${o}*` }
+                            }
                         })
-                }
-            });
+                    }
+                });
             }
         }
     }
 
     let dateWhen = "pre" as keyof SearchFilters;
-    if (afters.indexOf("MinDate") >= 0 || afters.indexOf("MaxDate") >= 0) dateWhen = "after";
+    if (afters.indexOf("MinDate") >= 0 || afters.indexOf("MaxDate") >= 0)
+        dateWhen = "after";
     let minDate = Array.isArray(body.MinDate) ? body.MinDate[0] : body.MinDate;
     let maxDate = Array.isArray(body.MaxDate) ? body.MaxDate[0] : body.MaxDate;
 
     if (minDate || maxDate) {
         const rangeQuery: any = {
-        range: {
-            [DATA_FIELD]: {
-            format: "dd/MM/yyyy"
+            range: {
+                [DATA_FIELD]: {
+                    format: "dd/MM/yyyy"
+                }
             }
-        }
         };
         if (minDate) {
             const [year, month, day] = minDate.split('-');
@@ -255,7 +258,7 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
     return filtersUsed;
 }
 
-export function parseSort(value: string | undefined, array: SortCombinations[]) {
+export function parseSort(value: string | undefined, array: SortCombinations[]): string {
     const sortV = value || "des";
     if (sortV == "des") {
         array.push({
@@ -294,11 +297,17 @@ export function createQueryDslQueryContainer(string?: string | string[]): QueryD
 }
 
 
-export function getSearchedArray(text: string) {
-    return getElasticSearchClient().then(c => c.indices.analyze({ index: JurisprudenciaVersion, text: text })).then(r => r.tokens?.map(o => o.token) || []).catch(e => [] as string[])
+export async function getSearchedArray(text: string): Promise<string[]> {
+    try {
+        const c = await getElasticSearchClient();
+        const r = await c.indices.analyze({ index: JurisprudenciaVersion, text: text });
+        return r.tokens?.map(o => o.token) || [];
+    } catch (e) {
+        return [] as string[];
+    }
 }
 
-export function sortAlphabetically(a: string, b: string) {
+export function sortAlphabetically(a: string, b: string): number {
     if (a.startsWith("«") && !b.startsWith("«"))
         return 1;
     if (b.startsWith("«") && !a.startsWith("«"))
@@ -308,6 +317,6 @@ export function sortAlphabetically(a: string, b: string) {
     return ak.localeCompare(bk);
 }
 
-export function sortBucketsAlphabetically(a: AggregationsStringTermsBucket, b: AggregationsStringTermsBucket) {
+export function sortBucketsAlphabetically(a: AggregationsStringTermsBucket, b: AggregationsStringTermsBucket): number {
     return sortAlphabetically(a.key, b.key);
 }
