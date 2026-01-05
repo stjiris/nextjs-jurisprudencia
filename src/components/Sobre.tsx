@@ -5,7 +5,7 @@ import { useFetch } from "./useFetch";
 import { BadgeFromState } from "./BadgeFromState";
 import { JurisprudenciaDocumentStateValue } from "@stjiris/jurisprudencia-document";
 
-export default function ModalSobre() {
+export default function Sobre() {
     return <div className="modal fade" id="modal-about" tabIndex={-1} role="dialog" aria-labelledby="modal-label" aria-hidden="true">
         <div className="modal-dialog">
             <div className="modal-content">

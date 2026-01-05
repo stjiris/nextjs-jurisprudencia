@@ -1,9 +1,8 @@
-import { AggregationsMaxAggregate, AggregationsMinAggregate, long, SearchTotalHits } from "@elastic/elasticsearch/lib/api/types";
+import { long, SearchTotalHits } from "@elastic/elasticsearch/lib/api/types";
 import { GetServerSideProps, GetServerSidePropsContext, PreviewData } from "next";
 import search, { createQueryDslQueryContainer, DEFAULT_AGGS, populateFilters, SearchFilters } from "@/core/elasticsearch"
 import { ParsedUrlQuery } from "querystring";
 import { authenticatedHandler } from "@/core/user/authenticate";
-import { ReadonlyURLSearchParams } from "next/navigation";
 
 export interface FormProps {
     count: number,

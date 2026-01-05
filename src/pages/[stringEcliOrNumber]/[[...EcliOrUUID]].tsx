@@ -1,20 +1,15 @@
 import { GetServerSideProps } from "next";
 import search from "@/core/elasticsearch"
-import { JurisprudenciaDocument, JurisprudenciaDocumentKey, JurisprudenciaDocumentStateValue, isJurisprudenciaDocumentStateKey } from "@stjiris/jurisprudencia-document";
-import React, { CSSProperties, ReactNode } from "react";
+import { JurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
 import Link from "next/link";
-import TargetBlankLink from "@/components/link";
 import Head from "next/head";
-import GenericPage from "@/components/genericPageStructure";
 import { trackClickedDocument } from "@/core/track-search";
 import { getAllKeys } from "@/core/keys";
 import { JurisprudenciaKey } from "@/types/keys";
-import { useFetch } from "@/components/useFetch";
 import { authenticatedHandler } from "@/core/user/authenticate";
-import { BadgeFromState } from "@/components/BadgeFromState";
-import { useAuth } from "@/contexts/auth";
 import { LoggerServerSideProps } from "@/core/logger-api";
-import EditionOptions from "@/components/EditionOptions";
+import GenericPage from "@/components/main_pages/genericPageStructure";
+import DecisionView from "@/components/decision/DecisionView";
 
 const MUST_HAVE = ["UUID", "Número de Processo", "Fonte", "ECLI", "URL", "Sumário", "Texto"]
 
@@ -114,119 +109,26 @@ function MultipleDocumentPage(props: { docs: JurisprudenciaDocument[], ids: stri
             <h4 className="alert-heading">Escolher documento a abrir...</h4>
             <ol>
                 {props.docs.map((doc, i) => <li key={i}>
-                    <Link href={doc.ECLI?.startsWith("ECLI:PT:STJ:") ? `/ecli/${doc.ECLI}` : `/${encodeURIComponent(doc["Número de Processo"]!)}/${doc.UUID}`} target="_blank">{doc["Número de Processo"]}</Link>
+                    <Link href={doc.ECLI?.startsWith("ECLI:PT:STJ:") ? `/ecli/${doc.ECLI}` : `/${encodeURIComponent(doc["Número de Processo"]!)}/${doc.UUID}`}>{doc["Número de Processo"]}</Link>
                 </li>)}
             </ol>
         </div>
     </>
 }
 
-// Add styles for the text container
-const styles = `
-.acordao-text-container {
-    max-width: 900px;
-    margin: 0 auto;
-    font-size: 1.1rem;
-    line-height: 1.6;
-}
-
-.sumario-text-container {
-    font-size: 1.35rem;
-    line-height: 1.7;
-    margin-top: 0.25rem;
-    padding-top: 0;
-}
-`;
-
 function DocumentPage(props: { doc: JurisprudenciaDocument, id: string, keys: JurisprudenciaKey[] }) {
-    let auth = useAuth();
     let proc = props.doc["Número de Processo"]!;
-    let uuid = props.doc["UUID"]!;
-    let related = useFetch<JurisprudenciaDocument[]>(`/api/related/${encodeURIComponent(proc)}/${uuid}`, []) || []
 
     return <>
         <Head>
             <title>{`${proc} - Jurisprudência - STJ`}</title>
-            <style>{styles}</style>
         </Head>
-        {auth &&
-            <div className="border border-dark container-fluid mb-1">
-                <Row>
-                    <div className="col-1"><b>Gestão:</b></div>
-                    <div className="col-11 d-flex gap-3">
-                        <EditionOptions {...props} />
-                    </div>
-                </Row>
-            </div>
-        }
-        <div className="border border-dark container-fluid">
-            <Row>
-                <div className="col-1"><b>N.º de Processo:</b></div>
-                <div className="col-7">{props.doc["Número de Processo"]}</div>
-                <div className="col-4 text-end">
-                    {props.doc.ECLI && props.doc.ECLI.length > 0 && props.doc.ECLI !== "«sem valor»" && <><small><TargetBlankLink href={`https://jurisprudencia.csm.org.pt/ecli/${props.doc.ECLI!}`} target="_blank" >{props.doc.ECLI}</TargetBlankLink></small>&nbsp;</>}
-                    {props.doc.URL && props.doc.URL.length > 0 && props.doc.URL !== "«sem valor»" && <><small><TargetBlankLink href={props.doc.URL}>{new URL(props.doc.URL!).host}</TargetBlankLink></small>&nbsp;</>}
-                    <small><b>Fonte:&nbsp;</b><span>{props.doc.Fonte}</span></small>
-                </div>
-            </Row>
-            {related.length > 0 ?
-                <Row style={{ background: "#dfdfdf" }}>
-                    <div className="col-1"><i className="bi bi-link"></i>Relacionados:</div>
-                    <div className="col-11">
-                        {related.flatMap((d, i) => [" / ", <Link key={i} href={`/${encodeURIComponent(d["Número de Processo"]!)}/${d.UUID}`}>{d["Número de Processo"]}</Link>, ` (${d.Data})`]).slice(1)}
-                    </div>
-                </Row> :
-                <></>}
-            {props.keys.filter(k => k.documentShow && !MUST_HAVE.includes(k.key)).map(k => <DefaultRow key={k.key} doc={props.doc} showkey={k.name} accessKey={k.key} noLink={!k.indicesList} />)}
-        </div>
-        <h6 className="border-top border-2 mt-2 mb-1"><b>Sumário</b></h6>
-        <div className="p-2 sumario-text-container" dangerouslySetInnerHTML={{ __html: props.doc.Sumário! }}></div>
-        <h6 className="border-top border-2 mt-2"><b>Decisão Texto Integral</b></h6>
-        <div className="p-2 acordao-text-container" dangerouslySetInnerHTML={{ __html: props.doc.Texto! }}></div>
+        <DecisionView {...props} />
     </>
 }
 
-function DefaultRow(props: { accessKey: JurisprudenciaDocumentKey, showkey?: string, doc: JurisprudenciaDocument, style?: CSSProperties, noLink?: boolean }) {
-    let value = props.doc[props.accessKey];
-    if (!value) return <></>
 
-    if (typeof value === "string" && value.length === 0) return <></>
-    if (typeof value === "object" && "Show" in value && "Original" in value && value.Show.length === 0 && value.Original.length === 0) return <></>
-    return props.doc[props.accessKey] ? <Row style={props.style}>
-        <div className="col-1"><b>{props.showkey ? props.showkey : props.accessKey}:</b></div>
-        <div className="col-11">
-            <Properties accessKey={props.accessKey} accessValue={props.doc[props.accessKey]} noLink={props.noLink} />
-        </div>
-    </Row> : <></>
-}
 
-function Row(props: { children: ReactNode, style?: CSSProperties }) {
-    return <div className="row border-bottom" style={props.style}>{props.children}</div>
-}
 
-function Properties({ accessKey, accessValue, noLink }: { accessKey: string, accessValue: JurisprudenciaDocument[JurisprudenciaDocumentKey], noLink?: boolean }) {
-    if (!accessValue) return <>«sem valor»</>
-    if (isJurisprudenciaDocumentStateKey(accessKey)) {
-        return <BadgeFromState state={accessValue as JurisprudenciaDocumentStateValue} />
-    }
-    if (typeof accessValue === "string") {
-        return noLink ? <>{accessValue}</> : <Link href={`/pesquisa?${accessKey}=${encodeURIComponent(accessValue)}`}>{accessValue}</Link>
-    }
-    if ("Index" in accessValue && "Show" in accessValue && "Original" in accessValue) {
-        let v = accessValue;
-        return <ShowOrOriginal accessKey={accessKey} value={accessValue} noLink={noLink} />
-    }
-    return <details>
-        <summary>{accessKey}</summary>
-        <pre>{JSON.stringify(accessValue)}</pre>
-    </details>
-}
 
-function ShowOrOriginal(props: { accessKey: string, value: { Show?: string[], Original?: string[] }, noLink?: boolean }) {
-    if (props.value.Show && props.value.Show.length > 0) {
-        return <>{props.value.Show.flatMap((v, i) => [" / ", props.noLink ? v : <Link key={i} href={`/pesquisa?${props.accessKey}=${encodeURIComponent(v)}`}>{v}</Link>]).slice(1)}</>
-    }
-    else {
-        return <>{props.value.Original?.flatMap((v, i) => [" / ", v]).slice(1)}</>
-    }
-}
+

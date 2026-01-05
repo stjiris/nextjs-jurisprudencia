@@ -13,10 +13,10 @@ USER clitools
 WORKDIR /home/clitools
 
 # util to convert between versions
-RUN git clone https://github.com/stjiris/version-converter && cd version-converter && npm install && npm run build
+#RUN git clone https://github.com/stjiris/version-converter && cd version-converter && npm install && npm run build
 
 # update jurisprudencia
-RUN git clone -b dev https://github.com/stjiris/jurisprudencia-etl && cd jurisprudencia-etl && npm install && npm run build
+#RUN git clone -b dev https://github.com/stjiris/jurisprudencia-etl && cd jurisprudencia-etl && npm install && npm run build
 #   https://crontab.guru/
 #   At minute 0 past every 3rd hour from 9 through 18 on every day-of-week from Monday through Friday.
 RUN (crontab -l; echo "0 9-18/3 * * 1-5 cd /home/clitools/jurisprudencia-etl && /usr/local/bin/node dist >> ../jurisprudencia-etl.stdout.log 2>> ../jurisprudencia-etl.stderr.log") | crontab -

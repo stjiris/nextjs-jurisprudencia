@@ -2,7 +2,7 @@ import { AggregationsMaxAggregate, AggregationsMinAggregate, AggregationsStringT
 import search, { createQueryDslQueryContainer, populateFilters, sortAlphabetically, sortBucketsAlphabetically } from "@/core/elasticsearch"
 import { NextApiRequest, NextApiResponse } from "next";
 import { IndicesProps, INDICES_OTHERS } from "@/types/indices";
-import { listAggregation } from "@/components/indices-helpers";
+import { listAggregation } from "@/components/main_pages/indices/indices-helpers";
 import { getAllKeys } from "@/core/keys";
 import { authenticatedHandler } from "@/core/user/authenticate";
 import LoggerApi from "@/core/logger-api";

@@ -1,10 +1,11 @@
 import Script from "next/script";
 import React, { useContext, useEffect } from "react";
-import Header, { AdminHeader } from "./header";
 import SearchForm from "./SearchForm";
 import { KeysProvider } from "@/contexts/keys";
 import { AuthProvider } from "@/contexts/auth";
 import Head from "next/head";
+import { AdminHeader } from "@/components/AdminHeader";
+import Header from "@/components/Header";
 
 const BootScript = () => <Script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossOrigin="anonymous"/>
 const MetaHead = ({title}: {title: string}) => <Head>
@@ -46,19 +47,6 @@ export function GenericPageWithForm(props: {keys_to_remove?: string[], count: nu
                 </div>
             </main>
             {props.escapeChildren}
-            <BootScript/>
-        </AuthProvider>
-    </KeysProvider>
-}
-
-export function DashboardGenericPage(props: {children: React.ReactNode, title: string}){
-    return <KeysProvider>
-        <AuthProvider>
-            <MetaHead title={props.title}/>
-            <AdminHeader/>
-            <main className='container-fluid'>
-                {props.children}
-            </main>
             <BootScript/>
         </AuthProvider>
     </KeysProvider>

@@ -1,6 +1,14 @@
-import { JurisprudenciaDocumentKey } from "@stjiris/jurisprudencia-document";
+import { JurisprudenciaDocumentKey, PartialJurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
 
 export type SimpleJurisprudenciaDocument = Record<JurisprudenciaDocumentKey, string>;
+
+function setPartialDocumentField(
+    doc: PartialJurisprudenciaDocument, 
+    key: string, 
+    value: string
+): void {
+    (doc as Record<string, any>)[key] = value;
+}
 
 export const SIMPLE_EDITOR_DEFAULTS = {
     STATE: "preparação",
@@ -13,14 +21,20 @@ export const SIMPLE_EDITOR_DEFAULTS = {
     Área: (ctx: SimpleJurisprudenciaDocument) => "Secção" in ctx ? areaFromSeccao(ctx.Secção) : undefined,
 } as Partial<Record<JurisprudenciaDocumentKey, string | ((ctx: SimpleJurisprudenciaDocument) => string | undefined)>>;
 
-export function getSimpleEditorDefaults(ctx: Partial<SimpleJurisprudenciaDocument> = {}): Partial<SimpleJurisprudenciaDocument> {
-    let result: Partial<SimpleJurisprudenciaDocument> = {};
+export function getSimpleEditorDefaults(ctx: PartialJurisprudenciaDocument = {}): PartialJurisprudenciaDocument {
+    const result: PartialJurisprudenciaDocument = {};
+    
     for (let key in SIMPLE_EDITOR_DEFAULTS) {
-        if (typeof SIMPLE_EDITOR_DEFAULTS[key as keyof typeof SIMPLE_EDITOR_DEFAULTS] === "function") {
-            let value = (SIMPLE_EDITOR_DEFAULTS[key as keyof typeof SIMPLE_EDITOR_DEFAULTS] as ((ctx: any) => string | undefined))(ctx);
-            if (value) result[key as JurisprudenciaDocumentKey] = value;
+        const typedKey = key as keyof typeof SIMPLE_EDITOR_DEFAULTS;
+        const defaultValue = SIMPLE_EDITOR_DEFAULTS[typedKey];
+        
+        if (typeof defaultValue === "function") {
+            const value = (defaultValue as ((ctx: any) => string | undefined))(ctx);
+            if (value) {
+                setPartialDocumentField(result, key, value);
+            }
         } else {
-            result[key as JurisprudenciaDocumentKey] = SIMPLE_EDITOR_DEFAULTS[key as keyof typeof SIMPLE_EDITOR_DEFAULTS] as string;
+            setPartialDocumentField(result, key, defaultValue as string);
         }
     }
     return result;

@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "@elastic/elasticsearch": "^8.9.0",
-    "@mdgf11/jurisprudencia-document": "^13.0.7",
     "@stjiris/jurisprudencia-document": "npm:@mdgf11/jurisprudencia-document@^13.0.7",
     "brace": "^0.11.1",
     "d3": "^7.8.5",
@@ -23,6 +22,7 @@
     "exceljs": "^4.3.0",
     "formidable": "^3.5.0",
     "next": "^13.3.0",
+    "quill": "^2.0.3",
     "react": "18.2.0",
     "react-ace": "^10.1.0",
     "react-bootstrap": "^2.8.0",

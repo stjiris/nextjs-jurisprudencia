@@ -1,7 +1,5 @@
-import { useKeys } from "@/components/formKeys";
-import { DashboardGenericPage } from "@/components/genericPageStructure";
-import { useFetch } from "@/components/useFetch";
-import { getAllKeys } from "@/core/keys";
+import GenericPage from "@/components/main_pages/genericPageStructure";
+import { useKeys } from "@/contexts/keys";
 import { LoggerServerSideProps } from "@/core/logger-api";
 import { withAuthentication } from "@/core/user/authenticate";
 import { JurisprudenciaKey, canBeActive, canHaveSuggestions } from "@/types/keys";
@@ -20,7 +18,7 @@ export default function ExcelPage() {
     let [bell, setBell] = useState(0);
     let update = () => setBell(b => b + 1)
     let keys = useKeys([bell]) || [];
-    return <DashboardGenericPage title="Jurisprudência STJ - Filtros">
+    return <GenericPage title="Jurisprudência STJ - Filtros">
         <div className="card shadow">
             <div className="card-body">
                 <table className="table table-hover">
@@ -62,7 +60,7 @@ export default function ExcelPage() {
                 </table>
             </div>
         </div>
-    </DashboardGenericPage>
+    </GenericPage>
 }
 
 function ShowFilterRow({ innitialKey, update: updateOrder }: { innitialKey: JurisprudenciaKey, update: () => void }) {

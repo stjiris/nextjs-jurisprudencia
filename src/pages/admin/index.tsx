@@ -1,9 +1,9 @@
 import { GetServerSideProps } from "next";
-import { DashboardGenericPage } from "@/components/genericPageStructure"
 import { withAuthentication } from "@/core/user/authenticate";
 import Link from "next/link";
 import { ReactNode } from "react";
 import { LoggerServerSideProps } from "@/core/logger-api";
+import GenericPage from "@/components/main_pages/genericPageStructure";
 
 export const getServerSideProps = withAuthentication<{}>(async ctx => {
     LoggerServerSideProps(ctx);
@@ -11,7 +11,7 @@ export const getServerSideProps = withAuthentication<{}>(async ctx => {
 })
 
 export default function IndexPage() {
-    return <DashboardGenericPage title="Jurisprudência STJ - Administração">
+    return <GenericPage title="Jurisprudência STJ - Administração">
         <div className="row justify-content-sm-center">
             <div className="col-sm-12 col-md-8 col-xl-6">
                 <div className="card shadow">
@@ -19,7 +19,7 @@ export default function IndexPage() {
                         <LinkEntry link="/pesquisa" title="Pesquisa">
                             <p>Pesquise normalmente pelos acórdãos. Terá acesso a mais informação e poderá abrir em modo de edição os acórdãos</p>
                         </LinkEntry>
-                        <LinkEntry link="/editar/simples/criar" title="Criar Acórdão">
+                        <LinkEntry link="/editar/criar" title="Criar Acórdão">
                             <p>Criar acordão manualmente</p>
                         </LinkEntry>
                         <LinkEntry link="/admin/excel" title="Importar/Exportar">
@@ -32,7 +32,7 @@ export default function IndexPage() {
                 </div>
             </div>
         </div>
-    </DashboardGenericPage>
+    </GenericPage>
 }
 
 function LinkEntry({ title, link, children }: { title: string, link: string, children: ReactNode }) {

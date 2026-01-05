@@ -1,7 +1,6 @@
 import { authenticatedHandler } from "@/core/user/authenticate";
 import { NextApiRequest, NextApiResponse } from "next";
 import { createDoc, createSimpleDoc, deleteDoc, getDoc, updateDoc } from "@/core/doc";
-import { WriteResponseBase } from "@elastic/elasticsearch/lib/api/types";
 import LoggerApi from "@/core/logger-api";
 
 export default LoggerApi(async function docApiHandler(

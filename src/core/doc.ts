@@ -1,7 +1,7 @@
 //@ts-nocheck
 import { JurisprudenciaDocument, JurisprudenciaDocumentStateValues, JurisprudenciaVersion, PartialJurisprudenciaDocument, isJurisprudenciaDocumentDateKey, isJurisprudenciaDocumentExactKey, isJurisprudenciaDocumentGenericKey, isJurisprudenciaDocumentStateKey, isJurisprudenciaDocumentTextKey, calculateUUID, calculateHASH } from "@stjiris/jurisprudencia-document";
 import { getElasticSearchClient } from "./elasticsearch";
-import { SimpleJurisprudenciaDocument, getSimpleEditorDefaults } from "@/components/simpleEditorDefaults";
+import { SimpleJurisprudenciaDocument, getSimpleEditorDefaults } from "@/components/decision/simpleEditorDefaults";
 
 export const existsDoc = (docId: string) => getElasticSearchClient().then(c => c.exists({ index: JurisprudenciaVersion, id: docId }))
 
@@ -10,7 +10,13 @@ export const getDoc = (docId: string) => getElasticSearchClient().then(c => c.ge
 export const updateDoc = (docId: string, previewDoc: PartialJurisprudenciaDocument) => getElasticSearchClient().then(c => {
     let doc: PartialJurisprudenciaDocument = {};
     for (let key in previewDoc) {
-        if (!previewDoc[key]) continue;
+        if (!previewDoc[key]) {
+            if (previewDoc[key] === "") {
+                doc[key] = "";
+            }
+            continue;
+        }
+
         if (isJurisprudenciaDocumentExactKey(key) && typeof previewDoc[key] === "string") {
             doc[key] = previewDoc[key];
             continue;

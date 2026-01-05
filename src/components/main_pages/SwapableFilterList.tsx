@@ -1,11 +1,72 @@
-import { Dispatch, DragEventHandler, SetStateAction, useState } from "react";
-import { useFormOrderedKeys } from "./formKeys";
-import { replaceSearchParams } from "./SelectNavigate";
+import { Dispatch, DragEventHandler, SetStateAction, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ReadonlyURLSearchParams, useSearchParams } from "next/navigation";
 import { JurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
 import { DatalistObj } from "@/types/search";
 import { NextRouter, useRouter } from "next/router";
+import { useKeysFromContext } from "@/contexts/keys";
+import { modifySearchParams, replaceSearchParams } from "./SelectNavigate";
+
+export const FORM_KEY = "_f";
+
+const FORM_SPL = "-"
+
+export function useFormOrderedKeys() {
+    let params = useSearchParams();
+    let router = useRouter();
+    let { keys: allKeys } = useKeysFromContext();
+    let availableKeys = useMemo(() => allKeys?.map(k => k.active ? k : null), [allKeys])
+    let defaultKeys = useMemo(() => allKeys?.map(k => k.filtersShow ? k : null), [allKeys])
+
+    let [sort, _setSort] = useState<number[]>([]);
+    const [previousSort, setPreviousSort] = useState<number[]>([]);
+
+    useEffect(() => {
+        _setSort(params.get(FORM_KEY)?.split(FORM_SPL).map(i => parseInt(i.trim())) || defaultKeys?.map((k, i) => k ? i : null).filter(i => i !== null) as number[] || [])
+    }, [params, defaultKeys])
+
+    let setSort = (cb: ((arg: number[]) => number[])) => {
+        _setSort(curr => {
+            let updated = cb(curr)
+            router.replace("?" + modifySearchParams(params, FORM_KEY, updated.join(FORM_SPL)).toString(), undefined, { scroll: false, shallow: true })
+            return updated;
+        })
+    }
+
+    const move = (currPos: number, insAfter: number) => {
+        if (currPos === insAfter) return;
+        return setSort((currSort) => {
+            let firstHalf = currSort.slice(0, currPos);
+            let secondHalf = currSort.slice(currPos + 1);
+            let final = firstHalf.concat(secondHalf);
+            final.splice(insAfter, 0, currSort[currPos]);
+            return final;
+        })
+    }
+
+    const hide = (currPos: number) => {
+        return setSort((currSort) => currSort.slice(0, currPos).concat(currSort.slice(currPos + 1)));
+    }
+
+    const all = () => {
+        setSort((currSort) => {
+            const hiddenItems = availableKeys?.map((v, i) => v !== null ? i : -1)
+                .filter((i) => i >= 0 && !currSort.includes(i)) || [];
+            
+            if (hiddenItems.length === 0 && previousSort.length > 0) {
+                const restored = previousSort;
+                setPreviousSort([]);
+                return restored;
+            } else {
+                setPreviousSort(currSort);
+                return [...hiddenItems, ...currSort];
+            }
+        });
+    }
+    if (!availableKeys || availableKeys.length === 0) return [[], { move, hide, all }, 0] as const; // Server return
+
+    return [sort.map((i) => availableKeys![i]), { move, hide, all }, (availableKeys.filter(k => k !== null).length || 0) - sort.filter((i) => availableKeys![i]).length] as const;
+}
 
 export function SwapableFilterList({filtersUsed}: {filtersUsed: Record<string, string[]>} ){
 
@@ -14,7 +75,6 @@ export function SwapableFilterList({filtersUsed}: {filtersUsed: Record<string, s
     let [selected, setSelected] = useState<number>();
 
     let dragEnd: DragEventHandler<HTMLDivElement> = (e) => {
-        // Own element
         if( selected === undefined || target === undefined ) return;
 
         if( selected === -1 ){ 
@@ -31,18 +91,16 @@ export function SwapableFilterList({filtersUsed}: {filtersUsed: Record<string, s
     }
 
     let dragStart: DragEventHandler<HTMLDivElement> = (e) => {
-        // Own element
         setTarget(parseInt(e.currentTarget.dataset.key!))
     };
     let dragOver: DragEventHandler<HTMLElement> = (e) => {
-        // Target
         setSelected(parseInt(e.currentTarget.dataset.key!));
     }
 
     return <div data-key="-2" className="border-top">
         <div className="d-flex my-1 pb-1 align-items-baseline">
             <small className="pe-1 text-white"><i className="bi bi-dash"></i></small>
-            <a role="button" className={"bg-white flex-grow border-0 text-dark " + (target !== undefined && selected !== undefined || rest!==0 ? "": "text-muted")} onDragOver={dragOver} onClick={(e) => {e.preventDefault(); rest!==0 ? all() : null;}} data-key="-1"><i className="bi bi-eye"></i> Esconder / Repor ({rest})</a>
+            <a role="button" className={"bg-white flex-grow border-0 text-dark " + (target !== undefined && selected !== undefined || rest!==0 ? "": "text-muted")} onDragOver={dragOver} onClick={(e) => {e.preventDefault(); all();}} data-key="-1"><i className="bi bi-eye"></i> Esconder / Repor ({rest})</a>
         </div>
         {sort.map((k,i) => k && <div data-key={i} key={i} draggable onDragOver={dragOver} onDragStart={dragStart} onDragEnd={dragEnd} className={"d-flex align-items-baseline " +( selected === i || target === i ? "shadow" : "")}>
             <small className={`pe-1 ${target!==i ? "text-muted" : ""} cursor-move`} style={{cursor: "move"}}><i className="bi bi-list"></i></small>

@@ -1,15 +1,14 @@
 import { JurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
-import { useFetchPost } from "./useFetch";
+import { useFetchPost } from "../useFetch";
 import { JurisprudenciaKey } from "@/types/keys";
 import Link from "next/link";
 
 
 
-export default function EditionOptions(props: { doc: JurisprudenciaDocument, id: string, keys: JurisprudenciaKey[] }) {
+export default function ManageDecisionOptions(props: { doc: JurisprudenciaDocument, id: string, keys: JurisprudenciaKey[] }) {
   const { post, loading, error, response } = useFetchPost<{ id: string; doc: JurisprudenciaDocument }, { ok: boolean; message: string, token?: string }>('/api/anonimizar');
 
   const anonimizadorUrl = process.env.NEXT_PUBLIC_ANONIMIZADOR_URL;
-  console.log(anonimizadorUrl);
   async function handleAnonimizar() {
     try {
       const result = await post({ id: props.id, doc: props.doc });
@@ -37,31 +36,30 @@ export default function EditionOptions(props: { doc: JurisprudenciaDocument, id:
   }
 
   return (
-      <>
-        <Link href={`/editar/avancado/${encodeURIComponent(props.id)}`}>
-          <i className="bi bi-pencil-square me-1"></i>
-          Abrir editor
-        </Link>
+    <>
+      <b>Gestão:   </b>
+      <Link href={`/editar/${encodeURIComponent(props.id)}`}>
+        <i className="bi bi-pencil-square me-1"></i>
+        Abrir editor
+      </Link>
 
-        {" | "}
-
-        {anonimizadorUrl && (
+      {" | "}
+      {anonimizadorUrl && (
         <>
           {" | "}
-          <Link
-            href="#"
+          <Link href="#" 
+            className={loading ? "text-muted" : ""}
+            title="Anonimizar"
             onClick={(e) => {
               e.preventDefault();
-              if (!loading) handleAnonimizar();
-            }}
-            className={loading ? "text-muted" : ""}
-            title="Ação protegida"
-          >
+              if (!loading)
+                handleAnonimizar();
+            }}>
             <i className="bi bi-shield-lock me-1"></i>
             {loading ? "Enviando…" : "Anonimizar"}
           </Link>
-        </>
-      )}
+        </>)}
     </>
     );
+
 }

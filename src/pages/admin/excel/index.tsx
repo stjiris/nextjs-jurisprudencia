@@ -1,9 +1,9 @@
-import { exportableKeys } from "@/components/exportable-keys";
-import { DashboardGenericPage } from "@/components/genericPageStructure";
+import GenericPage from "@/components/main_pages/genericPageStructure";
 import { useFetch } from "@/components/useFetch";
 import { LoggerServerSideProps } from "@/core/logger-api";
 import { withAuthentication } from "@/core/user/authenticate";
 import { ExcelFile, ExcelState, FileState } from "@/types/excel";
+import { exportableKeys } from "@/types/keys";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import React, { useEffect, useRef, useState } from "react";
@@ -93,7 +93,7 @@ export default function ExcelPage(){
         }
     }
 
-    return <DashboardGenericPage title="Jurisprudência STJ - Excel">
+    return <GenericPage title="Jurisprudência STJ - Excel">
         <div className="row justify-content-sm-center">
             <div className="col-sm-12 col-md-8 col-xl-6">
                 <div className="card shadow">
@@ -164,7 +164,7 @@ export default function ExcelPage(){
                 </div>
             </div>
         </div>
-    </DashboardGenericPage>
+    </GenericPage>
 }
 
 function RowFile(props: {file: ExcelFile}){

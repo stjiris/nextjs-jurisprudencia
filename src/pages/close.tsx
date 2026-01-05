@@ -1,4 +1,4 @@
-import { DashboardGenericPage } from "@/components/genericPageStructure";
+import GenericPage from "@/components/main_pages/genericPageStructure";
 import { LoggerServerSideProps } from "@/core/logger-api";
 import { GetServerSideProps } from "next";
 
@@ -7,7 +7,7 @@ export const getServerSideProps: GetServerSideProps = async ctx => {
     return {props: {}}
 }
 export default function ClosePageAfterPopupLogin() {
-    return <DashboardGenericPage title="Estabelecer sessão">
+    return <GenericPage title="Estabelecer sessão">
         <div className="container">Sessão restabelecida com sucesso. Pode fechar esta janela.</div>
-    </DashboardGenericPage>
+    </GenericPage>
 }

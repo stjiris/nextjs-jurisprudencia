@@ -1,4 +1,4 @@
-import { useKeys } from "@/components/formKeys";
+import { useFetch } from "@/components/useFetch";
 import { JurisprudenciaKey } from "@/types/keys";
 import { JurisprudenciaDocumentKey } from "@stjiris/jurisprudencia-document";
 import { createContext, useContext, useMemo } from "react";
@@ -6,6 +6,10 @@ import { createContext, useContext, useMemo } from "react";
 export const DEFAULT_KEYS: KeysContextType = { // Before fecthing it is empty
     keys: [],
     records: null
+}
+
+export function useKeys(deps: any[] = []) {
+    return useFetch<JurisprudenciaKey[]>("/api/keys", deps);
 }
 
 export const KeysContext = createContext<KeysContextType>(DEFAULT_KEYS);

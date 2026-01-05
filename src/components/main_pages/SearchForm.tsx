@@ -1,14 +1,9 @@
-import { DatalistObj } from "@/types/search";
-import { JurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
 import { AppRouterInstance } from "next/dist/shared/lib/app-router-context";
 import Link from "next/link";
-import { ReadonlyURLSearchParams, useRouter as useNavRouter, useSearchParams } from "next/navigation";
-import { NextRouter, useRouter } from "next/router";
-import { Dispatch, DragEventHandler, SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FORM_KEY, useFormOrderedKeys } from "./formKeys";
-import { replaceSearchParams } from "./SelectNavigate";
+import { useRouter as useNavRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useRef } from "react";
 import { useKeysFromContext } from "@/contexts/keys";
-import { SwapableFilterList, UsedFilters } from "./SwapableFilterList";
+import { FORM_KEY, SwapableFilterList, UsedFilters } from "./SwapableFilterList";
 
 function submit(form: HTMLFormElement, router: AppRouterInstance){
     const fd = new FormData(form);
@@ -27,18 +22,11 @@ function submit(form: HTMLFormElement, router: AppRouterInstance){
     router.push(`?${searchParams.toString()}`);
 }
 
-
-function isoDateOnly(value?: string | null): string {
-  if (!value) return "";
-  return value.length >= 10 ? value.slice(0, 10) : value;
-}
-
-
 export default function SearchForm({count, filtersUsed}:{count: number, filtersUsed: Record<string, string[]>}) {
     const form = useRef<HTMLFormElement>(null);
     const router = useNavRouter();
 
-    // Isto é uma logica de macabra que não vou desifrar, foi feito pelo Salvador
+    // Isto é uma logica estranha que não vou desifrar
     // Não vou mexer porque parece estar a funcionar
     const dataInicio = useRef<HTMLInputElement>(null);
     const dataFim = useRef<HTMLInputElement>(null);
@@ -94,7 +82,7 @@ export default function SearchForm({count, filtersUsed}:{count: number, filtersU
     const term = search.get("term");
     const group = search.get("group");
     const keys = useKeysFromContext();
-
+    const q = search.get("q");
     const minDate = search.get("MinDate");
     const maxDate = search.get("MaxDate");
 
@@ -106,7 +94,7 @@ export default function SearchForm({count, filtersUsed}:{count: number, filtersU
                 <b className="d-inline m-0">
                     <i className="bi-archive"></i> {count} Processos
                 </b>
-                {Object.keys(filtersUsed).length > 0 ? 
+                {Object.keys(filtersUsed).length > 0 || q ? 
                     <Link
                         className="text-danger text-decoration-none"
                         href={"?"+[term ? `term=${encodeURIComponent(term)}`: "", group ? `group=${encodeURIComponent(group)}`: ""].filter(s => s.length > 0).join("&")}
@@ -117,7 +105,7 @@ export default function SearchForm({count, filtersUsed}:{count: number, filtersU
             </div>
             <div className="d-flex my-1 pb-1 align-items-baseline">
                 <small className="pe-1 text-white"><i className="bi bi-dash"></i></small>
-                <input type="search" className="form-control form-control-sm rounded-0" name="q" placeholder="Texto Livre" defaultValue={""}/>
+                <input type="search" className="form-control form-control-sm rounded-0" name="q" placeholder="Texto Livre" defaultValue={q || ""}/>
             </div>
             
             <div className="d-flex my-1 pb-1 align-items-baseline">

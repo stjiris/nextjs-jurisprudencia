@@ -1,4 +1,4 @@
-import { DashboardGenericPage } from "@/components/genericPageStructure";
+import GenericPage from "@/components/main_pages/genericPageStructure";
 import { LoggerServerSideProps } from "@/core/logger-api";
 import { withAuthentication } from "@/core/user/authenticate";
 import { listUsers, User } from "@/core/user/usercrud";
@@ -16,7 +16,7 @@ export const getServerSideProps: GetServerSideProps<UsersPageProps> = withAuthen
 
 export default function UsersPage({users}: UsersPageProps){
 
-    return <DashboardGenericPage title="Jurisprudência STJ - Usuários">
+    return <GenericPage title="Jurisprudência STJ - Usuários">
         <table>
             <thead>
                 <tr>
@@ -30,5 +30,5 @@ export default function UsersPage({users}: UsersPageProps){
                 {users.map( (u,i) => <tr key={i} ><td>{u.id}</td><td>{u.username}</td><td>{u.salt}</td><td>{u.hash}</td></tr>)}
             </tbody>
         </table>
-    </DashboardGenericPage>
+    </GenericPage>
 }

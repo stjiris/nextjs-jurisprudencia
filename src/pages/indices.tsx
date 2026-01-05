@@ -1,11 +1,9 @@
-import { GenericPageWithForm } from "@/components/genericPageStructure";
+import { GenericPageWithForm } from "@/components/main_pages/genericPageStructure";
 import { useEffect, useRef, useState } from "react";
 import { ReadonlyURLSearchParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { addSearchParams, modifySearchParams, SelectNavigate } from "@/components/SelectNavigate";
-import Head from "next/head";
 import Script from "next/script";
-import { FormProps, withForm } from "@/components/pageWithForm";
+import { FormProps, withForm } from "@/components/main_pages/pageWithForm";
 import { useRouter } from "next/router";
 import { IndicesProps, INDICES_OTHERS } from "@/types/indices";
 import { Loading, SmallSpinner } from "@/components/loading";
@@ -14,6 +12,7 @@ import { JurisprudenciaKey } from "@/types/keys";
 import { useKeysFromContext } from "@/contexts/keys";
 import indicesCsvHandler from "./api/indices.csv";
 import { LoggerServerSideProps } from "@/core/logger-api";
+import { addSearchParams, modifySearchParams, SelectNavigate } from "@/components/main_pages/SelectNavigate";
 
 interface IndicesPageProps extends FormProps {
     term: string

@@ -1,4 +1,4 @@
-import GenericPage from "@/components/genericPageStructure"
+import GenericPage from "@/components/main_pages/genericPageStructure"
 import { LoggerServerSideProps } from "@/core/logger-api";
 import { withAuthentication } from "@/core/user/authenticate"
 import { readUser, User } from "@/core/user/usercrud";
