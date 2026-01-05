@@ -9,36 +9,44 @@ export const getDoc = (docId: string) => getElasticSearchClient().then(c => c.ge
 
 export const updateDoc = (docId: string, previewDoc: PartialJurisprudenciaDocument) => getElasticSearchClient().then(c => {
     let doc: PartialJurisprudenciaDocument = {};
+    const keysToDelete: string[] = [];
     for (let key in previewDoc) {
-        if (!previewDoc[key]) {
-            if (previewDoc[key] === "") {
-                doc[key] = "";
+        const value = previewDoc[key];
+        if (!value) {
+            if (value === "") {
+                keysToDelete.push(key);
             }
             continue;
         }
 
-        if (isJurisprudenciaDocumentExactKey(key) && typeof previewDoc[key] === "string") {
-            doc[key] = previewDoc[key];
-            continue;
-        }
-        if (isJurisprudenciaDocumentGenericKey(key) && typeof previewDoc[key] === "object" && previewDoc[key]?.Index.every(v => typeof v === "string") && previewDoc[key]?.Original.every(v => typeof v === "string") && previewDoc[key]?.Show.every(v => typeof v === "string")) {
-            doc[key] = previewDoc[key];
-            continue;
-        }
-        if (isJurisprudenciaDocumentDateKey(key) && typeof previewDoc[key] === "string" && previewDoc[key].match(/^\d{2}\/\d{2}\/\d{4}$/)) {
-            doc[key] = previewDoc[key];
-            continue;
-        }
-        if (isJurisprudenciaDocumentTextKey(key) && typeof previewDoc[key] === "string") {
-            doc[key] = previewDoc[key];
-            continue;
-        }
-        if (isJurisprudenciaDocumentStateKey(key) && typeof previewDoc[key] === "string" && JurisprudenciaDocumentStateValues.includes(previewDoc[key])) {
-            doc[key] = previewDoc[key];
-            continue;
-        }
+        if (isJurisprudenciaDocumentExactKey(key) && typeof value === "string") doc[key] = value;
+        else if (isJurisprudenciaDocumentGenericKey(key) && value?.Index && value?.Original && value?.Show) doc[key] = value;
+        else if (isJurisprudenciaDocumentDateKey(key) && typeof value === "string" && value.match(/^\d{2}\/\d{2}\/\d{4}$/)) doc[key] = value;
+        else if (isJurisprudenciaDocumentTextKey(key) && typeof value === "string") doc[key] = value;
+        else if (isJurisprudenciaDocumentStateKey(key) && typeof value === "string" && JurisprudenciaDocumentStateValues.includes(value)) doc[key] = value;
+
     }
-    return c.update<JurisprudenciaDocument, PartialJurisprudenciaDocument>({ index: JurisprudenciaVersion, id: docId, doc, refresh: "wait_for" })
+
+    if (keysToDelete.length === 0) {
+        return c.update<JurisprudenciaDocument, PartialJurisprudenciaDocument>({
+            index: JurisprudenciaVersion,
+            id: docId,
+            doc,
+            refresh: "wait_for"
+        });
+    }
+
+    const scriptLines = keysToDelete.map(k => `ctx._source.remove("${k}");`).join(" ");
+
+    return c.update<JurisprudenciaDocument>({
+        index: JurisprudenciaVersion,
+        id: docId,
+        body: {
+            script: scriptLines,
+            upsert: doc
+        },
+        refresh: "wait_for"
+    });
 })
 
 export const createDoc = (newdoc: PartialJurisprudenciaDocument) => getElasticSearchClient().then(c => {
