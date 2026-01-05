@@ -30,7 +30,7 @@ export default function JurisprudenciaItem({hit, searchId}:{hit: SearchHandlerRe
             {decisao && <div><b>{keys?.Decisão.name}:</b> {decisao}</div>}
         </div>
         {hit._source?.Sumário && !hit.highlight?.Sumário ? (
-            <div className="col-12 col-lg-8">
+            <div className="col-12 col-lg-8 rounded" style={{ backgroundColor: "var(--secondary-gold)" }}>
                 <b>{keys?.Sumário.name}:</b>{' '}
                 {(() => {
                     const summary = hit.highlight?.Sumário || hit._source.Sumário;
@@ -59,7 +59,7 @@ export default function JurisprudenciaItem({hit, searchId}:{hit: SearchHandlerRe
                     <i className="bi bi-caret-downright-fill"></i>
                     <b className="mouse-click">{keys?.Sumário.name}:</b>
                 </span>
-                {hit.highlight?.["SumárioMarks"] ? <div className="highlight">
+        {hit.highlight?.["SumárioMarks"] ? <div className="highlight">
                     <div className="highlight-bar" data-key="Sumário">
                         {(hit.highlight.SumárioMarks as HighlightFragment[]).map((marker,i) => <div key={i} className="highlight-bar-hit-parent">
                             <div className="highlight-bar-hit" data-offset={marker.offset} data-per={marker.offset/marker.size} style={{left: `${marker.offset/marker.size*100}%`, background: "green"}}></div>

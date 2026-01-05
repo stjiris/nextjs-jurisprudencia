@@ -5,174 +5,166 @@ import { useCallback, useEffect, useRef } from "react";
 import { useKeysFromContext } from "@/contexts/keys";
 import { FORM_KEY, SwapableFilterList, UsedFilters } from "./SwapableFilterList";
 
-function submit(form: HTMLFormElement, router: AppRouterInstance){
+function submit(form: HTMLFormElement, router: AppRouterInstance) {
     const fd = new FormData(form);
     const searchParams = new URLSearchParams();
-    for( let key of fd.keys() ){
-        let values = fd.getAll(key).filter(v => v.length > 0);
-        searchParams.delete(key);
-        for( let v of values ){
-            searchParams.append(key, v as string)
-        }
+
+    for (const key of fd.keys()) {
+        const values = fd.getAll(key).filter(v => String(v).length > 0);
+        for (const v of values) searchParams.append(key, v as string);
     }
-    let keysOrder = new URLSearchParams(window.location.search).get(FORM_KEY);
-    if(keysOrder){
-        searchParams.set(FORM_KEY, keysOrder);
-    }
+
+    const keysOrder = new URLSearchParams(window.location.search).get(FORM_KEY);
+    if (keysOrder) searchParams.set(FORM_KEY, keysOrder);
+
     router.push(`?${searchParams.toString()}`);
 }
 
-export default function SearchForm({count, filtersUsed}:{count: number, filtersUsed: Record<string, string[]>}) {
+export default function SearchForm({ count, filtersUsed }: { count: number; filtersUsed: Record<string, string[]> }) {
     const form = useRef<HTMLFormElement>(null);
     const router = useNavRouter();
 
-    // Isto é uma logica estranha que não vou desifrar
-    // Não vou mexer porque parece estar a funcionar
     const dataInicio = useRef<HTMLInputElement>(null);
     const dataFim = useRef<HTMLInputElement>(null);
-    
-    let resetDatas = useCallback(() => {
-        if( dataInicio.current )
-            dataInicio.current.value = ""
-        if( dataFim.current )
-            dataFim.current.value = ""
-    },[dataFim, dataInicio])
 
-    useEffect(() => {
-        const element = form.current;
-        const handleSubmit = () => {
-            if( element?.checkValidity() ){
-                submit(element, router);
-                let valueDataInicio = dataInicio.current?.value;
-                let valueDataFim = dataFim.current?.value;
-                form.current?.reset();
-                if(dataInicio.current && valueDataInicio)
-                    dataInicio.current.value = valueDataInicio
-                if(dataFim.current && valueDataFim)
-                    dataFim.current.value = valueDataFim
-            }
-            else{
-                element?.reportValidity();
-            }
-        }
-        element?.addEventListener("change", handleSubmit);
-        return () => {
-            element?.removeEventListener("change", handleSubmit)
-        }
-    }, [form, router])
+    const maxTouched = useRef(false);
 
-    function _validateDate() {
-        const startVal = dataInicio.current?.value || "";
-        const endVal = dataFim.current?.value || "";
+    const resetDatas = useCallback(() => {
+        if (dataInicio.current) dataInicio.current.value = "";
+        if (dataFim.current) dataFim.current.value = "";
+        maxTouched.current = false;
+    }, []);
 
-        if (dataFim.current && 'setCustomValidity' in dataFim.current) {
-            (dataFim.current as HTMLInputElement).setCustomValidity("");
-        }
+    function validateDates() {
+        const start = dataInicio.current?.value || "";
+        const end = dataFim.current?.value || "";
 
-        if (startVal && endVal && startVal > endVal) {
-            if (dataFim.current && 'setCustomValidity' in dataFim.current) {
-                (dataFim.current as HTMLInputElement).setCustomValidity("Data final deve ser igual ou posterior à data inicial");
-            }
+        if (dataFim.current) dataFim.current.setCustomValidity("");
+
+        if (start && end && start > end) {
+            dataFim.current?.setCustomValidity(
+                "Data final deve ser igual ou posterior à data inicial"
+            );
             return false;
         }
         return true;
     }
 
+    useEffect(() => {
+        const el = form.current;
+        if (!el) return;
+
+        const handleChange = () => {
+            if (!validateDates()) return el.reportValidity();
+
+            let removedName: string | null = null;
+            if (!maxTouched.current && dataFim.current) {
+                removedName = dataFim.current.name;
+                dataFim.current.removeAttribute("name");
+            }
+
+            submit(el, router);
+
+            if (removedName && dataFim.current) {
+                dataFim.current.name = removedName;
+            }
+
+            const a = dataInicio.current?.value;
+            const b = dataFim.current?.value;
+            el.reset();
+            if (a && dataInicio.current) dataInicio.current.value = a;
+            if (b && dataFim.current) dataFim.current.value = b;
+        };
+
+        el.addEventListener("change", handleChange);
+        return () => el.removeEventListener("change", handleChange);
+    }, [router]);
+
     const search = useSearchParams();
     const term = search.get("term");
     const group = search.get("group");
-    const keys = useKeysFromContext();
     const q = search.get("q");
     const minDate = search.get("MinDate");
     const maxDate = search.get("MaxDate");
+    const keys = useKeysFromContext();
 
-    return <form ref={form} method="get" style={{top: 0}} className="position-sticky">
-        {term ? <input type="text" name="term" hidden value={term} readOnly/> : ""}
-        {group ? <input type="text" name="group" hidden value={group} readOnly/> : ""}
-        <div className="d-block">
-            <div className="d-flex align-items-center justify-content-between">
-                <b className="d-inline m-0">
-                    <i className="bi-archive"></i> {count} Processos
-                </b>
-                {Object.keys(filtersUsed).length > 0 || q ? 
-                    <Link
-                        className="text-danger text-decoration-none"
-                        href={"?"+[term ? `term=${encodeURIComponent(term)}`: "", group ? `group=${encodeURIComponent(group)}`: ""].filter(s => s.length > 0).join("&")}
-                        onClick={resetDatas}>
-                            <i className="bi bi-eraser-fill"></i> Limpar
+    return (
+        <form ref={form} method="get" className="position-sticky" style={{ top: 0 }}>
+            {term && <input name="term" hidden value={term} readOnly />}
+            {group && <input name="group" hidden value={group} readOnly />}
+
+            <div className="d-block">
+                <div className="d-flex align-items-center justify-content-between">
+                    <b><i className="bi-archive" /> {count} Processos</b>
+                    {(Object.keys(filtersUsed).length > 0 || q) && (
+                        <Link
+                            href={"?" + [term && `term=${encodeURIComponent(term)}`, group && `group=${encodeURIComponent(group)}`].filter(Boolean).join("&")}
+                            className="text-danger text-decoration-none"
+                            onClick={resetDatas}
+                        >
+                            <i className="bi bi-eraser-fill" /> Limpar
                         </Link>
-                : ""}
-            </div>
-            <div className="d-flex my-1 pb-1 align-items-baseline">
-                <small className="pe-1 text-white"><i className="bi bi-dash"></i></small>
-                <input type="search" className="form-control form-control-sm rounded-0" name="q" placeholder="Texto Livre" defaultValue={q || ""}/>
-            </div>
-            
-            <div className="d-flex my-1 pb-1 align-items-baseline">
-                <small className="pe-1 text-white"><i className="bi bi-calendar3"></i></small>
-                <div className="input-group input-group-sm">
-                    <div className="input-group-prepend">
-                        <label htmlFor="data_inicio" className="input-group-text rounded-0 p-1" style={{minWidth: '50px'}}>
-                            De:
-                        </label>
-                    </div>
+                    )}
+                </div>
+
+                <input
+                    type="search"
+                    name="q"
+                    className="form-control form-control-sm rounded-0 my-1"
+                    placeholder="Texto Livre"
+                    defaultValue={q || ""}
+                />
+
+                <div className="input-group input-group-sm my-1">
+                    <label className="input-group-text rounded-0" style={{ minWidth: 50 }}>De:</label>
                     <input
-                        id="data_inicio"
                         type="date"
                         name="MinDate"
-                        className="form-control"
-                        max={maxDate || undefined}
+                        ref={dataInicio}
                         defaultValue={minDate || ""}
-                        ref={dataInicio as React.RefObject<HTMLInputElement>}
-                        onChange={() => { _validateDate(); }}
+                        max={maxDate || undefined}
+                        className="form-control"
+                        onChange={() => {
+                            validateDates();
+                            if (!maxTouched.current && dataFim.current) {
+                                dataFim.current.value = dataInicio.current?.value || "";
+                            }
+                        }}
                     />
                 </div>
-            </div>
 
-            <div className="d-flex my-1 pb-1 align-items-baseline">
-                <small className="pe-1 text-white"><i className="bi bi-calendar3"></i></small>
-                <div className="input-group input-group-sm">
-                    <div className="input-group-prepend">
-                        <label htmlFor="data_fim" className="input-group-text rounded-0 p-1" style={{minWidth: '50px'}}>
-                            Até:
-                        </label>
-                    </div>
+                <div className="input-group input-group-sm my-1">
+                    <label className="input-group-text rounded-0" style={{ minWidth: 50 }}>Até:</label>
                     <input
-                        id="data_fim"
                         type="date"
                         name="MaxDate"
-                        className="form-control"
-                        min={minDate || undefined}
+                        ref={dataFim}
                         defaultValue={maxDate || ""}
-                        ref={dataFim as React.RefObject<HTMLInputElement>}
-                        onChange={() => { _validateDate(); }}
+                        min={minDate || undefined}
+                        className="form-control"
+                        onChange={() => {
+                            maxTouched.current = true;
+                            validateDates();
+                        }}
                     />
                 </div>
-            </div>
 
-            <div className="d-flex align-items-baseline">
-                <small className="pe-1 text-white"><i className="bi bi-dash"></i></small>
-                <div className="my-1 pb-1 align-items-baseline form-check">
-                    <input id="checkbox-has-text" type="checkbox" className="form-check-input" name="mustHaveText" value="true" defaultChecked={search.has("mustHaveText")}/>
-                    <label className="form-check-label" htmlFor="checkbox-has-text">Tem de ter {keys?.records?.Texto?.name}</label>
+                <div className="form-check my-1">
+                    <input
+                        id="checkbox-has-text"
+                        type="checkbox"
+                        name="mustHaveText"
+                        value="true"
+                        defaultChecked={search.has("mustHaveText")}
+                        className="form-check-input"
+                    />
+                    <label htmlFor="checkbox-has-text" className="form-check-label">
+                        Tem de ter {keys?.records?.Texto?.name}
+                    </label>
                 </div>
+
+                <SwapableFilterList filtersUsed={filtersUsed} />
             </div>
-            {"hasField" in filtersUsed ? <div className="d-flex align-items-baseline">
-                <small className="pe-1 text-white"><i className="bi bi-dash"></i></small>
-                <div className="d-flex w-100 flex-column my-1 border pb-1">
-                    <input type="text" className="form-control form-control-sm border-0 border-bottom rounded-0" name="hasField" autoComplete="off" list="datalist-Campos" placeholder="Tem de ter o campo"/>
-                    <UsedFilters filtersUsed={filtersUsed} accessKey="hasField" />
-                </div>
-            </div> : ""}
-            {"notHasField" in filtersUsed ? <div className="d-flex align-items-baseline">
-                <small className="pe-1 text-white"><i className="bi bi-dash"></i></small>
-                <div className="d-flex w-100 flex-column my-1 border pb-1">
-                    <input type="text" className="form-control form-control-sm border-0 border-bottom rounded-0" name="notHasField" autoComplete="off" list="datalist-Campos" placeholder="Não pode ter o campo"/>
-                    <UsedFilters filtersUsed={filtersUsed} accessKey="notHasField" />
-                </div>
-            </div> : ""}
-            <SwapableFilterList filtersUsed={filtersUsed}/>
-        </div>
-    </form>
+        </form>
+    );
 }
-
