@@ -2,7 +2,7 @@ import { AggregationsAggregate, AggregationsAggregationContainer, AggregationsMa
 import search, { aggs, filterableProps, createQueryDslQueryContainer, populateFilters, sortAlphabetically } from "@/core/elasticsearch"
 import { NextApiRequest, NextApiResponse } from "next";
 import { INDICES_OTHERS } from "@/types/indices";
-import { listAggregation } from "@/components/main_pages/indices/indices-helpers";
+import { listAggregation } from "@/core/indices-helpers";
 import { stream } from "exceljs";
 import { authenticatedHandler } from "@/core/user/authenticate";
 import LoggerApi from "@/core/logger-api";

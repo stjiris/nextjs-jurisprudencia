@@ -29,7 +29,7 @@ export function listAggregation(term: string, group?: string): Record<string, Ag
             }
         }
     } as Record<string, AggregationsAggregationContainer>
-    if( groupFieldName){
+    if(groupFieldName){
         new_aggs[term].aggs!.Group = {
             terms: {
                 field: groupFieldName.replace("keyword","raw"),
