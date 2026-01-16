@@ -1,8 +1,9 @@
 import { JurisprudenciaKey, KEYS_INFO_INDEX_VERSION, KEYS_INFO_PROPERTIES, makeValidValue } from "@/types/keys";
 import { getElasticSearchClient } from "./elasticsearch";
 import { JurisprudenciaDocumentKey, JurisprudenciaDocumentKeys } from "@stjiris/jurisprudencia-document";
+import { Client } from "@elastic/elasticsearch";
 
-async function getClient() {
+async function getClient(): Promise<Client> {
     let client = await getElasticSearchClient();
     if (!(await client.indices.exists({ index: KEYS_INFO_INDEX_VERSION }))) {
         await client.indices.create({
@@ -98,7 +99,7 @@ export async function updateKey(key: JurisprudenciaDocumentKey, update: Partial<
         }
     });
     let hit = r.hits.hits[0];
-    if (!hit) return;
+    if (!hit || !hit._id) return;
 
     // if update a boolean that it's dependent of other update it
     if (update.indicesGroup) update.indicesList = true;

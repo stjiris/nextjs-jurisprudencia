@@ -4,9 +4,9 @@ import crypto from "crypto";
 
 const SAVED_SEARCH_INDEX = "saved-searches.0.1"
 
-async function getClient(){
+async function getClient() {
     let client = await getElasticSearchClient();
-    if( !(await client.indices.exists({index: SAVED_SEARCH_INDEX})) ){
+    if (!(await client.indices.exists({ index: SAVED_SEARCH_INDEX }))) {
         await client.indices.create({
             index: SAVED_SEARCH_INDEX,
             mappings: {
@@ -35,32 +35,32 @@ async function getClient(){
 }
 
 
-function shakeHash(str: string){
+function shakeHash(str: string) {
     let hash = crypto.createHash("shake256", { outputLength: 14 });
     hash.write(str);
     return hash.digest().toString("base64url");
 }
 
-export async function saveSearch(reqString: string){
+export async function saveSearch(reqString: string) {
     let client = await getClient();
-    let r = await client.search<{searchHash: string}>({ index: SAVED_SEARCH_INDEX, query: { term: { searchParams: reqString }}, _source: ["searchHash"]});
-    if( r.hits.hits.length > 0 ){
+    let r = await client.search<{ searchHash: string }>({ index: SAVED_SEARCH_INDEX, query: { term: { searchParams: reqString } }, _source: ["searchHash"] });
+    if (r.hits.hits.length > 0) {
         return r.hits.hits[0]._source?.searchHash;
     }
     let hashStr = shakeHash(reqString);
     r = await client.search({
         index: SAVED_SEARCH_INDEX,
-        query: { term: {searchHash: hashStr}},
+        query: { term: { searchHash: hashStr } },
         _source: false
     });
-    while(r.hits.hits.length > 0){ // prevent new hashes from coliding since we are using only the first 7 bytes
+    while (r.hits.hits.length > 0) { // prevent new hashes from coliding since we are using only the first 7 bytes
         let salt = crypto.randomBytes(10).toString('hex') // using salt to make less likely to colide
         hashStr = shakeHash(hashStr + salt);
         r = await client.search({
             index: SAVED_SEARCH_INDEX,
-            query: { term: {searchHash: hashStr}},
+            query: { term: { searchHash: hashStr } },
             _source: false
-        }); 
+        });
     }
     await client.index({
         index: SAVED_SEARCH_INDEX,
@@ -74,17 +74,17 @@ export async function saveSearch(reqString: string){
     return hashStr;
 }
 
-export async function trackClickedDocument(searchHash: string, documentId: string){
+export async function trackClickedDocument(searchHash: string, documentId: string) {
     let client = await getClient();
-    let r = await client.search<{searchClicks: string[]}>({
+    let r = await client.search<{ searchClicks: string[] }>({
         index: SAVED_SEARCH_INDEX,
         query: { term: { searchHash: searchHash } },
         _source: ["searchClicks"]
-    }).catch( e => {
+    }).catch(e => {
         console.log(e);
-        return {hits: {hits: []}}
+        return { hits: { hits: [] } }
     });
-    if( r.hits.hits.length == 0 ) return;
+    if (r.hits.hits.length == 0 || !r.hits.hits[0]._id) return;
 
     await client.update({
         index: SAVED_SEARCH_INDEX,
@@ -97,19 +97,19 @@ export async function trackClickedDocument(searchHash: string, documentId: strin
     });
 }
 
-export async function getShearchParams(searchHash: string){
+export async function getShearchParams(searchHash: string) {
     let client = await getClient()
-    let r = await client.search<{searchParams: string}>({
+    let r = await client.search<{ searchParams: string }>({
         index: SAVED_SEARCH_INDEX,
         query: {
             term: { searchHash: searchHash }
         },
         _source: ["searchParams"]
-    }).catch( e => {
+    }).catch(e => {
         console.log(e);
-        return {hits: {hits: []}}
+        return { hits: { hits: [] } }
     });
-    if( r.hits.hits.length == 0 ) return;
+    if (r.hits.hits.length == 0) return;
 
     return r.hits.hits[0]._source?.searchParams;
 }

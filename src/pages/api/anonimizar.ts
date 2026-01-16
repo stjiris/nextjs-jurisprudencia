@@ -60,9 +60,9 @@ export default LoggerApi(async function anonimizarHandler(
         console.log("/api/anonimizar payload:");
         console.log(JSON.stringify({ id, docPreview: Object.keys(doc) }, null, 2));
 
-        const token = crypto.randomUUID();
+        const token = doc.UUID;
 
-        const sendRes = await fetch(`${anonimizadorUrl}/api/new_document`, {
+        const sendRes = await fetch(`${anonimizadorUrl}/api/juris/save_document`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

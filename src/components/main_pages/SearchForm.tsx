@@ -1,11 +1,12 @@
-import { AppRouterInstance } from "next/dist/shared/lib/app-router-context";
+'use client';
+
 import Link from "next/link";
 import { useRouter as useNavRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef } from "react";
 import { useKeysFromContext } from "@/contexts/keys";
 import { FORM_KEY, SwapableFilterList, UsedFilters } from "./SwapableFilterList";
 
-function submit(form: HTMLFormElement, router: AppRouterInstance) {
+function submit(form: HTMLFormElement, router: ReturnType<typeof useNavRouter>) {
     const fd = new FormData(form);
     const searchParams = new URLSearchParams();
 

@@ -1,6 +1,19 @@
-FROM node:20.10-bookworm-slim
+FROM node:20.19-bullseye-slim
 
 RUN apt update && apt install vim cron git -y
+
+RUN apt update && \
+    apt install -y python3 python3-venv python3-dev build-essential ghostscript && \
+    apt clean && rm -rf /var/lib/apt/lists/*
+
+RUN python3 -m venv /opt/venv
+
+RUN /opt/venv/bin/pip install --upgrade pip && \
+    /opt/venv/bin/pip install camelot-py[cv] pandas cryptography numpy
+
+ENV PATH="/opt/venv/bin:$PATH"
+
+RUN ln -s /opt/venv/bin/python /usr/local/bin/python3
 
 RUN useradd -m clitools
 

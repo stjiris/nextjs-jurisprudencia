@@ -82,7 +82,8 @@ services:
       - ../jurisprudencia-privada-etl:/home/clitools/jurisprudencia-privada-etl:rw
       - ../jurisprudencia-etl:/home/clitools/jurisprudencia-etl:rw
       - ../version-converter:/home/clitools/version-converter:rw
-      - rss_data:/rss 
+      - ../backup-jurisprudencia:/home/clitools/backup-jurisprudencia:rw
+      - rss_data:/rss
     networks:
       - juris-network
   elasticsearch:

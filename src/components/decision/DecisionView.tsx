@@ -30,7 +30,7 @@ export default function DecisionView(props: { doc: JurisprudenciaDocument, id: s
                     <div className="row border-bottom">
                         <div className="col-6"><b>N.º de Processo: </b>{props.doc["Número de Processo"]}</div>
                         <div className="col-6 text-end">
-                            {props.doc.URL && props.doc.URL.length > 0 && props.doc.URL !== "«sem valor»" && <><small><Link className="bi bi-box-arrow-up-right" href={props.doc.URL}>{new URL(props.doc.URL!).host}</Link></small>&nbsp;</>}
+                            {props.doc.URL && props.doc.URL.length > 0 && props.doc.URL !== "«sem valor»" && <><small><Link className="bi bi-box-arrow-up-right" href={props.doc.URL} target="_blank" >{new URL(props.doc.URL!).host}</Link></small>&nbsp;</>}
                             <small><b>Fonte:&nbsp;</b><span>{props.doc.Fonte}</span></small>
                         </div>
                     </div>

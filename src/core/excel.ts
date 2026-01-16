@@ -208,8 +208,8 @@ async function updateIds(worksheetData: CellValue[][], client: Client, idIndex: 
             await client.bulk({
                 index: JurisprudenciaVersion,
                 operations: ops
-            }).then(r => {
-                logs.push(["update", actualField, r.took.toString(), "ms", r.items.length.toString(), r.errors ? "errors" : "no errors", ...r.items.map(i => i.update?.error?.reason || "")])
+            }).then((r: { took: { toString: () => string; }; items: any[]; errors: any; }) => {
+                logs.push(["update", actualField, r.took.toString(), "ms", r.items.length.toString(), r.errors ? "errors" : "no errors", ...r.items.map((i: { update: { error: { reason: any; }; }; }) => i.update?.error?.reason || "")])
             })
             ops = [];
         }
@@ -218,8 +218,8 @@ async function updateIds(worksheetData: CellValue[][], client: Client, idIndex: 
         await client.bulk({
             index: JurisprudenciaVersion,
             operations: ops
-        }).then(r => {
-            logs.push(["update", actualField, r.took.toString(), "ms", r.items.length.toString(), r.errors ? "errors" : "no errors", ...r.items.map(i => i.update?.error?.reason || "")])
+        }).then((r: { took: { toString: () => string; }; items: any[]; errors: any; }) => {
+            logs.push(["update", actualField, r.took.toString(), "ms", r.items.length.toString(), r.errors ? "errors" : "no errors", ...r.items.map((i: { update: { error: { reason: any; }; }; }) => i.update?.error?.reason || "")])
         })
     }
     return logs;
@@ -346,7 +346,7 @@ async function fieldCard(client: Client, pit: SearchPointInTimeReference, field:
                     }
                 }
             }
-        }).then(r => (r.aggregations![groupingField] as AggregationsCardinalityAggregate).value);
+        }).then((r) => (r.aggregations![groupingField] as AggregationsCardinalityAggregate).value);
         return await client.search({
             pit: pit,
             size: 0,
@@ -370,7 +370,7 @@ async function fieldCard(client: Client, pit: SearchPointInTimeReference, field:
                     }
                 }
             }
-        }).then(r => (r.aggregations!.SumValue as AggregationsSumAggregate).value!)
+        }).then((r) => (r.aggregations!.SumValue as AggregationsSumAggregate).value!)
     }
     return await client.search({
         size: 0,
@@ -382,7 +382,7 @@ async function fieldCard(client: Client, pit: SearchPointInTimeReference, field:
                 }
             }
         }
-    }).then(r => (r.aggregations![field] as AggregationsCardinalityAggregate).value)
+    }).then((r) => (r.aggregations![field] as AggregationsCardinalityAggregate).value)
 }
 
 async function aggregateField(client: Client, pit: SearchPointInTimeReference, field: string, groupingField?: string) {
@@ -444,10 +444,10 @@ async function getAllIndices(client: Client, pit: SearchPointInTimeReference, ke
         EXCEL_STATE.export_all = i / (typeof r.hits.total === "object" ? r.hits.total.value : r.hits.total || 1)
         keys.forEach((key, i) => {
             if (isJurisprudenciaDocumentGenericKey(key)) {
-                data[i].push(...r.hits.hits.flatMap(hit => allGenericColumns(hit, key as typeof JurisprudenciaDocumentGenericKeys[number])))
+                data[i].push(...r.hits.hits.flatMap((hit: any) => allGenericColumns(hit, key as typeof JurisprudenciaDocumentGenericKeys[number])))
             }
             else {
-                data[i].push(...r.hits.hits.flatMap(hit => [addHash([hit._source![key] as any || "", hit._id])]))
+                data[i].push(...r.hits.hits.flatMap((hit) => [addHash([hit._source![key] as any || "", hit._id])]))
             }
         })
         i += r.hits.hits.length
@@ -462,7 +462,7 @@ function allGenericColumns(hit: SearchHit<JurisprudenciaDocument>, key: typeof J
     let shw = hit._source![key]?.Show || [];
     let ind = hit._source![key]?.Index || [];
     for (let i = 0; i < Math.max(ori?.length, shw?.length, ind?.length); i++) {
-        data.push(addHash([ori[i] || "", shw[i] || "", ind[i] || "", hit._id]))
+        data.push(addHash([ori[i] || "", shw[i] || "", ind[i] || "", hit._id || ""]))
     }
     return data
 }

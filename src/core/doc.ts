@@ -2,33 +2,41 @@
 import { JurisprudenciaDocument, JurisprudenciaDocumentStateValues, JurisprudenciaVersion, PartialJurisprudenciaDocument, isJurisprudenciaDocumentDateKey, isJurisprudenciaDocumentExactKey, isJurisprudenciaDocumentGenericKey, isJurisprudenciaDocumentStateKey, isJurisprudenciaDocumentTextKey, calculateUUID, calculateHASH } from "@stjiris/jurisprudencia-document";
 import { getElasticSearchClient } from "./elasticsearch";
 import { SimpleJurisprudenciaDocument, getSimpleEditorDefaults } from "@/components/decision/simpleEditorDefaults";
+import { Client } from "@elastic/elasticsearch";
 
 export const existsDoc = (docId: string) => getElasticSearchClient().then(c => c.exists({ index: JurisprudenciaVersion, id: docId }))
 
 export const getDoc = (docId: string) => getElasticSearchClient().then(c => c.get<JurisprudenciaDocument>({ index: JurisprudenciaVersion, id: docId }))
 
-export const updateDoc = (docId: string, previewDoc: PartialJurisprudenciaDocument) => getElasticSearchClient().then(c => {
+export async function updateDoc(docId: string, previewDoc: PartialJurisprudenciaDocument): Promise<> {
+    const elasticSearchClient: Client = await getElasticSearchClient();
+
     let doc: PartialJurisprudenciaDocument = {};
     const keysToDelete: string[] = [];
     for (let key in previewDoc) {
         const value = previewDoc[key];
         if (!value) {
             if (value === "") {
-                keysToDelete.push(key);
+                keysToDelete.push(key); updateDoc
             }
             continue;
         }
 
-        if (isJurisprudenciaDocumentExactKey(key) && typeof value === "string") doc[key] = value;
-        else if (isJurisprudenciaDocumentGenericKey(key) && value?.Index && value?.Original && value?.Show) doc[key] = value;
-        else if (isJurisprudenciaDocumentDateKey(key) && typeof value === "string" && value.match(/^\d{2}\/\d{2}\/\d{4}$/)) doc[key] = value;
-        else if (isJurisprudenciaDocumentTextKey(key) && typeof value === "string") doc[key] = value;
-        else if (isJurisprudenciaDocumentStateKey(key) && typeof value === "string" && JurisprudenciaDocumentStateValues.includes(value)) doc[key] = value;
+        if (isJurisprudenciaDocumentExactKey(key) && typeof value === "string")
+            doc[key] = value;
+        else if (isJurisprudenciaDocumentGenericKey(key) && value?.Index && value?.Original && value?.Show)
+            doc[key] = value;
+        else if (isJurisprudenciaDocumentDateKey(key) && typeof value === "string" && value.match(/^\d{2}\/\d{2}\/\d{4}$/))
+            doc[key] = value;
+        else if (isJurisprudenciaDocumentTextKey(key) && typeof value === "string")
+            doc[key] = value;
+        else if (isJurisprudenciaDocumentStateKey(key) && typeof value === "string" && JurisprudenciaDocumentStateValues.includes(value))
+            doc[key] = value;
 
     }
 
     if (keysToDelete.length === 0) {
-        return c.update<JurisprudenciaDocument, PartialJurisprudenciaDocument>({
+        return elasticSearchClient.update<JurisprudenciaDocument, PartialJurisprudenciaDocument>({
             index: JurisprudenciaVersion,
             id: docId,
             doc,
@@ -38,7 +46,7 @@ export const updateDoc = (docId: string, previewDoc: PartialJurisprudenciaDocume
 
     const scriptLines = keysToDelete.map(k => `ctx._source.remove("${k}");`).join(" ");
 
-    return c.update<JurisprudenciaDocument>({
+    return elasticSearchClient.update<JurisprudenciaDocument>({
         index: JurisprudenciaVersion,
         id: docId,
         body: {
@@ -47,7 +55,7 @@ export const updateDoc = (docId: string, previewDoc: PartialJurisprudenciaDocume
         },
         refresh: "wait_for"
     });
-})
+}
 
 export const createDoc = (newdoc: PartialJurisprudenciaDocument) => getElasticSearchClient().then(c => {
     let doc: PartialJurisprudenciaDocument = {};
