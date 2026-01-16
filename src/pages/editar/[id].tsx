@@ -2,7 +2,6 @@ import { withAuthentication } from "@/core/user/authenticate"
 import { JurisprudenciaDocument, JurisprudenciaDocumentDateKey, JurisprudenciaDocumentExactKey, JurisprudenciaDocumentGenericKey, JurisprudenciaDocumentStateKey, JurisprudenciaDocumentStateValue, JurisprudenciaDocumentStateValues, JurisprudenciaDocumentTextKey, PartialJurisprudenciaDocument, isJurisprudenciaDocumentContentKey, isJurisprudenciaDocumentDateKey, isJurisprudenciaDocumentExactKey, isJurisprudenciaDocumentGenericKey, isJurisprudenciaDocumentHashKey, isJurisprudenciaDocumentObjectKey, isJurisprudenciaDocumentStateKey, isJurisprudenciaDocumentTextKey } from "@stjiris/jurisprudencia-document";
 import { useContext, useState } from "react";
 
-import Link from "next/link";
 import { useRouter as useNavRouter, useSearchParams } from "next/navigation";
 import { useRouter } from "next/router";
 import { Loading } from "@/components/loading";
@@ -17,7 +16,7 @@ import GenericPage from "@/components/main_pages/genericPageStructure";
 
 export const getServerSideProps = withAuthentication<{}>(async ctx => {
     LoggerServerSideProps(ctx);
-    return {props: {}}
+    return { props: {} }
 })
 
 interface UpdateProps {
@@ -26,8 +25,11 @@ interface UpdateProps {
 }
 
 export default function UpdatePage() {
-    let searchParams = useSearchParams();
-    let id = searchParams.get("id");
+    const router = useRouter();
+    let { id } = router.query;
+    if (Array.isArray(id)) {
+        id = id[0];
+    }
     let response = useFetch<GetResponse<JurisprudenciaDocument>>(`/api/doc/${id}`, [id]);
 
     return <GenericPage title="Jurisprudência STJ - Editar Documento">
@@ -65,23 +67,23 @@ function EditKey({ accessKey, doc }: { accessKey: JurisprudenciaKey, doc: Partia
     if (isJurisprudenciaDocumentObjectKey(accessKey.key) || isJurisprudenciaDocumentHashKey(accessKey.key) || isJurisprudenciaDocumentContentKey(accessKey.key))
         return <ShowCode accessKey={accessKey} doc={doc} />
     if (isJurisprudenciaDocumentDateKey(accessKey.key))
-        return <DateInput accessKey={{...accessKey, key: accessKey.key as JurisprudenciaDocumentDateKey}} doc={doc} />
+        return <DateInput accessKey={{ ...accessKey, key: accessKey.key as JurisprudenciaDocumentDateKey }} doc={doc} />
     if (isJurisprudenciaDocumentTextKey(accessKey.key)) {
-        return <TextInput accessKey={{...accessKey, key: accessKey.key as JurisprudenciaDocumentTextKey}} doc={doc} />
+        return <TextInput accessKey={{ ...accessKey, key: accessKey.key as JurisprudenciaDocumentTextKey }} doc={doc} />
     }
 
     if (isJurisprudenciaDocumentGenericKey(accessKey.key)) {
-        return <TokenSelection accessKey={{...accessKey, key: accessKey.key as JurisprudenciaDocumentGenericKey}} doc={doc} editorSuggestions={accessKey.editorSuggestions} editorRestricted={accessKey.editorRestricted} />
+        return <TokenSelection accessKey={{ ...accessKey, key: accessKey.key as JurisprudenciaDocumentGenericKey }} doc={doc} editorSuggestions={accessKey.editorSuggestions} editorRestricted={accessKey.editorRestricted} />
     }
     if (isJurisprudenciaDocumentExactKey(accessKey.key)) {
         if (accessKey.editorSuggestions) {
-            return <ExactInputWithSuggestions accessKey={{...accessKey, key: accessKey.key as JurisprudenciaDocumentExactKey}} doc={doc} />
+            return <ExactInputWithSuggestions accessKey={{ ...accessKey, key: accessKey.key as JurisprudenciaDocumentExactKey }} doc={doc} />
         }
-        return <ExactInput accessKey={{...accessKey, key: accessKey.key as JurisprudenciaDocumentExactKey}} doc={doc} />
+        return <ExactInput accessKey={{ ...accessKey, key: accessKey.key as JurisprudenciaDocumentExactKey }} doc={doc} />
 
     }
     if (isJurisprudenciaDocumentStateKey(accessKey.key))
-        return <ExactInput accessKey={{...accessKey, key: accessKey.key as JurisprudenciaDocumentStateKey}} doc={doc} options={JurisprudenciaDocumentStateValues} />
+        return <ExactInput accessKey={{ ...accessKey, key: accessKey.key as JurisprudenciaDocumentStateKey }} doc={doc} options={JurisprudenciaDocumentStateValues} />
 
     return <>Unreachable</>
 }
