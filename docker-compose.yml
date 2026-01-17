@@ -38,7 +38,7 @@ services:
     restart: unless-stopped
     networks:
       - juris-network
-  server-dev:
+  server_dev:
     build:
       context: .
       dockerfile: ./Dockerfile_dev
@@ -55,10 +55,11 @@ services:
       ANONIMIZADOR_SECRET: ${ANONIMIZADOR_SECRET}
       ANONIMIZADOR_URL: ${ANONIMIZADOR_URL}
     ports:
-      - "${SERVER_DEV_HOST:-127.0.0.1}:${SERVER_DEV_PORT:-3000}:3000"
+      - "${SERVER_DEV_HOST:-0.0.0.0}:${SERVER_DEV_PORT:-3001}:3000"
     volumes:
       - excel_data:/usr/src/app/files
       - .:/usr/src/app
+      - /usr/src/app/node_modules
       - rss_data:/rss
     depends_on:
       elasticsearch:
@@ -68,6 +69,8 @@ services:
     restart: unless-stopped
     profiles:
       - dev
+    networks:
+      - juris-network
   clitools:
     build:
       context: ./compose/clitools

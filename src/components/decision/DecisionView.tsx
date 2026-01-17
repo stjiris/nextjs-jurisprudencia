@@ -39,18 +39,18 @@ export default function DecisionView(props: { doc: JurisprudenciaDocument, id: s
                             {props.doc.ECLI && props.doc.ECLI.length > 0 && props.doc.ECLI !== "«sem valor»" && <><b>ECLI: </b><small><Link href={`https://jurisprudencia.csm.org.pt/ecli/${props.doc.ECLI!}`} target="_blank" >{props.doc.ECLI}<i className="bi bi-box-arrow-up-right ms-1 align-top"></i></Link></small>&nbsp;</>}
                         </div>
                     </div>
-                    
+
                     <div className="row border-bottom">
                         {related.length > 0 ?
-                                <>
-                                <div className="col-1"><i className="bi bi-link"></i>Relacionados:</div>
-                                <div className="col-11">
+                            <>
+                                <div className="col-6"><i className="bi bi-link"></i>Relacionados:</div>
+                                <div className="col-6">
                                     {related.flatMap((d, i) => [" / ", <Link key={i} href={`/${encodeURIComponent(d["Número de Processo"]!)}/${d.UUID}`}>{d["Número de Processo"]}</Link>, ` (${d.Data})`]).slice(1)}
                                 </div>
-                                </>
-                        :<></>}
+                            </>
+                            : <></>}
                     </div>
-                    
+
 
                     {props.keys.filter(k => k.documentShow && !MUST_HAVE.includes(k.key)).map(k => <DefaultRow key={k.key} doc={props.doc} showkey={k.name} accessKey={k.key} noLink={!k.indicesList} />)}
                 </div>
@@ -58,7 +58,7 @@ export default function DecisionView(props: { doc: JurisprudenciaDocument, id: s
                     <div className="col-12 col-md-10 mt-3">
                         <h6 className="border-top border-2"><b>Sumário</b></h6>
                         <div className="p-2" dangerouslySetInnerHTML={{ __html: props.doc.Sumário! }}></div>
-                        
+
                         <h6 className="border-top border-2"><b>Texto Integral</b></h6>
                         <div className="p-2" dangerouslySetInnerHTML={{ __html: props.doc.Texto! }}></div>
                     </div>
