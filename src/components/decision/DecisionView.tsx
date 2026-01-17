@@ -44,7 +44,7 @@ export default function DecisionView(props: { doc: JurisprudenciaDocument, id: s
                         {related.length > 0 ?
                             <>
                                 <div className="col-6"><i className="bi bi-link"></i>Relacionados:</div>
-                                <div className="col-6">
+                                <div className="col-6 text-end">
                                     {related.flatMap((d, i) => [" / ", <Link key={i} href={`/${encodeURIComponent(d["Número de Processo"]!)}/${d.UUID}`}>{d["Número de Processo"]}</Link>, ` (${d.Data})`]).slice(1)}
                                 </div>
                             </>
