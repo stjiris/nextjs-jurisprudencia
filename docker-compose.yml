@@ -1,4 +1,3 @@
-version: '3.9'
 volumes:
   elasticsearch_data: {}
   excel_data: {}
@@ -6,10 +5,38 @@ volumes:
   redis_data: {}
 networks:
   juris-network:
-    external: true
+    name: juris-network
 
 services:
-  server:
+  server_externo:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      args:
+        NEXT_BASE_PATH: ${NEXT_BASE_PATH}
+    environment:
+      ES_URL: http://elasticsearch:9200
+      ES_USER: elastic
+      ES_PASS: elasticsearch
+      NEXT_BASE_PATH: ${NEXT_BASE_PATH}
+      PUBLIC_STATES: ${PUBLIC_STATES}
+      RSS_FOLDER: /rss
+    ports:
+      - "${SERVER_HOST:-0.0.0.0}:${SERVER_PORT:-3000}:3000"
+    volumes:
+      - excel_data:/usr/src/app/files:rw
+      - rss_data:/rss
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles:
+      - externo
+    networks:
+      - juris-network
+  server_interno:
     build:
       context: .
       dockerfile: ./Dockerfile
@@ -36,6 +63,8 @@ services:
       redis:
         condition: service_healthy
     restart: unless-stopped
+    profiles:
+      - interno
     networks:
       - juris-network
   server_dev:
@@ -43,19 +72,19 @@ services:
       context: .
       dockerfile: ./Dockerfile_dev
       args:
-        NEXT_BASE_PATH: ${NEXT_DEV_BASE_PATH}
+        NEXT_BASE_PATH: ${NEXT_BASE_PATH}
         NEXT_PUBLIC_ANONIMIZADOR_URL: ${NEXT_PUBLIC_ANONIMIZADOR_URL}
     environment:
       ES_URL: http://elasticsearch:9200
       ES_USER: elastic
       ES_PASS: elasticsearch
-      NEXT_BASE_PATH: ${NEXT_DEV_BASE_PATH}
+      NEXT_BASE_PATH: ${NEXT_BASE_PATH}
       PUBLIC_STATES: ${PUBLIC_STATES}
       RSS_FOLDER: /rss
       ANONIMIZADOR_SECRET: ${ANONIMIZADOR_SECRET}
       ANONIMIZADOR_URL: ${ANONIMIZADOR_URL}
     ports:
-      - "${SERVER_DEV_HOST:-0.0.0.0}:${SERVER_DEV_PORT:-3001}:3000"
+      - "${SERVER_HOST:-0.0.0.0}:${SERVER_PORT:-3000}:3000"
     volumes:
       - excel_data:/usr/src/app/files
       - .:/usr/src/app
@@ -71,7 +100,7 @@ services:
       - dev
     networks:
       - juris-network
-  clitools:
+  clitools_externo:
     build:
       context: ./compose/clitools
     environment:
@@ -87,6 +116,47 @@ services:
       - ../version-converter:/home/clitools/version-converter:rw
       - ../backup-jurisprudencia:/home/clitools/backup-jurisprudencia:rw
       - rss_data:/rss
+    profiles:
+      - externo
+    networks:
+      - juris-network
+  clitools_interno:
+    build:
+      context: ./compose/clitools
+      dockerfile: ./Dockerfile_interno
+    environment:
+      ES_URL: http://elasticsearch:9200
+      ES_USER: elastic
+      ES_PASS: elasticsearch
+      RSS_FOLDER: /rss
+      RSS_LINK: ${RSS_LINK:-http://localhost:3000/jurisprudencia}
+      RSS_MAX_FEED_SIZE: 200
+    volumes:
+      - rss_data:/rss
+    profiles:
+      - interno
+    networks:
+      - juris-network
+  clitools_dev:
+    # this dev assumes you cloned the clitools components and mounts them into the container for easily making changes
+    build:
+      context: ./compose/clitools
+      dockerfile: ./Dockerfile_dev
+    environment:
+      ES_URL: http://elasticsearch:9200
+      ES_USER: elastic
+      ES_PASS: elasticsearch
+      RSS_FOLDER: /rss
+      RSS_LINK: ${RSS_LINK:-http://localhost:3000/jurisprudencia}
+      RSS_MAX_FEED_SIZE: 200
+    volumes:
+      - ../jurisprudencia-privada-etl:/home/clitools/jurisprudencia-privada-etl:rw
+      - ../jurisprudencia-etl:/home/clitools/jurisprudencia-etl:rw
+      - ../version-converter:/home/clitools/version-converter:rw
+      - ../backup-jurisprudencia:/home/clitools/backup-jurisprudencia:rw
+      - rss_data:/rss
+    profiles:
+      - dev
     networks:
       - juris-network
   elasticsearch:
@@ -114,6 +184,21 @@ services:
     restart: unless-stopped
     networks:
       - juris-network
+  redis:
+    image: redis:6.2-bookworm
+    ports:
+      - "${REDIS_HOST:-127.0.0.1}:${REDIS_PORT:-6379}:6379"
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: redis-cli ping
+      interval: 10s
+      timeout: 30s
+      retries: 15
+      start_period: 10s
+    networks:
+      - juris-network
   kibana:
     image: docker.elastic.co/kibana/kibana:8.4.0
     depends_on:
@@ -128,20 +213,5 @@ services:
     restart: always
     profiles:
       - kibana
-    networks:
-      - juris-network
-  redis:
-    image: redis:6.2-bookworm
-    ports:
-      - "${REDIS_HOST:-127.0.0.1}:${REDIS_PORT:-6379}:6379"
-    restart: unless-stopped
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: redis-cli ping
-      interval: 10s
-      timeout: 30s
-      retries: 15
-      start_period: 10s
     networks:
       - juris-network

@@ -1,19 +1,6 @@
-FROM node:20.19-bullseye-slim
+FROM node:20.10-bookworm-slim
 
 RUN apt update && apt install vim cron git -y
-
-RUN apt update && \
-    apt install -y python3 python3-venv python3-dev build-essential ghostscript && \
-    apt clean && rm -rf /var/lib/apt/lists/*
-
-RUN python3 -m venv /opt/venv
-
-RUN /opt/venv/bin/pip install --upgrade pip && \
-    /opt/venv/bin/pip install camelot-py[cv] pandas cryptography numpy
-
-ENV PATH="/opt/venv/bin:$PATH"
-
-RUN ln -s /opt/venv/bin/python /usr/local/bin/python3
 
 RUN useradd -m clitools
 
@@ -26,23 +13,20 @@ USER clitools
 WORKDIR /home/clitools
 
 # util to convert between versions
-#RUN git clone https://github.com/stjiris/version-converter && cd version-converter && npm install && npm run build
+RUN git clone https://github.com/stjiris/version-converter && cd version-converter && npm install && npm run build
 
 # update jurisprudencia
-#RUN git clone -b dev https://github.com/stjiris/jurisprudencia-etl && cd jurisprudencia-etl && npm install && npm run build
+RUN git clone https://github.com/stjiris/jurisprudencia-etl && cd jurisprudencia-etl && npm install && npm run build
 #   https://crontab.guru/
 #   At minute 0 past every 3rd hour from 9 through 18 on every day-of-week from Monday through Friday.
-RUN (crontab -l; echo "0 9-18/3 * * 1-5 cd /home/clitools/jurisprudencia-privada-etl && npm run run_dgsi >> ../jurisprudencia-privada-etl.stdout.log 2>> ../jurisprudencia-privada-etl.stderr.log") | crontab -
+RUN (crontab -l; echo "0 9-18/3 * * 1-5 cd /home/clitools/jurisprudencia-etl && /usr/local/bin/node dist >> ../jurisprudencia-etl.stdout.log 2>> ../jurisprudencia-etl.stderr.log") | crontab -
 #   At 04:30 on Saturday.
-RUN (crontab -l; echo "30 4 * * 6 cd /home/clitools/jurisprudencia-privada-etl && npm run run_dgsi --full  >> ../jurisprudencia-privada-etl.full.stdout.log 2>> ../jurisprudencia-privada-etl.full.stderr.log") | crontab -
-
-#   Every 10 min during week days update sharepoint
-RUN (crontab -l; echo "*/10 9-18 * * 1-5 cd /home/clitools/jurisprudencia-privada-etl && npm run run_sharepoint >> ../jurisprudencia-privada-etl.stdout.log 2>> ../jurisprudencia-privada-etl.stderr.log") | crontab -
+RUN (crontab -l; echo "30 4 * * 6 cd /home/clitools/jurisprudencia-etl && /usr/local/bin/node dist --full  >> ../jurisprudencia-etl.full.stdout.log 2>> ../jurisprudencia-etl.full.stderr.log") | crontab -
 
 # no build needed here
 RUN git clone https://github.com/stjiris/backup-jurisprudencia && cd backup-jurisprudencia && npm install
 #   At 10:00 on Sunday.
-RUN (crontab -l; echo "0 10 * * 0 cd /home/clitools/backup-jurisprudencia && /usr/local/bin/node cli backup jurisprudencia.13.0,users.0.0,keys-info.0.0 >> ../backup-jurisprudencia.full.stdout.log 2>> ../backup-jurisprudencia.full.stderr.log") | crontab -
+RUN (crontab -l; echo "0 10 * * 0 cd /home/clitools/backup-jurisprudencia && /usr/local/bin/node cli backup jurisprudencia.12.0,users.0.0,keys-info.0.0 >> ../backup-jurisprudencia.full.stdout.log 2>> ../backup-jurisprudencia.full.stderr.log") | crontab -
 
 # update rss feed
 RUN git clone https://github.com/stjiris/jurisprudencia-rss.git && cd jurisprudencia-rss && npm install && npm run build
@@ -52,11 +36,5 @@ RUN (crontab -l; echo "45 9-18/3 * * 1-5 cd /home/clitools/jurisprudencia-rss &&
 COPY entrypoint.sh .
 
 USER root
-
-RUN apt update && apt install -y locales apt-utils vim cron git && sed -i '/en_US.UTF-8/s/^# //' /etc/locale.gen && locale-gen en_US.UTF-8 && update-locale LANG=en_US.UTF-8
-
-ENV LANG=en_US.UTF-8
-ENV LANGUAGE=en_US:en
-ENV LC_ALL=en_US.UTF-8
 
 ENTRYPOINT ["./entrypoint.sh"]
