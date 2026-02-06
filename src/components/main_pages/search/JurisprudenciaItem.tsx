@@ -1,3 +1,4 @@
+import { BadgeFromState } from "@/components/BadgeFromState";
 import { useKeysFromContext } from "@/contexts/keys";
 import { HighlightFragment, SearchHandlerResponseItem } from "@/types/search";
 import { JurisprudenciaDocumentGenericKey } from "@stjiris/jurisprudencia-document";
@@ -5,7 +6,7 @@ import Link from "next/link";
 
 const SUMARY_SIZE = 450
 
-export default function JurisprudenciaItem({hit, searchId}:{hit: SearchHandlerResponseItem, searchId?: string}){
+export default function JurisprudenciaItem({ hit, searchId }: { hit: SearchHandlerResponseItem, searchId?: string }) {
     const keys = useKeysFromContext().records;
     const searchParam = searchId ? `?search=${searchId}` : ""
     const numeroProcesso = hit._source?.["Número de Processo"];
@@ -22,12 +23,14 @@ export default function JurisprudenciaItem({hit, searchId}:{hit: SearchHandlerRe
                     {numeroProcesso}
                 </Link>
                 {data ? ` - ${data}` : ""}
-                {area ? secao ? ` - ${area} - ${secao}` :  ` - ${area}` : ""}
+                {area ? secao ? ` - ${area} - ${secao}` : ` - ${area}` : ""}
+                {keys?.STATE.active && hit._source.STATE ? <span className="px-1"><BadgeFromState state={hit._source["STATE"]} /></span> : <></>}
             </div>
 
             {meioProcessual && <div><b>{keys?.["Meio Processual"].name}:</b> {meioProcessual}</div>}
             {relator && <div><b>{keys?.["Relator Nome Profissional"].name}:</b> {relator}</div>}
             {decisao && <div><b>{keys?.Decisão.name}:</b> {decisao}</div>}
+
         </div>
         {hit._source?.Sumário && !hit.highlight?.Sumário ? (
             <div className="col-12 col-lg-8 rounded" style={{ backgroundColor: "var(--secondary-gold)" }}>
@@ -55,46 +58,46 @@ export default function JurisprudenciaItem({hit, searchId}:{hit: SearchHandlerRe
         ) : ""}
         {hit._source?.Sumário && hit.highlight?.Sumário ? <details className="col-12">
             <summary className="d-flex align-items-center list-unstyled">
-                <span style={{width: "10%", flexShrink: 1}}>
+                <span style={{ width: "10%", flexShrink: 1 }}>
                     <i className="bi bi-caret-downright-fill"></i>
                     <b className="mouse-click">{keys?.Sumário.name}:</b>
                 </span>
-        {hit.highlight?.["SumárioMarks"] ? <div className="highlight">
+                {hit.highlight?.["SumárioMarks"] ? <div className="highlight">
                     <div className="highlight-bar" data-key="Sumário">
-                        {(hit.highlight.SumárioMarks as HighlightFragment[]).map((marker,i) => <div key={i} className="highlight-bar-hit-parent">
-                            <div className="highlight-bar-hit" data-offset={marker.offset} data-per={marker.offset/marker.size} style={{left: `${marker.offset/marker.size*100}%`, background: "green"}}></div>
-                            <div className="highlight-bar-hit-content d-none" dangerouslySetInnerHTML={{__html: marker.textFragment}}></div>
+                        {(hit.highlight.SumárioMarks as HighlightFragment[]).map((marker, i) => <div key={i} className="highlight-bar-hit-parent">
+                            <div className="highlight-bar-hit" data-offset={marker.offset} data-per={marker.offset / marker.size} style={{ left: `${marker.offset / marker.size * 100}%`, background: "green" }}></div>
+                            <div className="highlight-bar-hit-content d-none" dangerouslySetInnerHTML={{ __html: marker.textFragment }}></div>
                         </div>)}
                     </div>
-                </div>:""}
+                </div> : ""}
             </summary>
-            <div className="col-12 p-2 border pesquisa-sumario" dangerouslySetInnerHTML={{__html: hit.highlight?.Sumário ? hit.highlight?.Sumário : hit._source.Sumário}} />
-        </details>:""}
+            <div className="col-12 p-2 border pesquisa-sumario" dangerouslySetInnerHTML={{ __html: hit.highlight?.Sumário ? hit.highlight?.Sumário : hit._source.Sumário }} />
+        </details> : ""}
         {hit.highlight?.Texto ? <details className="col-12 d-print-none">
             <summary className="d-flex align-items-center list-unstyled">
-                <span style={{width: "10%", flexShrink: 1}}>
+                <span style={{ width: "10%", flexShrink: 1 }}>
                     <i className="bi bi-caret-downright-fill"></i>
                     <b className="mouse-click">{keys?.Texto.name}</b>
                 </span>
                 <div className="highlight">
                     <div className="highlight-bar" data-key="Texto">
                         {(hit.highlight.Texto as HighlightFragment[]).map((marker, i) => <div key={i} className="highlight-bar-hit-parent">
-                            <div className="highlight-bar-hit" data-offset={marker.offset} data-per={marker.offset/marker.size} style={{left: `${marker.offset/marker.size*100}%`, background: "green"}}></div>
-                            <div className="highlight-bar-hit-content d-none" dangerouslySetInnerHTML={{__html: marker.textFragment}}></div>
+                            <div className="highlight-bar-hit" data-offset={marker.offset} data-per={marker.offset / marker.size} style={{ left: `${marker.offset / marker.size * 100}%`, background: "green" }}></div>
+                            <div className="highlight-bar-hit-content d-none" dangerouslySetInnerHTML={{ __html: marker.textFragment }}></div>
                         </div>)}
                     </div>
                 </div>
             </summary>
             <div className="col-12 p-2 border d-flex flex-wrap">
-                {(hit.highlight.Texto as HighlightFragment[]).flatMap((frag,i) => [<div key={i} className="pesquisa-sep"></div>,<div key={i} dangerouslySetInnerHTML={{__html: frag.textFragment}}></div>])}
+                {(hit.highlight.Texto as HighlightFragment[]).flatMap((frag, i) => [<div key={i} className="pesquisa-sep"></div>, <div key={i} dangerouslySetInnerHTML={{ __html: frag.textFragment }}></div>])}
             </div>
         </details> : ""}
     </article>
 }
 
-function showOrOriginal(hit: SearchHandlerResponseItem, key: JurisprudenciaDocumentGenericKey){
+function showOrOriginal(hit: SearchHandlerResponseItem, key: JurisprudenciaDocumentGenericKey) {
     let show = hit._source![key]?.Show;
-    if( show && show.length > 0 ) return show;
+    if (show && show.length > 0) return show;
     let original = hit._source![key]?.Original;
     return original || [];
 }
