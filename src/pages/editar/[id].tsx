@@ -107,10 +107,10 @@ function UpdateDocument({ id }: { id: string }) {
             method: "DELETE",
         }).then(r => r.json() as Promise<WriteResponseBase>);
         if (writeResponseBase.result === "updated") {
-            navRouter.refresh();
+            navRouter.back();
         }
         else {
-            navRouter.push("/admin/")
+            navRouter.push("/pesquisa/")
         }
     }
 
