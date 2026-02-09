@@ -16,7 +16,7 @@ const MUST_HAVE = ["UUID", "Número de Processo", "Fonte", "ECLI", "URL", "Sumá
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
     LoggerServerSideProps(ctx);
     let { stringEcliOrNumber, EcliOrUUID, search: searchId } = ctx.query;
-    if (!stringEcliOrNumber){
+    if (!stringEcliOrNumber) {
         return {
             redirect: {
                 destination: "/",
@@ -32,7 +32,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
 
     let must = [];
     if (stringEcliOrNumber == "ecli") {
-        if (!EcliOrUUID){
+        if (!EcliOrUUID) {
             return {
                 redirect: {
                     destination: "/",

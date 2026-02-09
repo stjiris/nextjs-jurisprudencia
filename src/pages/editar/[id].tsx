@@ -10,8 +10,7 @@ import { GetResponse, WriteResponseBase } from "@elastic/elasticsearch/lib/api/t
 import { useKeysFromContext } from "@/contexts/keys";
 import { JurisprudenciaKey } from "@/types/keys";
 import { LoggerServerSideProps } from "@/core/logger-api";
-import { DateInput, ExactInput, ShowCode, TextInput, TokenSelection, UpdateContext, UpdateObject, ExactInputWithSuggestions } from "@/components/decision/dashboardDoc";
-import DecisionView from "@/components/decision/DecisionView";
+import { DateInput, ExactInput, ShowCode, TextInput, TokenSelection, UpdateContext, UpdateObject, ExactInputWithSuggestions, ExactInputRestricted } from "@/components/decision/dashboardDoc";
 import GenericPage from "@/components/main_pages/genericPageStructure";
 
 export const getServerSideProps = withAuthentication<{}>(async ctx => {
@@ -48,10 +47,8 @@ function Update({ doc, id }: UpdateProps) {
     return <UpdateContext.Provider value={[updateObject, setUpdateObject]}>
         <div className="container-fluid">
             <div className="row">
-                <div className="col-6">
-                    <DecisionView doc={doc} id={id} keys={keys.keys} />
-                </div>
-                <div className="card shadow col-6">
+
+                <div className="card shadow col-6 mx-auto">
                     <UpdateDocument id={id} />
                     {keys.keys.map((key, i) => <EditKey key={i} accessKey={key} doc={doc} />)}
                 </div>
@@ -76,6 +73,9 @@ function EditKey({ accessKey, doc }: { accessKey: JurisprudenciaKey, doc: Partia
         return <TokenSelection accessKey={{ ...accessKey, key: accessKey.key as JurisprudenciaDocumentGenericKey }} doc={doc} editorSuggestions={accessKey.editorSuggestions} editorRestricted={accessKey.editorRestricted} />
     }
     if (isJurisprudenciaDocumentExactKey(accessKey.key)) {
+        if (accessKey.editorRestricted) {
+            return <ExactInputRestricted accessKey={{ ...accessKey, key: accessKey.key as JurisprudenciaDocumentExactKey }} doc={doc} />
+        }
         if (accessKey.editorSuggestions) {
             return <ExactInputWithSuggestions accessKey={{ ...accessKey, key: accessKey.key as JurisprudenciaDocumentExactKey }} doc={doc} />
         }
@@ -126,6 +126,10 @@ function UpdateDocument({ id }: { id: string }) {
                     <button className="btn btn-danger" onClick={deleteDoc} disabled={Object.keys(updateObject).length > 0}>Eliminar</button>
                     <button className="btn btn-warning" onClick={() => navRouter.refresh()} disabled={Object.keys(updateObject).length === 0}>Cancelar</button>
                     <button className="btn btn-success" onClick={update} disabled={Object.keys(updateObject).length === 0}>Guardar</button>
+                    <button className="btn btn-primary" onClick={async () => {
+                        update();
+                        navRouter.back();
+                    }} disabled={Object.keys(updateObject).length === 0}>Guardar e Voltar</button>
                 </div>
             </div>
         </div>

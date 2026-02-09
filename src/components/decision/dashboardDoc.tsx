@@ -25,7 +25,7 @@ export function TextInput({ accessKey, doc }: InputProps<JurisprudenciaDocumentT
     let [, setUpdateObject] = useContext(UpdateContext);
     let initialValue = doc[accessKey.key] || "";
     let [html, setValue] = useState<string>(initialValue);
-    
+
     let onChange = (content: string, delta: any, source: string) => {
         if (source === 'user') {
             let valueWithoutEmpty = content.replaceAll("<p><br></p>", "");
@@ -33,13 +33,13 @@ export function TextInput({ accessKey, doc }: InputProps<JurisprudenciaDocumentT
             setValue(valueWithoutEmpty);
         }
     }
-    
+
     return <InputRow accessKey={accessKey} toSave={html !== initialValue}>
-        <ReactQuill 
-            className="form-control h-100 p-0 border-0" 
-            theme="snow" 
+        <ReactQuill
+            className="form-control h-100 p-0 border-0"
+            theme="snow"
             defaultValue={initialValue}
-            onChange={onChange} 
+            onChange={onChange}
         />
     </InputRow>;
 }
@@ -85,9 +85,9 @@ export function ExactInput({ accessKey, doc, options }: InputProps<Jurisprudenci
 
     if (options && options.length > 0) {
         return <InputRow accessKey={accessKey} toSave={toSave}>
-            <select 
-                className="form-select" 
-                defaultValue={displayValue} 
+            <select
+                className="form-select"
+                defaultValue={displayValue}
                 onChange={(evt) => update(evt.currentTarget.value)}
             >
                 {options.map((v, i) => <option key={i} value={v}>{v}</option>)}
@@ -96,10 +96,10 @@ export function ExactInput({ accessKey, doc, options }: InputProps<Jurisprudenci
     }
 
     return <InputRow accessKey={accessKey} toSave={toSave}>
-        <input 
-            className="form-control" 
-            defaultValue={displayValue} 
-            onInput={(evt) => update(evt.currentTarget.value)} 
+        <input
+            className="form-control"
+            defaultValue={displayValue}
+            onInput={(evt) => update(evt.currentTarget.value)}
         />
     </InputRow>;
 }
@@ -119,6 +119,49 @@ export function ShowGenerated({ accessKey, doc }: InputProps<JurisprudenciaDocum
         <small className="input-group-text w-25">{accessKey.name}</small>
         <input className="form-control" defaultValue="Gerado automaticamente" disabled />
     </div>;
+}
+
+export function ExactInputRestricted({ accessKey, doc }: InputProps<JurisprudenciaDocumentExactKey>) {
+    let [, setUpdateObject] = useContext(UpdateContext);
+    let initialValue = doc[accessKey.key] || "";
+    let [toSave, setToSave] = useState<boolean>(false);
+    let update = (newValue: string) => {
+        if (JSON.stringify(newValue) === JSON.stringify(initialValue)) {
+            setUpdateObject(({ [accessKey.key]: _key_to_remove, ...old }) => ({ ...old }));
+            setToSave(false);
+        }
+        else {
+            setUpdateObject((old) => ({ ...old, [accessKey.key]: newValue }));
+            setToSave(true);
+        }
+    };
+
+    const datalistId = `datalist-${encodeURIComponent(accessKey.key)}`
+    const router = useRouter();
+    const [datalist, setDatalist] = useState<DatalistObj[] | null>(null);
+
+    const handleInput = (evt: React.FormEvent<HTMLInputElement>) => {
+        const newValue = evt.currentTarget.value;
+
+        if (!datalist || datalist.some(item => item.key === newValue) || newValue === "") {
+            update(newValue);
+        } else {
+            evt.currentTarget.value = initialValue;
+        }
+    };
+
+    return <InputRow accessKey={accessKey} toSave={toSave}>
+        <input
+            className="form-control"
+            defaultValue={initialValue}
+            list={datalistId}
+            onInput={handleInput}
+            onFocus={() => !datalist && loadDatalist(router, accessKey.key, setDatalist)}
+        />
+        <datalist id={datalistId}>
+            {datalist?.map(({ key }, i) => <option key={i} value={`${key}`} />)}
+        </datalist>
+    </InputRow>;
 }
 
 export function ExactInputWithSuggestions({ accessKey, doc }: InputProps<JurisprudenciaDocumentExactKey>) {
@@ -161,10 +204,10 @@ async function loadDatalist(router: NextRouter, accessKey: string, setDatalist: 
 
 export function TokenSelection({ accessKey, doc, editorSuggestions, editorRestricted }: InputProps<JurisprudenciaDocumentGenericKey> & { editorSuggestions?: boolean, editorRestricted?: boolean }) {
     const [, setUpdateObject] = useContext(UpdateContext);
-    
+
     const fieldValue = doc[accessKey.key];
     const initialValue = fieldValue == null ? "" : fieldValue['Show'].join("\n");
-    
+
     const [toSave, setToSave] = useState<boolean>(false);
     const defaultValue = initialValue ? initialValue.split("\n").map(v => ({ value: v, label: v })) : [];
 
@@ -179,11 +222,11 @@ export function TokenSelection({ accessKey, doc, editorSuggestions, editorRestri
             setToSave(true);
         }
     };
-    
+
     let options: DatalistObj[] | null | undefined = useFetch<DatalistObj[]>(`/api/datalist?agg=${encodeURIComponent(accessKey.key)}`, []);
 
     options = editorSuggestions ? options : null;
-    
+
     let optionsList: readonly { value: string, label: string }[] = useMemo(() => {
         if (!options)
             return [{ value: initialValue, label: initialValue }];
@@ -192,9 +235,9 @@ export function TokenSelection({ accessKey, doc, editorSuggestions, editorRestri
         }
         return options.map((v) => ({ value: v.key, label: v.key })).concat({ value: initialValue, label: initialValue });
     }, [options, initialValue]);
-    
+
     const finalOptionsList = editorSuggestions ? optionsList : undefined;
-    
+
     return (
         <InputRow accessKey={accessKey} toSave={toSave}>
             <Createable
@@ -219,8 +262,8 @@ export function TokenSelection({ accessKey, doc, editorSuggestions, editorRestri
 }
 
 function InputRow({ accessKey, toSave, children }: { accessKey: JurisprudenciaKey, toSave: boolean, children: React.ReactNode }) {
-    return <div className="input-group">
-        <small className={"input-group-text w-25 " + (toSave ? "fw-bold" : "")}>{accessKey.name}{toSave ? "*" : ""}</small>
+    return <div className="input-group ">
+        <small className={"input-group-text w-25 align-items-start" + (toSave ? "fw-bold" : "")} >{accessKey.name}{toSave ? "*" : ""} </small>
         {children}
-    </div>;
+    </ div>;
 }
