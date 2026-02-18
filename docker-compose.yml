@@ -150,10 +150,10 @@ services:
       RSS_LINK: ${RSS_LINK:-http://localhost:3000/jurisprudencia}
       RSS_MAX_FEED_SIZE: 200
     volumes:
-      - ../jurisprudencia-privada-etl:/home/clitools/jurisprudencia-privada-etl:rw
-      - ../jurisprudencia-etl:/home/clitools/jurisprudencia-etl:rw
-      - ../version-converter:/home/clitools/version-converter:rw
-      - ../backup-jurisprudencia:/home/clitools/backup-jurisprudencia:rw
+      #- ../jurisprudencia-privada-etl:/home/clitools/jurisprudencia-privada-etl:rw
+      #- ../jurisprudencia-etl:/home/clitools/jurisprudencia-etl:rw
+      #- ../version-converter:/home/clitools/version-converter:rw
+      #- ../backup-jurisprudencia:/home/clitools/backup-jurisprudencia:rw
       - rss_data:/rss
     profiles:
       - dev
