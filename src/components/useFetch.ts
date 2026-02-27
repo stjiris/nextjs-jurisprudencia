@@ -40,6 +40,7 @@ export function useFetchPost<TReq = any, TRes = any>(relativeUrl: string) {
             setLoading(true);
             setError(null);
             try {
+
                 const res = await fetch(router.basePath + relativeUrl, {
                     method: "POST",
                     headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
@@ -47,7 +48,8 @@ export function useFetchPost<TReq = any, TRes = any>(relativeUrl: string) {
                     signal: init?.signal,
                 });
 
-                if (!res.ok) throw new Error(`Request failed ${res.status}`);
+                if (!res.ok)
+                    throw new Error(`Request failed ${res.status}`);
                 const data = await res.json();
                 setResponse(data);
                 return data;

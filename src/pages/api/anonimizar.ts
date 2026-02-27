@@ -1,7 +1,7 @@
 import LoggerApi from "@/core/logger-api";
 import { authenticatedHandler } from "@/core/user/authenticate";
 import type { NextApiRequest, NextApiResponse } from "next";
-import crypto from "crypto";
+const { loadNlpDocument } = await import("@stjiris/filesystem-lib");
 
 type AnonimizarResponse = {
     ok: boolean;
@@ -62,6 +62,8 @@ export default LoggerApi(async function anonimizarHandler(
 
         const token = doc.UUID;
 
+        const nlpJson = loadNlpDocument(doc);
+        console.log(nlpJson);
         const sendRes = await fetch(`${anonimizadorUrl}/api/juris/save_document`, {
             method: "POST",
             headers: {
@@ -71,6 +73,7 @@ export default LoggerApi(async function anonimizarHandler(
             body: JSON.stringify({
                 token,
                 document: doc,
+                nlp: nlpJson,
                 ts: Date.now(),
             }),
         });

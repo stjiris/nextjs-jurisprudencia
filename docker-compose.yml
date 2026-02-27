@@ -42,7 +42,7 @@ services:
       dockerfile: ./Dockerfile
       args:
         NEXT_BASE_PATH: ${NEXT_BASE_PATH}
-        NEXT_PUBLIC_ANONIMIZADOR_URL: ${NEXT_PUBLIC_ANONIMIZADOR_URL}
+        ANONIMIZADOR_URL: ${ANONIMIZADOR_URL}
     environment:
       ES_URL: http://elasticsearch:9200
       ES_USER: elastic
@@ -73,7 +73,7 @@ services:
       dockerfile: ./Dockerfile_dev
       args:
         NEXT_BASE_PATH: ${NEXT_BASE_PATH}
-        NEXT_PUBLIC_ANONIMIZADOR_URL: ${NEXT_PUBLIC_ANONIMIZADOR_URL}
+        NEXT_PUBLIC_ANONIMIZADOR_URL: ${ANONIMIZADOR_URL:-/http://localhost:7999/anon-service}
     environment:
       ES_URL: http://elasticsearch:9200
       ES_USER: elastic
@@ -82,7 +82,7 @@ services:
       PUBLIC_STATES: ${PUBLIC_STATES}
       RSS_FOLDER: /rss
       ANONIMIZADOR_SECRET: ${ANONIMIZADOR_SECRET}
-      ANONIMIZADOR_URL: ${ANONIMIZADOR_URL}
+      ANONIMIZADOR_URL: ${ANONIMIZADOR_URL:-http://anonimizador_dev:7999/anon-service}
     ports:
       - "${SERVER_HOST:-0.0.0.0}:${SERVER_PORT:-3000}:3000"
     volumes:

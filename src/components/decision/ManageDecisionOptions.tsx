@@ -18,7 +18,6 @@ export default function ManageDecisionOptions(props: { doc: JurisprudenciaDocume
 				return;
 			}
 
-
 			if (result.token) {
 				const secondAppUrl = `${anonimizadorUrl}/document/${encodeURI(result.token)}`;
 				window.open(secondAppUrl, "_blank", "noopener,noreferrer");
@@ -43,10 +42,9 @@ export default function ManageDecisionOptions(props: { doc: JurisprudenciaDocume
 				Abrir editor
 			</Link>
 
-			{" | "}
 			{anonimizadorUrl && (
 				<>
-					{" | "}
+					{" || "}
 					<Link href="#"
 						className={loading ? "text-muted" : ""}
 						title="Anonimizar"
