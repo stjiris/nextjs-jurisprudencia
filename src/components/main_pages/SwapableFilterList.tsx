@@ -151,14 +151,25 @@ function FilterList({filtersUsed, accessKey, dontSuggest, showKey}: {filtersUsed
     const searchParams = useSearchParams();
     const router = useRouter()
     const [datalist, setDatalist] = useState<DatalistObj[]>([]);
+    const usedValues = useMemo(() => {
+        return new Set((filtersUsed[accessKey] || []).map(normalizeFilterValue));
+    }, [filtersUsed, accessKey]);
+
+    const visibleDatalist = useMemo(() => {
+        return datalist.filter(({ key }) => !usedValues.has(normalizeFilterValue(key)));
+    }, [datalist, usedValues]);
 
     return <div className="d-flex flex-column my-1 border pb-1 flex-grow-1">
         <datalist id={datalistId}>
-            {datalist.map(({key, count}, i) => <option key={i} value={`"${key}"`} label={count ? `Quantidade: ${count}` : ""}/>)}
+            {visibleDatalist.map(({key, count}, i) => <option key={i} value={`"${key}"`} label={count ? `Quantidade: ${count}` : ""}/>)}
         </datalist>
         <input type="text" className="form-control form-control-sm border-0 border-bottom rounded-0" name={accessKey} autoComplete="off" list={datalistId} placeholder={showKey || accessKey} onFocus={() => !dontSuggest && datalist.length == 0 ? loadDatalist(router, accessKey, searchParams, setDatalist) : null}/>
         <UsedFilters filtersUsed={filtersUsed} accessKey={accessKey}/>
     </div>
+}
+
+function normalizeFilterValue(value: string) {
+    return value.replace(/^not:/, "").replace(/^"|"$/g, "").trim();
 }
 
 async function loadDatalist(router: NextRouter, accessKey: string, searchParams: ReadonlyURLSearchParams, setDatalist: Dispatch<SetStateAction<DatalistObj[]>>){
