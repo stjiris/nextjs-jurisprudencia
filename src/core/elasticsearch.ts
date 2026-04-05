@@ -1,7 +1,7 @@
 import { canBeActive } from "@/types/keys";
 import { Client } from "@elastic/elasticsearch";
 import { AggregationsAggregate, AggregationsAggregationContainer, AggregationsStringTermsBucket, AggregationsTermsAggregation, QueryDslQueryContainer, SearchRequest, SearchResponse, SortCombinations } from "@elastic/elasticsearch/lib/api/types";
-import { isJurisprudenciaDocumentGenericKey, JurisprudenciaDocument, JurisprudenciaDocumentDateKey, JurisprudenciaDocumentDateKeys, JurisprudenciaDocumentKeys, JurisprudenciaDocumentProperties, JurisprudenciaDocumentStateValue, JurisprudenciaDocumentStateValues, JurisprudenciaVersion } from "@stjiris/jurisprudencia-document";
+import { isJurisprudenciaDocumentGenericKey, JurisprudenciaDocument, JurisprudenciaDocumentDateKey, JurisprudenciaDocumentDateKeys, JurisprudenciaDocumentExactKeys, JurisprudenciaDocumentGenericKeys, JurisprudenciaDocumentKeys, JurisprudenciaDocumentProperties, JurisprudenciaDocumentStateValue, JurisprudenciaDocumentStateValues, JurisprudenciaDocumentTextKeys, JurisprudenciaVersion } from "@stjiris/jurisprudencia-document";
 
 export const filterableProps = JurisprudenciaDocumentKeys.filter(canBeActive);
 
@@ -295,13 +295,98 @@ export function createQueryDslQueryContainer(string?: string | string[]): QueryD
             match_all: {}
         };
     }
-    // Use query_string to support AND, OR, NOT, and parentheses in free text search
-    return [{
-        query_string: {
-            query: Array.isArray(string) ? string.join(" ") : string,
-            fields: ["*"]
+    const raw = Array.isArray(string) ? string.join(" ") : string;
+    const query = raw.trim();
+    if (!query) {
+        return {
+            match_all: {}
+        };
+    }
+
+    const sumarioField = JurisprudenciaDocumentTextKeys.find(key => key === "Sumário") || "Sumário";
+    const textoField = JurisprudenciaDocumentTextKeys.find(key => key === "Texto") || "Texto";
+    const descritoresBase = JurisprudenciaDocumentGenericKeys.find(key => key === "Descritores") || "Descritores";
+    const descritoresField = `${descritoresBase}.Index`;
+    const numeroProcessoField = JurisprudenciaDocumentKeys.find(key => key === "Número de Processo") || "Número de Processo";
+
+    const exactKeys = JurisprudenciaDocumentExactKeys.filter(key => key === "Número de Processo" || key === "ECLI");
+    const genericKeys = JurisprudenciaDocumentGenericKeys.filter(key => key !== "Descritores");
+
+    const metadataFields = [
+        ...exactKeys.map(key => `${key}^100`),
+        `${descritoresField}^50`,
+        ...genericKeys.map(key => `${key}.Index^30`)
+    ];
+
+    const textFields = [
+        `${sumarioField}^60`,
+        `${textoField}^1`
+    ];
+
+    const caseNumberPattern = /^\d{1,7}\/\d{2}\.[0-9A-Z]{3,8}\.[0-9A-Z]{1,4}$/i;
+    const metadataMultiMatch: QueryDslQueryContainer = {
+        multi_match: {
+            query,
+            type: "best_fields",
+            fields: metadataFields,
+            fuzziness: "AUTO"
         }
-    }];
+    };
+
+    const textMultiMatch: QueryDslQueryContainer = {
+        multi_match: {
+            query,
+            type: "best_fields",
+            fields: textFields,
+            fuzziness: "AUTO"
+        }
+    };
+
+    if (caseNumberPattern.test(query)) {
+        return {
+            bool: {
+                should: [
+                    {
+                        match_phrase: {
+                            [numeroProcessoField]: {
+                                query,
+                                boost: 10
+                            }
+                        }
+                    },
+                    metadataMultiMatch,
+                    textMultiMatch
+                ],
+                minimum_should_match: 1
+            }
+        };
+    }
+
+    return {
+        bool: {
+            should: [
+                {
+                    match_phrase: {
+                        [descritoresField]: {
+                            query,
+                            boost: 20
+                        }
+                    }
+                },
+                {
+                    match_phrase: {
+                        [sumarioField]: {
+                            query,
+                            boost: 20
+                        }
+                    }
+                },
+                metadataMultiMatch,
+                textMultiMatch
+            ],
+            minimum_should_match: 1
+        }
+    };
 }
 
 
@@ -312,6 +397,71 @@ export async function getSearchedArray(text: string): Promise<string[]> {
         return r.tokens?.map(o => o.token) || [];
     } catch (e) {
         return [] as string[];
+    }
+}
+
+export async function getAutocompleteSuggestions(text: string): Promise<{ text: string, type: string }[]> {
+    const queryText = text?.trim();
+    if (!queryText) return [];
+
+    const fieldDefs = [
+        { key: "Descritores", field: `${JurisprudenciaDocumentGenericKeys.find(k => k === "Descritores") || "Descritores"}.Index` },
+        { key: "Relator Nome Profissional", field: `${JurisprudenciaDocumentGenericKeys.find(k => k === "Relator Nome Profissional") || "Relator Nome Profissional"}.Index` },
+        { key: "Área", field: `${JurisprudenciaDocumentGenericKeys.find(k => k === "Área") || "Área"}.Index` },
+        { key: "Secção", field: `${JurisprudenciaDocumentGenericKeys.find(k => k === "Secção") || "Secção"}.Index` },
+        { key: "Meio Processual", field: `${JurisprudenciaDocumentGenericKeys.find(k => k === "Meio Processual") || "Meio Processual"}.Index` },
+        { key: "Votação", field: `${JurisprudenciaDocumentGenericKeys.find(k => k === "Votação") || "Votação"}.Index` }
+    ];
+    const escapedUpper = queryText.toUpperCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const includePattern = `${escapedUpper}.*`;
+
+    try {
+        const client = await getElasticSearchClient();
+        const response = await client.search<JurisprudenciaDocument, Record<string, AggregationsAggregate>>({
+            index: JurisprudenciaVersion,
+            size: 0,
+            query: {
+                bool: {
+                    should: fieldDefs.map(({ field }) => ({
+                        match_phrase_prefix: { [field]: { query: queryText } }
+                    })),
+                    minimum_should_match: 1
+                }
+            },
+            aggs: {
+                descritores: { terms: { field: `${fieldDefs[0].field}.keyword`, size: 10, include: includePattern } },
+                relator: { terms: { field: `${fieldDefs[1].field}.keyword`, size: 10, include: includePattern } },
+                area: { terms: { field: `${fieldDefs[2].field}.keyword`, size: 10, include: includePattern } },
+                secao: { terms: { field: `${fieldDefs[3].field}.keyword`, size: 10, include: includePattern } },
+                meioProcessual: { terms: { field: `${fieldDefs[4].field}.keyword`, size: 10, include: includePattern } },
+                votacao: { terms: { field: `${fieldDefs[5].field}.keyword`, size: 10, include: includePattern } }
+            }
+        });
+
+        const aggMap: Array<{ key: keyof typeof response.aggregations | string; type: string }> = [
+            { key: "descritores", type: "Descritores" },
+            { key: "relator", type: "Relator Nome Profissional" },
+            { key: "area", type: "Área" },
+            { key: "secao", type: "Secção" },
+            { key: "meioProcessual", type: "Meio Processual" },
+            { key: "votacao", type: "Votação" }
+        ];
+
+        const unique = new Map<string, { text: string; type: string }>();
+        for (const { key, type } of aggMap) {
+            const agg = (response.aggregations as Record<string, { buckets?: AggregationsStringTermsBucket[] }> | undefined)?.[key];
+            const buckets = Array.isArray(agg?.buckets) ? agg!.buckets : [];
+            for (const bucket of buckets) {
+                if (typeof bucket.key === "string") {
+                    const id = `${type}:${bucket.key}`;
+                    if (!unique.has(id)) unique.set(id, { text: bucket.key, type });
+                }
+            }
+        }
+
+        return Array.from(unique.values()).slice(0, 30);
+    } catch (e) {
+        return [];
     }
 }
 
