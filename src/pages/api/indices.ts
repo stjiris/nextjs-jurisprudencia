@@ -18,6 +18,9 @@ export default LoggerApi(async function indicesCsvHandler(
         group = Array.isArray(req.query.group) ? req.query.group[0] : req.query.group!;
     }
 
+    const sort = typeof req.query.sort === "string" ? req.query.sort : "count";
+    const order = typeof req.query.order === "string" ? req.query.order : "desc";
+
     const authed = await authenticatedHandler(req);
 
     let keys = await getAllKeys(authed);
@@ -49,8 +52,25 @@ export default LoggerApi(async function indicesCsvHandler(
                 subbuckets.forEach(s => groupObj[s.key] = (groupObj[s.key] || 0) + s.doc_count)
             }
         })
-        buckets.sort(sortBucketsAlphabetically)
-        sortedGroup = Object.entries(groupObj).sort((a, b) => sortAlphabetically(a[0], b[0]))
+
+        if (sort === "alpha") {
+            if (order === "desc") {
+                buckets.sort((a, b) => sortBucketsAlphabetically(b, a));
+                //sortedGroup = Object.entries(groupObj).sort((a, b) => sortAlphabetically(b[0], a[0]));
+            } else {
+                buckets.sort(sortBucketsAlphabetically);
+                //sortedGroup = Object.entries(groupObj).sort((a, b) => sortAlphabetically(a[0], b[0]));
+            }
+        } else {
+            //ordena por doc_count, desempate alfabético
+            buckets.sort((a, b) => {
+                if (b.doc_count !== a.doc_count)
+                    return order === "asc" ? a.doc_count - b.doc_count : b.doc_count - a.doc_count;
+                return sortBucketsAlphabetically(a, b);
+            });
+        }
+        sortedGroup = Object.entries(groupObj).sort((a, b) => sortAlphabetically(a[0], b[0]));
+        
         sortedGroup.slice(10).forEach(a => othersCount += groupObj[a[0]])
         sortedGroup.splice(10)
         if (othersCount > 0) {

@@ -1,5 +1,5 @@
 import { GenericPageWithForm } from "@/components/main_pages/genericPageStructure";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { ReadonlyURLSearchParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Script from "next/script";
@@ -49,7 +49,26 @@ export default function Indices(props: IndicesPageProps){
 function IndicesTable(props: IndicesPageProps){
     let router = useRouter()
     let searchParams = useSearchParams();
+
+    const sort = searchParams.get("sort") || "count";
+    const order = searchParams.get("order") || "desc";
+
+    const [sortGroup, setSortGroup] = useState<string | null>(null);
+    const [sortGroupOrder, setSortGroupOrder] = useState<"asc" | "desc">("desc");
+
     let state = useFetch<IndicesProps>(`/api/indices?${searchParams.toString()}`,[])
+
+    const displayedBuckets = useMemo(() => {
+        const buckets = state?.termAggregation?.buckets;
+        if (!Array.isArray(buckets)) return [];
+        if (!sortGroup) return buckets;
+        return [...buckets].sort((a, b) => {
+            const aCount = a.Group?.buckets?.find((gb: any) => gb.key === sortGroup)?.doc_count || 0;
+            const bCount = b.Group?.buckets?.find((gb: any) => gb.key === sortGroup)?.doc_count || 0;
+            if (bCount !== aCount) return sortGroupOrder === "asc" ? aCount - bCount : bCount - aCount;
+            return a.key < b.key ? -1 : a.key > b.key ? 1 : 0;
+        });
+    }, [state, sortGroup, sortGroupOrder]);
 
     if( !state ){
         console.log("here");
@@ -60,7 +79,6 @@ function IndicesTable(props: IndicesPageProps){
     if( !Array.isArray(termAggregation.buckets) ){
         return <div className="alert alert-danger">Erro: Esperada lista, recebido objeto</div>;
     }
-    // Gold no highlight retirar o texto
     return <>
         {(termAggregation.sum_other_doc_count || 0) > 0 && <div className="alert alert-warning" role="alert">
             <h5 className="alert-heading">
@@ -74,11 +92,48 @@ function IndicesTable(props: IndicesPageProps){
             <thead>
                 <tr>
                     <th>#</th>
-                    <th>Índice <a href={`${router.basePath}/api/indices.csv?${searchParams.toString()}`} className="ms-1" download="indices.csv"><i className="bi bi-filetype-csv"></i></a><a href={`${router.basePath}/api/indices.xlsx?${searchParams.toString()}`} className="ms-1" download="indices.xlsx"><i className="bi bi-filetype-xlsx"></i></a></th>
+                    <th>Índice <a href={`${router.basePath}/api/indices.csv?${searchParams.toString()}`} className="ms-1" download="indices.csv"><i className="bi bi-filetype-csv"></i></a><a href={`${router.basePath}/api/indices.xlsx?${searchParams.toString()}`} className="ms-1" download="indices.xlsx"><i className="bi bi-filetype-xlsx"></i></a>
+                        <button
+                            onClick={() => {
+                                const newOrder = order === "desc" ? "asc" : "desc";
+                                const params = new URLSearchParams(searchParams.toString());
+                                params.set("sort", "count");
+                                params.set("order", newOrder);
+                                setSortGroup(null);
+                                router.push(`?${params.toString()}`);
+                            }}
+                            className={`btn btn-sm btn-link p-0 ms-2 ${sort === "count" && !sortGroup ? "text-primary" : "text-muted"}`}
+                            title={`Ordenar por ocorrências totais (${order === "desc" ? "descendente" : "ascendente"})`}
+                        >
+                            <i className={`bi bi-caret-${sort === "count" && order === "asc" && !sortGroup ? "up" : "down"}-fill`}></i>
+                        </button>
+                    </th>
                     <th className="text-end-border-end">
                         <SelectGroup group={props.group}/>
                     </th>
-                    {sortedGroup.map(([name, count],i) => <td key={i} className="text-end border-end">{name == INDICES_OTHERS || props.group in props.filtersUsed ? name : <Link href={`?${modifySearchParams(searchParams, props.group, `"${name}"`)}`}>{name}</Link>}</td>)}
+                    {sortedGroup.map(([name, count], i) => (
+                        <td key={i} className="text-end border-end">
+                            {name == INDICES_OTHERS || props.group in props.filtersUsed
+                                ? name
+                                : <Link href={`?${modifySearchParams(searchParams, props.group, `"${name}"`)}`}>{name}</Link>}
+                            {name !== INDICES_OTHERS && (
+                                <button
+                                    onClick={() => {
+                                        if (sortGroup === name) {
+                                            setSortGroupOrder(o => o === "desc" ? "asc" : "desc");
+                                        } else {
+                                            setSortGroup(name);
+                                            setSortGroupOrder("desc");
+                                        }
+                                    }}
+                                    className={`btn btn-sm btn-link p-0 ms-1 ${sortGroup === name ? "text-primary" : "text-muted"}`}
+                                    title={`Ordenar por ${name} (${sortGroup === name && sortGroupOrder === "asc" ? "ascendente" : "descendente"})`}
+                                >
+                                    <i className={`bi bi-caret-${sortGroup === name && sortGroupOrder === "asc" ? "up" : "down"}-fill`}></i>
+                                </button>
+                            )}
+                        </td>
+                    ))}
                     <th></th>
                     <th className="text-start">Datas</th>
                 </tr>
@@ -86,6 +141,23 @@ function IndicesTable(props: IndicesPageProps){
                     <th>{termAggregation.buckets.length}</th>
                     <th>
                         <SelectTerm term={props.term}/>
+                        <button
+                            onClick={() => {
+                                const params = new URLSearchParams(searchParams.toString());
+                                params.set("sort", "alpha");
+                                if (sort === "alpha") {
+                                    params.set("order", order === "asc" ? "desc" : "asc");
+                                } else {
+                                    params.set("order", "asc");
+                                }
+                                setSortGroup(null);
+                                router.push(`?${params.toString()}`);
+                            }}
+                            className={`btn btn-sm btn-link p-0 ms-1 ${sort === "alpha" && !sortGroup ? "text-primary" : "text-muted"}`}
+                            title={`Ordenar alfabeticamente (${sort === "alpha" && order === "desc" && !sortGroup ? "Z→A" : "A→Z"})`}
+                        >
+                            <i className={`bi bi-sort-alpha-${sort === "alpha" && order === "desc" && !sortGroup ? "up" : "down"}`}></i>
+                        </button>
                     </th>
                     <th className="text-end border-end"><Link href={`/pesquisa?${searchParams.toString()}`}>{termAggregation.buckets.reduce((acc, b)=> acc+b.doc_count, 0)}</Link></th>
                     {sortedGroup.map(([name,count], i) => <td key={i} className="text-end border-end"><Link href={`/pesquisa?${modifySearchParams(searchParams, props.group, `"${name}"`)}`}>{count}</Link></td>)}
@@ -94,11 +166,11 @@ function IndicesTable(props: IndicesPageProps){
                 </tr>
             </thead>
             <tbody>
-                {termAggregation.buckets.length <= props.limits && termAggregation.buckets.map( (b, i) => <ShowBucketRow key={i} index={i} bucket={b} filtersUsed={props.filtersUsed} searchParams={searchParams} term={props.term} group={props.group} sortedGroup={sortedGroup} />)}
-            </tbody>
+            {displayedBuckets.length <= props.limits && displayedBuckets.map( (b, i) => <ShowBucketRow key={i} index={i} bucket={b} filtersUsed={props.filtersUsed} searchParams={searchParams} term={props.term} group={props.group} sortedGroup={sortedGroup} />)}
+        </tbody>
         </table>
-        {termAggregation.buckets.length > props.limits && <div className="d-flex flex-wrap">
-            {termAggregation.buckets.map( (b, i) => <ShowBucketLine key={i} index={i} bucket={b} filtersUsed={props.filtersUsed} searchParams={searchParams} term={props.term} group={props.group} sortedGroup={sortedGroup} />)}
+        {displayedBuckets.length > props.limits && <div className="d-flex flex-wrap">
+            {displayedBuckets.map( (b, i) => <ShowBucketLine key={i} index={i} bucket={b} filtersUsed={props.filtersUsed} searchParams={searchParams} term={props.term} group={props.group} sortedGroup={sortedGroup} />)}
         </div>}
     </>
 }
