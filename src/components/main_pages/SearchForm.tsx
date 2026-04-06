@@ -57,6 +57,9 @@ export default function SearchForm({ count, filtersUsed }: { count: number; filt
 
         const handleChange = () => {
             if (!validateDates()) return el.reportValidity();
+            
+            // Validate filters and form validity
+            if (!el.checkValidity()) return el.reportValidity();
 
             let removedName: string | null = null;
             if (!maxTouched.current && dataFim.current) {
