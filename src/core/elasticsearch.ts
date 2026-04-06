@@ -106,6 +106,12 @@ export function padZero(num: number | string, size: number = 4): string {
 
 export function populateFilters(filters: SearchFilters, body: Partial<Record<string, string | string[]>> = {}, afters = ["MinDate", "MaxDate"]) {
     const filtersUsed = {} as Record<string, string[]>;
+
+    const isSafeForQueryString = (value: string): boolean => {
+        const quoteCount = (value.match(/"/g) || []).length;
+        return quoteCount % 2 === 0;
+    };
+
     for (let key in aggs) {
         let aggName = key;
         let aggObj = aggs[key];
@@ -124,10 +130,11 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
 
             // Detect advanced operators in any value
             const hasAdvanced = (arr: string[]) => arr.some(v => /[\(\)\"\bAND\b|\bOR\b|\bNOT\b]/i.test(v));
-            if (should.length && hasAdvanced(should)) {
+            const shouldQueryString = should.join(" ");
+            if (should.length && hasAdvanced(should) && isSafeForQueryString(shouldQueryString)) {
                 filters[when].push({
                     query_string: {
-                        query: should.join(" "),
+                        query: shouldQueryString,
                         fields: [fieldName],
                         default_operator: "OR"
                     }
@@ -147,13 +154,14 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
                     }
                 });
             }
-            if (must_not.length && hasAdvanced(must_not)) {
+            const mustNotQueryString = must_not.join(" ");
+            if (must_not.length && hasAdvanced(must_not) && isSafeForQueryString(mustNotQueryString)) {
                 filters[when].push({
                     bool: {
                         must_not: [
                             {
                                 query_string: {
-                                    query: must_not.join(" "),
+                                    query: mustNotQueryString,
                                     fields: [fieldName],
                                     default_operator: "OR"
                                 }
