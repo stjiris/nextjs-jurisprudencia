@@ -54,8 +54,13 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
 
     const authed = await authenticatedHandler(ctx.req);
     let keys = await getAllKeys(authed);
+    const NON_ANON_FIELDS = ["Sumário Não Anonimizado", "Texto Não Anonimizado"];
     let includes = keys.filter(k => k.documentShow || MUST_HAVE.includes(k.key)).map(k => k.key);
     let excludes = keys.filter(k => !k.documentShow && !MUST_HAVE.includes(k.key)).map(k => k.key);
+    if (authed) {
+        includes = [...new Set([...includes, ...NON_ANON_FIELDS])];
+        excludes = excludes.filter(k => !NON_ANON_FIELDS.includes(k));
+    }
     let r = await search({ bool: { must } }, { pre: [], after: [] }, 0, {}, 100, { _source: { includes, excludes } }, authed);
     if (r.hits.hits.length <= 0) {
         ctx.res.statusCode = 404;

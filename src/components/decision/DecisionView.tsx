@@ -4,7 +4,7 @@ import { isJurisprudenciaDocumentStateKey, JurisprudenciaDocument, Jurisprudenci
 import { useFetch } from "../useFetch";
 import ManageDecisionOptions from "./ManageDecisionOptions";
 import Link from "next/link";
-import { CSSProperties, ReactNode } from "react";
+import { CSSProperties, ReactNode, useState } from "react";
 import { BadgeFromState } from "../BadgeFromState";
 
 const MUST_HAVE = ["UUID", "Número de Processo", "Fonte", "ECLI", "URL", "Sumário", "Texto"]
@@ -14,6 +14,10 @@ export default function DecisionView(props: { doc: JurisprudenciaDocument, id: s
     let proc = props.doc["Número de Processo"]!;
     let uuid = props.doc["UUID"]!;
     let related = useFetch<JurisprudenciaDocument[]>(`/api/related/${encodeURIComponent(proc)}/${uuid}`, []) || []
+    let [showOriginal, setShowOriginal] = useState(false);
+    let hasNonAnon = auth && !!(props.doc["Sumário Não Anonimizado"] || props.doc["Texto Não Anonimizado"]);
+    let sumario = showOriginal ? (props.doc["Sumário Não Anonimizado"] ?? props.doc.Sumário) : props.doc.Sumário;
+    let texto = showOriginal ? (props.doc["Texto Não Anonimizado"] ?? props.doc.Texto) : props.doc.Texto;
 
     return <>
         <div className="container">
@@ -56,11 +60,21 @@ export default function DecisionView(props: { doc: JurisprudenciaDocument, id: s
                 </div>
                 <div className="row justify-content-center">
                     <div className="col-12 col-md-10 mt-3">
+                        {hasNonAnon && <div className="mb-2">
+                            <div
+                                onClick={() => setShowOriginal(v => !v)}
+                                title={showOriginal ? "Ver texto anonimizado" : "Ver texto original (não anonimizado)"}
+                                style={{ display: "inline-flex", border: "1px solid var(--primary-red)", borderRadius: "4px", fontSize: "0.8rem", cursor: "pointer", userSelect: "none", overflow: "hidden" }}
+                            >
+                                <span style={{ padding: "3px 12px", color: "var(--primary-red)", backgroundColor: showOriginal ? "transparent" : "var(--secondary-gold)", transition: "background-color 0.2s ease" }}>Anonimizado</span>
+                                <span style={{ padding: "3px 12px", color: "var(--primary-red)", backgroundColor: showOriginal ? "var(--secondary-gold)" : "transparent", borderLeft: "1px solid var(--primary-red)", transition: "background-color 0.2s ease" }}>Original</span>
+                            </div>
+                        </div>}
                         <h6 className="border-top border-2"><b>Sumário</b></h6>
-                        <div className="p-2" dangerouslySetInnerHTML={{ __html: props.doc.Sumário! }}></div>
+                        <div className="p-2" dangerouslySetInnerHTML={{ __html: sumario! }}></div>
 
                         <h6 className="border-top border-2"><b>Texto Integral</b></h6>
-                        <div className="p-2" dangerouslySetInnerHTML={{ __html: props.doc.Texto! }}></div>
+                        <div className="p-2" dangerouslySetInnerHTML={{ __html: texto! }}></div>
                     </div>
                 </div>
             </div>

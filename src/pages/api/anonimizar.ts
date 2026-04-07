@@ -62,7 +62,12 @@ export default LoggerApi(async function anonimizarHandler(
 
         const token = doc.UUID;
 
-        const nlpJson = loadNlpDocument(doc);
+        let nlpJson = null;
+        try {
+            nlpJson = loadNlpDocument(doc);
+        } catch (nlpErr) {
+            console.warn("Failed to load NLP document, proceeding without it:", nlpErr);
+        }
         console.log(nlpJson);
         const sendRes = await fetch(`${anonimizadorUrl}/api/juris/save_document`, {
             method: "POST",
