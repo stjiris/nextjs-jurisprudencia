@@ -1,7 +1,7 @@
 import LoggerApi from "@/core/logger-api";
 import { authenticatedHandler } from "@/core/user/authenticate";
 import type { NextApiRequest, NextApiResponse } from "next";
-const { loadNlpDocument } = await import("@stjiris/filesystem-lib");
+const { loadDocumentFile } = await import("@stjiris/filesystem-lib");
 
 type AnonimizarResponse = {
     ok: boolean;
@@ -64,7 +64,7 @@ export default LoggerApi(async function anonimizarHandler(
 
         let nlpJson = null;
         try {
-            nlpJson = loadNlpDocument(doc);
+            nlpJson = loadDocumentFile(doc, "nlp");
         } catch (nlpErr) {
             console.warn("Failed to load NLP document, proceeding without it:", nlpErr);
         }
