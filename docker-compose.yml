@@ -52,11 +52,13 @@ services:
       RSS_FOLDER: /rss
       ANONIMIZADOR_SECRET: ${ANONIMIZADOR_SECRET}
       ANONIMIZADOR_URL: ${ANONIMIZADOR_URL}
+      LOCAL_ROOT: /filesystem-results
     ports:
       - "${SERVER_HOST:-0.0.0.0}:${SERVER_PORT:-3000}:3000"
     volumes:
       - excel_data:/usr/src/app/files:rw
       - rss_data:/rss
+      - ../jurisprudencia-privada-etl/results:/filesystem-results:ro
     depends_on:
       elasticsearch:
         condition: service_healthy
@@ -83,6 +85,7 @@ services:
       RSS_FOLDER: /rss
       ANONIMIZADOR_SECRET: ${ANONIMIZADOR_SECRET}
       ANONIMIZADOR_URL: ${ANONIMIZADOR_URL:-http://anonimizador_dev:7999/anon-service}
+      LOCAL_ROOT: /filesystem-results
     ports:
       - "${SERVER_HOST:-0.0.0.0}:${SERVER_PORT:-3000}:3000"
     volumes:
@@ -90,6 +93,7 @@ services:
       - .:/usr/src/app
       - /usr/src/app/node_modules
       - rss_data:/rss
+      - ../jurisprudencia-privada-etl/results:/filesystem-results:ro
     depends_on:
       elasticsearch:
         condition: service_healthy
