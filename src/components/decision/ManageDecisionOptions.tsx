@@ -11,7 +11,7 @@ export default function ManageDecisionOptions(props: { doc: JurisprudenciaDocume
 	const anonimizadorUrl = process.env.NEXT_PUBLIC_ANONIMIZADOR_URL;
 	async function handleAnonimizar() {
 		try {
-			const result = await post({ id: props.id, doc: props.doc });
+			const result = await post({ id: props.id, doc: props.doc, jurisUrl: window.location.href });
 
 			if (!result.ok) {
 				alert("Falha ao anonimizar: " + result.message);

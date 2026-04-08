@@ -12,7 +12,7 @@ export default LoggerApi(async function receberHandler(req: NextApiRequest, res:
         return res.status(401).json({ ok: false, message: "Unauthorized" });
     }
 
-    const { jurisId, anonimizedTexto, originalTexto } = req.body;
+    const { jurisId, anonimizedTexto, anonimizedSumario, originalTexto, originalSumario } = req.body;
 
     if (!jurisId || !anonimizedTexto) {
         return res.status(400).json({ ok: false, message: "Missing jurisId or anonimizedTexto" });
@@ -26,11 +26,18 @@ export default LoggerApi(async function receberHandler(req: NextApiRequest, res:
 
         const update: Record<string, string> = {
             Texto: anonimizedTexto,
+            STATE: "preparação",
         };
 
-        // Only set the original if not already preserved
         if (!current._source["Texto Não Anonimizado"] && originalTexto) {
             update["Texto Não Anonimizado"] = originalTexto;
+        }
+
+        if (anonimizedSumario) {
+            update["Sumário"] = anonimizedSumario;
+            if (!current._source["Sumário Não Anonimizado"] && originalSumario) {
+                update["Sumário Não Anonimizado"] = originalSumario;
+            }
         }
 
         await updateDoc(jurisId, update);

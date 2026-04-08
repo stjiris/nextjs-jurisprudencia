@@ -48,7 +48,7 @@ export default LoggerApi(async function anonimizarHandler(
     }
 
     try {
-        const { doc, id } = req.body;
+        const { doc, id, jurisUrl } = req.body;
 
         if (!doc || !id) {
             return res.status(400).json({
@@ -79,6 +79,7 @@ export default LoggerApi(async function anonimizarHandler(
                 token,
                 document: doc,
                 nlp: nlpJson,
+                jurisUrl,
                 ts: Date.now(),
             }),
         });
