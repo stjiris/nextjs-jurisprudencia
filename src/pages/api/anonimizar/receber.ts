@@ -1,6 +1,7 @@
 import LoggerApi from "@/core/logger-api";
 import { getDoc, updateDoc } from "@/core/doc";
 import { NextApiRequest, NextApiResponse } from "next";
+const { saveAnonimizedDocument } = await import("@stjiris/filesystem-lib");
 
 export default LoggerApi(async function receberHandler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method !== "POST") {
@@ -41,6 +42,14 @@ export default LoggerApi(async function receberHandler(req: NextApiRequest, res:
         }
 
         await updateDoc(jurisId, update);
+
+        // Save Anonimizado.docx and Anonimizado.pdf to the filesystem (best-effort)
+        try {
+            await saveAnonimizedDocument(current._source, anonimizedTexto, anonimizedSumario || undefined);
+        } catch (fsErr) {
+            console.error("receber: failed to save anonymized files to filesystem:", fsErr);
+        }
+
         return res.status(200).json({ ok: true });
     } catch (err) {
         console.error("Error in /api/anonimizar/receber:", err);

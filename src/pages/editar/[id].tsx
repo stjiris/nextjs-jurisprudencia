@@ -49,13 +49,16 @@ function Update({ doc, id }: UpdateProps) {
     let keys = useKeysFromContext();
     let [updateObject, setUpdateObject] = useState<UpdateObject>({});
 
-    // Build a set of keys that are rendered as part of a pair (the right-side key is skipped individually)
-    const pairedRightKeys = new Set(TEXT_PAIRS.map(([, right]) => right));
-
     // Build a map from key name to JurisprudenciaKey for pair lookup
     const keyMap = Object.fromEntries(keys.keys.map(k => [k.key, k]));
 
-    const hasPairs = TEXT_PAIRS.some(([left, right]) => keyMap[left]?.editorEnabled && keyMap[right]?.editorEnabled);
+    // A pair is shown if the left key is editorEnabled AND the doc has a value for the right key
+    // (even if the right key isn't explicitly editorEnabled in admin config)
+    const activePairs = TEXT_PAIRS.filter(([left, right]) => keyMap[left]?.editorEnabled && doc[right as keyof typeof doc]);
+    const activePairRightKeys = new Set(activePairs.map(([, right]) => right));
+    const activePairLeftKeys = new Set(activePairs.map(([left]) => left));
+
+    const hasPairs = activePairs.length > 0;
 
     return <UpdateContext.Provider value={[updateObject, setUpdateObject]}>
         <div className="container-fluid">
@@ -64,18 +67,14 @@ function Update({ doc, id }: UpdateProps) {
                     <UpdateDocument id={id} />
                     {keys.keys.map((key, i) => {
                         if (!key.editorEnabled) return null;
-                        // Check if this key is the left of a pair
-                        const pair = TEXT_PAIRS.find(([left]) => left === key.key);
-                        if (pair) {
-                            const rightKey = keyMap[pair[1]];
-                            if (rightKey?.editorEnabled) {
-                                return <TextPairInput key={i} leftKey={key as any} rightKey={rightKey as any} doc={doc} />;
-                            }
+                        // If this is the left key of an active pair, render the pair
+                        if (activePairLeftKeys.has(key.key)) {
+                            const pair = TEXT_PAIRS.find(([left]) => left === key.key)!;
+                            const rightKeyConfig = (keyMap[pair[1]] ?? { key: pair[1], name: pair[1], editorEnabled: true }) as any;
+                            return <TextPairInput key={i} leftKey={key as any} rightKey={rightKeyConfig} doc={doc} />;
                         }
-                        // Skip right-side keys (rendered by their pair)
-                        if (pairedRightKeys.has(key.key) && keyMap[TEXT_PAIRS.find(([, right]) => right === key.key)![0]]?.editorEnabled) {
-                            return null;
-                        }
+                        // Skip right-side keys if they're rendered by their pair
+                        if (activePairRightKeys.has(key.key)) return null;
                         return <EditKey key={i} accessKey={key} doc={doc} />;
                     })}
                 </div>
