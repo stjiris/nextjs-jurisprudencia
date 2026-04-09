@@ -18,6 +18,8 @@ export default function DecisionView(props: { doc: JurisprudenciaDocument, id: s
     let hasNonAnon = auth && !!((props.doc["Texto Não Anonimizado"] && props.doc["Texto"]) || (props.doc["Sumário Não Anonimizado"] && props.doc["Sumário"]));
     let sumario = showOriginal ? (props.doc["Sumário Não Anonimizado"] ?? props.doc.Sumário) : (props.doc.Sumário || props.doc["Sumário Não Anonimizado"]);
     let texto = showOriginal ? (props.doc["Texto Não Anonimizado"] ?? props.doc.Texto) : (props.doc.Texto || props.doc["Texto Não Anonimizado"]);
+    const sumarioIsOriginal = showOriginal || !props.doc.Sumário;
+    const textoIsOriginal = showOriginal || !props.doc.Texto;
 
     return <>
         <div className="container">
@@ -70,10 +72,10 @@ export default function DecisionView(props: { doc: JurisprudenciaDocument, id: s
                                 <span style={{ padding: "3px 12px", color: "var(--primary-red)", backgroundColor: showOriginal ? "var(--secondary-gold)" : "transparent", borderLeft: "1px solid var(--primary-red)", transition: "background-color 0.2s ease" }}>Original</span>
                             </div>
                         </div>}
-                        <h6 className="border-top border-2"><b>Sumário</b></h6>
+                        <h6 className="border-top border-2"><b>{sumarioIsOriginal && props.doc["Sumário Não Anonimizado"] ? "Sumário Não Anonimizado" : "Sumário"}</b></h6>
                         <div className="p-2" dangerouslySetInnerHTML={{ __html: sumario! }}></div>
 
-                        <h6 className="border-top border-2"><b>Texto Integral</b></h6>
+                        <h6 className="border-top border-2"><b>{textoIsOriginal && props.doc["Texto Não Anonimizado"] ? "Texto Integral Não Anonimizado" : "Texto Integral"}</b></h6>
                         <div className="p-2" dangerouslySetInnerHTML={{ __html: texto! }}></div>
                     </div>
                 </div>

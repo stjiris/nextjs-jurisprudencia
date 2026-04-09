@@ -24,6 +24,15 @@ export default LoggerApi(async function docApiHandler(
     if( req.method === "PUT" ){
         try{
             const content = JSON.parse(req.body);
+            const current = await getDoc(id);
+            if (current._source) {
+                try {
+                    const { moveDecision } = await import("@stjiris/filesystem-lib");
+                    moveDecision(current._source, content);
+                } catch (fsErr) {
+                    console.error("doc PUT: moveDecision failed:", fsErr);
+                }
+            }
             return res.json(await updateDoc(id, content))
         }
         catch(e){
