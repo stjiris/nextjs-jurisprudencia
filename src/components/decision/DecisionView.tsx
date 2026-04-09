@@ -16,8 +16,8 @@ export default function DecisionView(props: { doc: JurisprudenciaDocument, id: s
     let related = useFetch<JurisprudenciaDocument[]>(`/api/related/${encodeURIComponent(proc)}/${uuid}`, []) || []
     let [showOriginal, setShowOriginal] = useState(false);
     let hasNonAnon = auth && !!((props.doc["Texto Não Anonimizado"] && props.doc["Texto"]) || (props.doc["Sumário Não Anonimizado"] && props.doc["Sumário"]));
-    let sumario = showOriginal ? (props.doc["Sumário Não Anonimizado"] ?? props.doc.Sumário) : props.doc.Sumário;
-    let texto = showOriginal ? (props.doc["Texto Não Anonimizado"] ?? props.doc.Texto) : props.doc.Texto;
+    let sumario = showOriginal ? (props.doc["Sumário Não Anonimizado"] ?? props.doc.Sumário) : (props.doc.Sumário || props.doc["Sumário Não Anonimizado"]);
+    let texto = showOriginal ? (props.doc["Texto Não Anonimizado"] ?? props.doc.Texto) : (props.doc.Texto || props.doc["Texto Não Anonimizado"]);
 
     return <>
         <div className="container">
