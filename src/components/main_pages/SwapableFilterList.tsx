@@ -22,8 +22,16 @@ export function useFormOrderedKeys() {
     const [previousSort, setPreviousSort] = useState<number[]>([]);
 
     useEffect(() => {
-        _setSort(params.get(FORM_KEY)?.split(FORM_SPL).map(i => parseInt(i.trim())) || defaultKeys?.map((k, i) => k ? i : null).filter(i => i !== null) as number[] || [])
-    }, [params, defaultKeys])
+        const baseSort: number[] = params.get(FORM_KEY)?.split(FORM_SPL).map(i => parseInt(i.trim())) || defaultKeys?.map((k, i) => k ? i : null).filter(i => i !== null) as number[] || [];
+        const sortSet = new Set(baseSort);
+        const extra: number[] = [];
+        availableKeys?.forEach((k, i) => {
+            if (k && !sortSet.has(i) && params.has(k.key)) {
+                extra.push(i);
+            }
+        });
+        _setSort([...extra, ...baseSort]);
+    }, [params, defaultKeys, availableKeys])
 
     let setSort = (cb: ((arg: number[]) => number[])) => {
         _setSort(curr => {
