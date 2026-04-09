@@ -32,17 +32,40 @@ async function getClient(): Promise<Client> {
             index: KEYS_INFO_INDEX_VERSION,
             size: 1000
         })
-        const presentKeys = new Set(r.hits.hits.map(h => h._source?.key).filter(Boolean));
-        const missingKeys = JurisprudenciaDocumentKeys.filter(k => !presentKeys.has(k));
+
+        // Deduplicate: keep the first occurrence of each key, delete the rest
+        const seenKeys = new Set<string>();
+        const toDelete: string[] = [];
+        const uniqueHits: typeof r.hits.hits = [];
+        for (const hit of r.hits.hits) {
+            const k = hit._source?.key;
+            if (!k || seenKeys.has(k)) {
+                if (hit._id) toDelete.push(hit._id);
+            } else {
+                seenKeys.add(k);
+                uniqueHits.push(hit);
+            }
+        }
+        if (toDelete.length > 0) {
+            console.log(`keys-info: removing ${toDelete.length} duplicate entries`);
+            await client.bulk({
+                operations: toDelete.map(id => ({ delete: { _index: KEYS_INFO_INDEX_VERSION, _id: id } })),
+                refresh: "true"
+            });
+        }
+
+        // Add any keys present in v13 but missing from the index
+        const missingKeys = JurisprudenciaDocumentKeys.filter(k => !seenKeys.has(k));
         if (missingKeys.length > 0) {
+            console.log(`keys-info: adding ${missingKeys.length} missing keys: ${missingKeys.join(", ")}`);
             await client.bulk<JurisprudenciaKey, JurisprudenciaKey>({
                 index: KEYS_INFO_INDEX_VERSION,
                 operations: missingKeys.flatMap((key, i) => [
                     { create: {} },
-                    { key: key, name: key, description: "Sem descrição", active: false, filtersSuggest: false, filtersShow: false, filtersOrder: presentKeys.size + i + 1, indicesList: false, indicesGroup: false, documentShow: false, authentication: false, editorEnabled: false, editorRestricted: false, editorSuggestions: false }
+                    { key: key, name: key, description: "Sem descrição", active: false, filtersSuggest: false, filtersShow: false, filtersOrder: seenKeys.size + i + 1, indicesList: false, indicesGroup: false, documentShow: false, authentication: false, editorEnabled: false, editorRestricted: false, editorSuggestions: false }
                 ]),
                 refresh: "true"
-            }).then(r => console.log(r.items[0]))
+            });
         }
     }
     return client;
@@ -52,7 +75,7 @@ export async function getAllKeys(authed: boolean = false) {
     let client = await getClient();
     return await client.search<JurisprudenciaKey>({
         index: KEYS_INFO_INDEX_VERSION,
-        size: JurisprudenciaDocumentKeys.length,
+        size: 1000,
         sort: [{
             "filtersOrder": "asc"
         }, {
