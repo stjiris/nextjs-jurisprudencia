@@ -71,7 +71,7 @@ export function TextPairInput({ leftKey, rightKey, doc }: { leftKey: Jurispruden
     const rightChanged = rightHtml !== rightInitial;
 
     return <div className="border rounded mb-2 p-2">
-        <div className="d-flex gap-2" style={{ height: "400px" }}>
+        <div className="d-flex gap-2" style={{ height: "700px" }}>
             <div className="d-flex flex-column" style={{ width: "50%" }}>
                 <small className={"fw-semibold mb-1" + (leftChanged ? " text-warning" : "")}>{leftKey.name}{leftChanged ? "*" : ""}</small>
                 <ReactQuill
