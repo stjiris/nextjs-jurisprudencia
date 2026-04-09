@@ -1,16 +1,21 @@
 import { JurisprudenciaDocument, JurisprudenciaDocumentDateKey, JurisprudenciaDocumentExactKey, JurisprudenciaDocumentGenericKey, JurisprudenciaDocumentKey, JurisprudenciaDocumentStateKey, JurisprudenciaDocumentTextKey, PartialJurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
-import { Dispatch, SetStateAction, createContext, useContext, useMemo, useRef, useState } from "react";
+import { Dispatch, SetStateAction, createContext, useContext, useMemo, useState } from "react";
 
 import { JurisprudenciaKey } from "@/types/keys";
 import { DatalistObj } from "@/types/search";
 import dynamic from 'next/dynamic';
 import { NextRouter, useRouter } from "next/router";
-import 'react-quill/dist/quill.snow.css';
 import Createable from "react-select/creatable";
 import { useFetch } from "../useFetch";
 import { createFilter } from "react-select";
 
-export const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
+export const ReactQuill = dynamic(
+    async () => {
+        await import('react-quill/dist/quill.snow.css');
+        return import('react-quill').then(mod => mod.default);
+    },
+    { ssr: false }
+);
 
 export type UpdateObject = PartialJurisprudenciaDocument;
 
