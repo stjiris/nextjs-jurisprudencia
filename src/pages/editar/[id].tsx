@@ -10,7 +10,7 @@ import { GetResponse, WriteResponseBase } from "@elastic/elasticsearch/lib/api/t
 import { useKeysFromContext } from "@/contexts/keys";
 import { JurisprudenciaKey } from "@/types/keys";
 import { LoggerServerSideProps } from "@/core/logger-api";
-import { DateInput, ExactInput, ShowCode, TextInput, TokenSelection, UpdateContext, UpdateObject, ExactInputWithSuggestions, ExactInputRestricted } from "@/components/decision/dashboardDoc";
+import { DateInput, ExactInput, ShowCode, TextInput, TextPairInput, TokenSelection, UpdateContext, UpdateObject, ExactInputWithSuggestions, ExactInputRestricted } from "@/components/decision/dashboardDoc";
 import GenericPage from "@/components/main_pages/genericPageStructure";
 
 export const getServerSideProps = withAuthentication<{}>(async ctx => {
@@ -40,17 +40,44 @@ export default function UpdatePage() {
     </GenericPage>
 }
 
+const TEXT_PAIRS: [string, string][] = [
+    ["Texto", "Texto Não Anonimizado"],
+    ["Sumário", "Sumário Não Anonimizado"],
+];
+
 function Update({ doc, id }: UpdateProps) {
     let keys = useKeysFromContext();
     let [updateObject, setUpdateObject] = useState<UpdateObject>({});
 
+    // Build a set of keys that are rendered as part of a pair (the right-side key is skipped individually)
+    const pairedRightKeys = new Set(TEXT_PAIRS.map(([, right]) => right));
+
+    // Build a map from key name to JurisprudenciaKey for pair lookup
+    const keyMap = Object.fromEntries(keys.keys.map(k => [k.key, k]));
+
+    const hasPairs = TEXT_PAIRS.some(([left, right]) => keyMap[left]?.editorEnabled && keyMap[right]?.editorEnabled);
+
     return <UpdateContext.Provider value={[updateObject, setUpdateObject]}>
         <div className="container-fluid">
             <div className="row">
-
-                <div className="card shadow col-6 mx-auto">
+                <div className={"card shadow mx-auto " + (hasPairs ? "col-10" : "col-6")}>
                     <UpdateDocument id={id} />
-                    {keys.keys.map((key, i) => <EditKey key={i} accessKey={key} doc={doc} />)}
+                    {keys.keys.map((key, i) => {
+                        if (!key.editorEnabled) return null;
+                        // Check if this key is the left of a pair
+                        const pair = TEXT_PAIRS.find(([left]) => left === key.key);
+                        if (pair) {
+                            const rightKey = keyMap[pair[1]];
+                            if (rightKey?.editorEnabled) {
+                                return <TextPairInput key={i} leftKey={key as any} rightKey={rightKey as any} doc={doc} />;
+                            }
+                        }
+                        // Skip right-side keys (rendered by their pair)
+                        if (pairedRightKeys.has(key.key) && keyMap[TEXT_PAIRS.find(([, right]) => right === key.key)![0]]?.editorEnabled) {
+                            return null;
+                        }
+                        return <EditKey key={i} accessKey={key} doc={doc} />;
+                    })}
                 </div>
             </div>
         </div>

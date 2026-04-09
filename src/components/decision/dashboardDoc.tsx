@@ -1,5 +1,5 @@
 import { JurisprudenciaDocument, JurisprudenciaDocumentDateKey, JurisprudenciaDocumentExactKey, JurisprudenciaDocumentGenericKey, JurisprudenciaDocumentKey, JurisprudenciaDocumentStateKey, JurisprudenciaDocumentTextKey, PartialJurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
-import { Dispatch, SetStateAction, createContext, useContext, useMemo, useRef, useState } from "react";
+import { Dispatch, MutableRefObject, SetStateAction, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 import { JurisprudenciaKey } from "@/types/keys";
 import { DatalistObj } from "@/types/search";
@@ -42,6 +42,88 @@ export function TextInput({ accessKey, doc }: InputProps<JurisprudenciaDocumentT
             onChange={onChange}
         />
     </InputRow>;
+}
+
+export function TextPairInput({ leftKey, rightKey, doc }: { leftKey: JurisprudenciaKey & { key: JurisprudenciaDocumentTextKey }, rightKey: JurisprudenciaKey & { key: JurisprudenciaDocumentTextKey }, doc: JurisprudenciaDocument | PartialJurisprudenciaDocument }) {
+    let [, setUpdateObject] = useContext(UpdateContext);
+    let leftInitial = doc[leftKey.key] || "";
+    let rightInitial = doc[rightKey.key] || "";
+    let [leftHtml, setLeftHtml] = useState<string>(leftInitial);
+    let [rightHtml, setRightHtml] = useState<string>(rightInitial);
+    let leftWrapRef = useRef<HTMLDivElement>(null);
+    let rightWrapRef = useRef<HTMLDivElement>(null);
+    let syncingRef = useRef(false);
+
+    const getEditor = (wrapRef: MutableRefObject<HTMLDivElement | null>) =>
+        wrapRef.current?.querySelector<HTMLElement>(".ql-editor") ?? null;
+
+    const syncScroll = useCallback((source: MutableRefObject<HTMLDivElement | null>, target: MutableRefObject<HTMLDivElement | null>) => {
+        if (syncingRef.current) return;
+        const sourceEl = getEditor(source);
+        const targetEl = getEditor(target);
+        if (!sourceEl || !targetEl) return;
+        syncingRef.current = true;
+        const ratio = sourceEl.scrollTop / (sourceEl.scrollHeight - sourceEl.clientHeight || 1);
+        targetEl.scrollTop = ratio * (targetEl.scrollHeight - targetEl.clientHeight);
+        syncingRef.current = false;
+    }, []);
+
+    useEffect(() => {
+        const leftEl = getEditor(leftWrapRef);
+        const rightEl = getEditor(rightWrapRef);
+        if (!leftEl || !rightEl) return;
+        const onLeftScroll = () => syncScroll(leftWrapRef, rightWrapRef);
+        const onRightScroll = () => syncScroll(rightWrapRef, leftWrapRef);
+        leftEl.addEventListener("scroll", onLeftScroll);
+        rightEl.addEventListener("scroll", onRightScroll);
+        return () => {
+            leftEl.removeEventListener("scroll", onLeftScroll);
+            rightEl.removeEventListener("scroll", onRightScroll);
+        };
+    }, [syncScroll]);
+
+    const onLeftChange = (content: string, _delta: any, source: string) => {
+        if (source === 'user') {
+            let v = content.replaceAll("<p><br></p>", "");
+            setUpdateObject(old => ({ ...old, [leftKey.key]: v }));
+            setLeftHtml(v);
+        }
+    };
+
+    const onRightChange = (content: string, _delta: any, source: string) => {
+        if (source === 'user') {
+            let v = content.replaceAll("<p><br></p>", "");
+            setUpdateObject(old => ({ ...old, [rightKey.key]: v }));
+            setRightHtml(v);
+        }
+    };
+
+    const leftChanged = leftHtml !== leftInitial;
+    const rightChanged = rightHtml !== rightInitial;
+
+    return <div className="border rounded mb-2 p-2">
+        <div className="d-flex gap-2" style={{ height: "400px" }}>
+            <div className="d-flex flex-column flex-grow-1 overflow-hidden" ref={leftWrapRef}>
+                <small className={"fw-semibold mb-1" + (leftChanged ? " text-warning" : "")}>{leftKey.name}{leftChanged ? "*" : ""}</small>
+                <ReactQuill
+                    className="flex-grow-1 overflow-hidden"
+                    theme="snow"
+                    defaultValue={leftInitial}
+                    onChange={onLeftChange}
+                />
+            </div>
+            <div className="vr" />
+            <div className="d-flex flex-column flex-grow-1 overflow-hidden" ref={rightWrapRef}>
+                <small className={"fw-semibold mb-1" + (rightChanged ? " text-warning" : "")}>{rightKey.name}{rightChanged ? "*" : ""}</small>
+                <ReactQuill
+                    className="flex-grow-1 overflow-hidden"
+                    theme="snow"
+                    defaultValue={rightInitial}
+                    onChange={onRightChange}
+                />
+            </div>
+        </div>
+    </div>;
 }
 
 export function DateInput({ accessKey, doc }: InputProps<JurisprudenciaDocumentDateKey>) {

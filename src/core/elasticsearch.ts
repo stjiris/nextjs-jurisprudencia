@@ -20,20 +20,20 @@ export const aggs = {
     MinAno: {
         min: {
             field: DATA_FIELD,
-            format: 'yyyy'
+            format: "yyyy"
         }
     },
     MaxAno: {
         max: {
             field: DATA_FIELD,
-            format: 'yyyy'
+            format: "yyyy"
         }
     }
 } as Record<string, AggregationsAggregationContainer>;
-filterableProps.forEach(name => {
-    let key = name
+filterableProps.forEach((name) => {
+    let key = name;
     if (isJurisprudenciaDocumentGenericKey(name)) {
-        key += ".Index.keyword"
+        key += ".Index.keyword";
     }
     aggs[name] = {
         terms: {
@@ -43,7 +43,7 @@ filterableProps.forEach(name => {
                 _key: "asc"
             }
         }
-    }
+    };
 });
 
 export const DEFAULT_AGGS = {
@@ -53,7 +53,7 @@ export const DEFAULT_AGGS = {
 export const DEFAULT_RESULTS_PER_PAGE = 10;
 
 export async function getElasticSearchClient() {
-    return new Client({ node: process.env.ES_URL || "http://localhost:9200", auth: { username: "elastic", password: "elasticsearch" } })
+    return new Client({ node: process.env.ES_URL || "http://localhost:9200", auth: { username: "elastic", password: "elasticsearch" }, sniffOnStart: false, sniffOnConnectionFault: false, sniffInterval: false });
 }
 
 export type SearchFilters = {
@@ -61,17 +61,10 @@ export type SearchFilters = {
     after: QueryDslQueryContainer[];
 };
 
-export default async function search(
-    query: QueryDslQueryContainer | QueryDslQueryContainer[],
-    filters: SearchFilters = { pre: [], after: [] },
-    page: number = 0,
-    saggs: Record<string, AggregationsAggregationContainer> = DEFAULT_AGGS,
-    rpp = DEFAULT_RESULTS_PER_PAGE,
-    extras: Partial<SearchRequest> = {}, all: boolean = false): Promise<SearchResponse<JurisprudenciaDocument, Record<string, AggregationsAggregate>>> {
-
+export default async function search(query: QueryDslQueryContainer | QueryDslQueryContainer[], filters: SearchFilters = { pre: [], after: [] }, page: number = 0, saggs: Record<string, AggregationsAggregationContainer> = DEFAULT_AGGS, rpp = DEFAULT_RESULTS_PER_PAGE, extras: Partial<SearchRequest> = {}, all: boolean = false): Promise<SearchResponse<JurisprudenciaDocument, Record<string, AggregationsAggregate>>> {
     const must = Array.isArray(query) ? query : [query];
     if (!all) {
-        must.push({ terms: { STATE: _PUBLIC_STATES } })
+        must.push({ terms: { STATE: _PUBLIC_STATES } });
     }
     const client = await getElasticSearchClient();
     return await client.search<JurisprudenciaDocument>({
@@ -92,7 +85,7 @@ export default async function search(
         from: page * rpp,
         track_total_hits: true,
         _source: (filterableProps as any[]).concat("Sumário"),
-        ...extras // Allows 
+        ...extras // Allows
     });
 }
 
@@ -112,18 +105,18 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
         let aggField = (aggObj.terms ? "terms" : "significant_terms") as keyof AggregationsAggregationContainer;
         if (!aggObj[aggField]) continue;
         if (body[aggName]) {
-            filtersUsed[aggName] = ((Array.isArray(body[aggName]) ? body[aggName] : [body[aggName]]) as string[]).filter(o => o.length > 0);
+            filtersUsed[aggName] = ((Array.isArray(body[aggName]) ? body[aggName] : [body[aggName]]) as string[]).filter((o) => o.length > 0);
             let when = "pre" as keyof SearchFilters;
             if (afters.indexOf(aggName) != -1) {
                 when = "after" as keyof SearchFilters;
             }
             let fieldName = (aggObj[aggField] as AggregationsTermsAggregation).field!;
-            let should = filtersUsed[aggName].filter(o => !o.startsWith("not:"))
-            let must_not = filtersUsed[aggName].filter(o => o.startsWith("not:")).map(o => o.substring(4))
-            let must_or_should = !isJurisprudenciaDocumentGenericKey(aggName) || body["_should"]?.includes(aggName) ? "should" : "must"  // AND or OR - if a signle value use alawys OR else default OR but flag for AND
+            let should = filtersUsed[aggName].filter((o) => !o.startsWith("not:"));
+            let must_not = filtersUsed[aggName].filter((o) => o.startsWith("not:")).map((o) => o.substring(4));
+            let must_or_should = !isJurisprudenciaDocumentGenericKey(aggName) || body["_should"]?.includes(aggName) ? "should" : "must"; // AND or OR - if a signle value use alawys OR else default OR but flag for AND
 
             // Detect advanced operators in any value
-            const hasAdvanced = (arr: string[]) => arr.some(v => /[\(\)\"\bAND\b|\bOR\b|\bNOT\b]/i.test(v));
+            const hasAdvanced = (arr: string[]) => arr.some((v) => /[\(\)\"\bAND\b|\bOR\b|\bNOT\b]/i.test(v));
             if (should.length && hasAdvanced(should)) {
                 filters[when].push({
                     query_string: {
@@ -135,15 +128,19 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
             } else if (should.length) {
                 filters[when].push({
                     bool: {
-                        [must_or_should]: should.map(o => (o.startsWith("\"") && o.endsWith("\"")) ? {
-                            term: {
-                                [fieldName.replace("keyword", "raw")]: { value: `${o.slice(1, -1)}` }
-                            }
-                        } : {
-                            wildcard: {
-                                [fieldName]: { value: `*${o}*` }
-                            }
-                        }),
+                        [must_or_should]: should.map((o) =>
+                            o.startsWith('"') && o.endsWith('"')
+                                ? {
+                                      term: {
+                                          [fieldName.replace("keyword", "raw")]: { value: `${o.slice(1, -1)}` }
+                                      }
+                                  }
+                                : {
+                                      wildcard: {
+                                          [fieldName]: { value: `*${o}*` }
+                                      }
+                                  }
+                        )
                     }
                 });
             }
@@ -164,15 +161,19 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
             } else if (must_not.length) {
                 filters[when].push({
                     bool: {
-                        must_not: must_not.map(o => (o.startsWith("\"") && o.endsWith("\"")) ? {
-                            term: {
-                                [fieldName.replace("keyword", "raw")]: { value: `${o.slice(1, -1)}` }
-                            }
-                        } : {
-                            wildcard: {
-                                [fieldName]: { value: `*${o}*` }
-                            }
-                        })
+                        must_not: must_not.map((o) =>
+                            o.startsWith('"') && o.endsWith('"')
+                                ? {
+                                      term: {
+                                          [fieldName.replace("keyword", "raw")]: { value: `${o.slice(1, -1)}` }
+                                      }
+                                  }
+                                : {
+                                      wildcard: {
+                                          [fieldName]: { value: `*${o}*` }
+                                      }
+                                  }
+                        )
                     }
                 });
             }
@@ -180,8 +181,7 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
     }
 
     let dateWhen = "pre" as keyof SearchFilters;
-    if (afters.indexOf("MinDate") >= 0 || afters.indexOf("MaxDate") >= 0)
-        dateWhen = "after";
+    if (afters.indexOf("MinDate") >= 0 || afters.indexOf("MaxDate") >= 0) dateWhen = "after";
     let minDate = Array.isArray(body.MinDate) ? body.MinDate[0] : body.MinDate;
     let maxDate = Array.isArray(body.MaxDate) ? body.MaxDate[0] : body.MaxDate;
 
@@ -194,14 +194,14 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
             }
         };
         if (minDate) {
-            const [year, month, day] = minDate.split('-');
+            const [year, month, day] = minDate.split("-");
             const formattedMinDate = `${day}/${month}/${year}`;
 
             rangeQuery.range[DATA_FIELD].gte = formattedMinDate;
             filtersUsed.MinDate = [formattedMinDate];
         }
         if (maxDate) {
-            const [year, month, day] = maxDate.split('-');
+            const [year, month, day] = maxDate.split("-");
             const formattedMaxDate = `${day}/${month}/${year}`;
 
             rangeQuery.range[DATA_FIELD].lte = formattedMaxDate;
@@ -211,8 +211,8 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
     }
 
     if (body.notHasField) {
-        filtersUsed.notHasField = (Array.isArray(body.notHasField) ? body.notHasField : [body.notHasField]).filter(o => o.length > 0);
-        filtersUsed.notHasField.forEach(field => {
+        filtersUsed.notHasField = (Array.isArray(body.notHasField) ? body.notHasField : [body.notHasField]).filter((o) => o.length > 0);
+        filtersUsed.notHasField.forEach((field) => {
             filters.pre.push({
                 bool: {
                     must_not: {
@@ -225,8 +225,8 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
         });
     }
     if (body.hasField) {
-        filtersUsed.hasField = (Array.isArray(body.hasField) ? body.hasField : [body.hasField]).filter(o => o.length > 0);
-        filtersUsed.hasField.forEach(field => {
+        filtersUsed.hasField = (Array.isArray(body.hasField) ? body.hasField : [body.hasField]).filter((o) => o.length > 0);
+        filtersUsed.hasField.forEach((field) => {
             filters.pre.push({
                 bool: {
                     must: {
@@ -264,19 +264,17 @@ export function parseSort(value: string | undefined, array: SortCombinations[]):
         array.push({
             [DATA_FIELD]: { order: "desc" }
         });
-    }
-    else if (sortV == "asc") {
+    } else if (sortV == "asc") {
         array.push({
             [DATA_FIELD]: { order: "asc" }
         });
-    }
-    else if (sortV == "score") {
+    } else if (sortV == "score") {
         array.push({
             _score: { order: "desc" }
         });
         array.push({
             [DATA_FIELD]: { order: "desc" }
-        })
+        });
     }
     return sortV;
 }
@@ -288,30 +286,29 @@ export function createQueryDslQueryContainer(string?: string | string[]): QueryD
         };
     }
     // Use query_string to support AND, OR, NOT, and parentheses in free text search
-    return [{
-        query_string: {
-            query: Array.isArray(string) ? string.join(" ") : string,
-            fields: ["*"]
+    return [
+        {
+            query_string: {
+                query: Array.isArray(string) ? string.join(" ") : string,
+                fields: ["*"]
+            }
         }
-    }];
+    ];
 }
-
 
 export async function getSearchedArray(text: string): Promise<string[]> {
     try {
         const c = await getElasticSearchClient();
         const r = await c.indices.analyze({ index: JurisprudenciaVersion, text: text });
-        return r.tokens?.map(o => o.token) || [];
+        return r.tokens?.map((o) => o.token) || [];
     } catch (e) {
         return [] as string[];
     }
 }
 
 export function sortAlphabetically(a: string, b: string): number {
-    if (a.startsWith("«") && !b.startsWith("«"))
-        return 1;
-    if (b.startsWith("«") && !a.startsWith("«"))
-        return -1;
+    if (a.startsWith("«") && !b.startsWith("«")) return 1;
+    if (b.startsWith("«") && !a.startsWith("«")) return -1;
     let ak = a.replace(/^[^A-Za-zÀ-ÖØ-öø-ÿ0-9]*/, "");
     let bk = b.replace(/^[^A-Za-zÀ-ÖØ-öø-ÿ0-9]*/, "");
     return ak.localeCompare(bk);
