@@ -10,7 +10,7 @@ import { GetResponse, WriteResponseBase } from "@elastic/elasticsearch/lib/api/t
 import { useKeysFromContext } from "@/contexts/keys";
 import { JurisprudenciaKey } from "@/types/keys";
 import { LoggerServerSideProps } from "@/core/logger-api";
-import { DateInput, ExactInput, ShowCode, TextInput, TextPairInput, TextPairsCombinedInput, TokenSelection, UpdateContext, UpdateObject, ExactInputWithSuggestions, ExactInputRestricted } from "@/components/decision/dashboardDoc";
+import { DateInput, ExactInput, ShowCode, TextInput, TextPairInput, TokenSelection, UpdateContext, UpdateObject, ExactInputWithSuggestions, ExactInputRestricted } from "@/components/decision/dashboardDoc";
 import GenericPage from "@/components/main_pages/genericPageStructure";
 
 export const getServerSideProps = withAuthentication<{}>(async ctx => {
@@ -52,15 +52,11 @@ function Update({ doc, id }: UpdateProps) {
     // Build a map from key name to JurisprudenciaKey for pair lookup
     const keyMap = Object.fromEntries(keys.keys.map(k => [k.key, k]));
 
-    // A pair is shown if the left key is editorEnabled AND the doc has a value for the right key
-    // (even if the right key isn't explicitly editorEnabled in admin config)
     const activePairs = TEXT_PAIRS.filter(([left, right]) => keyMap[left]?.editorEnabled && doc[right as keyof typeof doc]);
     const activePairRightKeys = new Set(activePairs.map(([, right]) => right));
     const activePairLeftKeys = new Set(activePairs.map(([left]) => left));
 
     const hasPairs = activePairs.length > 0;
-    const bothPairsActive = activePairs.length >= 2;
-    const renderedCombined = { done: false };
 
     return <UpdateContext.Provider value={[updateObject, setUpdateObject]}>
         <div className="container-fluid">
@@ -70,15 +66,6 @@ function Update({ doc, id }: UpdateProps) {
                     {keys.keys.map((key, i) => {
                         if (!key.editorEnabled) return null;
                         if (activePairLeftKeys.has(key.key)) {
-                            if (bothPairsActive) {
-                                if (renderedCombined.done) return null;
-                                renderedCombined.done = true;
-                                const combinedPairs = activePairs.map(([left, right]) => ({
-                                    leftKey: (keyMap[left] ?? { key: left, name: left, editorEnabled: true }) as any,
-                                    rightKey: (keyMap[right] ?? { key: right, name: right, editorEnabled: true }) as any,
-                                }));
-                                return <TextPairsCombinedInput key={i} pairs={combinedPairs} doc={doc} />;
-                            }
                             const pair = TEXT_PAIRS.find(([left]) => left === key.key)!;
                             const rightKeyConfig = (keyMap[pair[1]] ?? { key: pair[1], name: pair[1], editorEnabled: true }) as any;
                             return <TextPairInput key={i} leftKey={key as any} rightKey={rightKeyConfig} doc={doc} />;

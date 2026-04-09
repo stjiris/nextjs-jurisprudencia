@@ -1,5 +1,5 @@
 import { JurisprudenciaDocument, JurisprudenciaDocumentDateKey, JurisprudenciaDocumentExactKey, JurisprudenciaDocumentGenericKey, JurisprudenciaDocumentKey, JurisprudenciaDocumentStateKey, JurisprudenciaDocumentTextKey, PartialJurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
-import { Dispatch, MutableRefObject, SetStateAction, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { Dispatch, SetStateAction, createContext, useContext, useMemo, useRef, useState } from "react";
 
 import { JurisprudenciaKey } from "@/types/keys";
 import { DatalistObj } from "@/types/search";
@@ -50,37 +50,6 @@ export function TextPairInput({ leftKey, rightKey, doc }: { leftKey: Jurispruden
     let rightInitial = doc[rightKey.key] || "";
     let [leftHtml, setLeftHtml] = useState<string>(leftInitial);
     let [rightHtml, setRightHtml] = useState<string>(rightInitial);
-    let leftWrapRef = useRef<HTMLDivElement>(null);
-    let rightWrapRef = useRef<HTMLDivElement>(null);
-    let syncingRef = useRef(false);
-
-    const getEditor = (wrapRef: MutableRefObject<HTMLDivElement | null>) =>
-        wrapRef.current?.querySelector<HTMLElement>(".ql-editor") ?? null;
-
-    const syncScroll = useCallback((source: MutableRefObject<HTMLDivElement | null>, target: MutableRefObject<HTMLDivElement | null>) => {
-        if (syncingRef.current) return;
-        const sourceEl = getEditor(source);
-        const targetEl = getEditor(target);
-        if (!sourceEl || !targetEl) return;
-        syncingRef.current = true;
-        const ratio = sourceEl.scrollTop / (sourceEl.scrollHeight - sourceEl.clientHeight || 1);
-        targetEl.scrollTop = ratio * (targetEl.scrollHeight - targetEl.clientHeight);
-        syncingRef.current = false;
-    }, []);
-
-    useEffect(() => {
-        const leftEl = getEditor(leftWrapRef);
-        const rightEl = getEditor(rightWrapRef);
-        if (!leftEl || !rightEl) return;
-        const onLeftScroll = () => syncScroll(leftWrapRef, rightWrapRef);
-        const onRightScroll = () => syncScroll(rightWrapRef, leftWrapRef);
-        leftEl.addEventListener("scroll", onLeftScroll);
-        rightEl.addEventListener("scroll", onRightScroll);
-        return () => {
-            leftEl.removeEventListener("scroll", onLeftScroll);
-            rightEl.removeEventListener("scroll", onRightScroll);
-        };
-    }, [syncScroll]);
 
     const onLeftChange = (content: string, _delta: any, source: string) => {
         if (source === 'user') {
@@ -103,7 +72,7 @@ export function TextPairInput({ leftKey, rightKey, doc }: { leftKey: Jurispruden
 
     return <div className="border rounded mb-2 p-2">
         <div className="d-flex gap-2" style={{ height: "400px" }}>
-            <div className="d-flex flex-column flex-grow-1 overflow-hidden" ref={leftWrapRef}>
+            <div className="d-flex flex-column" style={{ width: "50%" }}>
                 <small className={"fw-semibold mb-1" + (leftChanged ? " text-warning" : "")}>{leftKey.name}{leftChanged ? "*" : ""}</small>
                 <ReactQuill
                     className="flex-grow-1 overflow-hidden"
@@ -113,7 +82,7 @@ export function TextPairInput({ leftKey, rightKey, doc }: { leftKey: Jurispruden
                 />
             </div>
             <div className="vr" />
-            <div className="d-flex flex-column flex-grow-1 overflow-hidden" ref={rightWrapRef}>
+            <div className="d-flex flex-column" style={{ width: "50%" }}>
                 <small className={"fw-semibold mb-1" + (rightChanged ? " text-warning" : "")}>{rightKey.name}{rightChanged ? "*" : ""}</small>
                 <ReactQuill
                     className="flex-grow-1 overflow-hidden"
@@ -126,91 +95,6 @@ export function TextPairInput({ leftKey, rightKey, doc }: { leftKey: Jurispruden
     </div>;
 }
 
-export function TextPairsCombinedInput({ pairs, doc }: {
-    pairs: Array<{ leftKey: JurisprudenciaKey & { key: JurisprudenciaDocumentTextKey }, rightKey: JurisprudenciaKey & { key: JurisprudenciaDocumentTextKey } }>,
-    doc: JurisprudenciaDocument | PartialJurisprudenciaDocument
-}) {
-    const [, setUpdateObject] = useContext(UpdateContext);
-    const syncingRef = useRef(false);
-    const editor0Wrap = useRef<HTMLDivElement>(null);
-    const editor1Wrap = useRef<HTMLDivElement>(null);
-    const side0Scroll = useRef<HTMLDivElement>(null);
-    const side1Scroll = useRef<HTMLDivElement>(null);
-
-    const getEditor = (wrapRef: MutableRefObject<HTMLDivElement | null>) =>
-        wrapRef.current?.querySelector<HTMLElement>(".ql-editor") ?? null;
-
-    const syncScroll = useCallback((sourceEl: HTMLElement | null, targetEl: HTMLElement | null) => {
-        if (syncingRef.current || !sourceEl || !targetEl) return;
-        syncingRef.current = true;
-        const ratio = sourceEl.scrollTop / (sourceEl.scrollHeight - sourceEl.clientHeight || 1);
-        targetEl.scrollTop = ratio * (targetEl.scrollHeight - targetEl.clientHeight);
-        syncingRef.current = false;
-    }, []);
-
-    useEffect(() => {
-        const pairs = [
-            { editorWrap: editor0Wrap, sideScroll: side0Scroll },
-            { editorWrap: editor1Wrap, sideScroll: side1Scroll },
-        ];
-        const cleanups: (() => void)[] = [];
-        pairs.forEach(({ editorWrap, sideScroll }) => {
-            const editorEl = getEditor(editorWrap);
-            const sideEl = sideScroll.current;
-            if (!editorEl || !sideEl) return;
-            const onEditor = () => syncScroll(editorEl, sideEl);
-            const onSide = () => syncScroll(sideEl, editorEl);
-            editorEl.addEventListener("scroll", onEditor);
-            sideEl.addEventListener("scroll", onSide);
-            cleanups.push(() => { editorEl.removeEventListener("scroll", onEditor); sideEl.removeEventListener("scroll", onSide); });
-        });
-        return () => cleanups.forEach(f => f());
-    }, [syncScroll]);
-
-    const editorWraps = [editor0Wrap, editor1Wrap];
-
-    return <div className="border rounded mb-2 p-2">
-        <div className="d-flex gap-2" style={{ height: "500px" }}>
-            <div className="d-flex flex-column flex-grow-1 overflow-hidden">
-                <small className="fw-semibold mb-1">{pairs[0].rightKey.name}</small>
-                <div
-                    ref={side0Scroll}
-                    className="flex-grow-1 overflow-auto border rounded p-2 bg-light"
-                    dangerouslySetInnerHTML={{ __html: (doc[pairs[0].rightKey.key] as string) || "" }}
-                />
-            </div>
-            <div className="vr" />
-            <div className="d-flex flex-column flex-grow-1 overflow-hidden gap-2">
-                {pairs.map((pair, i) => {
-                    const initial = (doc[pair.leftKey.key] as string) || "";
-                    return <div key={pair.leftKey.key} className="d-flex flex-column flex-grow-1 overflow-hidden" ref={editorWraps[i]}>
-                        <small className="fw-semibold mb-1">{pair.leftKey.name}</small>
-                        <ReactQuill
-                            className="flex-grow-1 overflow-hidden"
-                            theme="snow"
-                            defaultValue={initial}
-                            onChange={(content, _delta, source) => {
-                                if (source === 'user') {
-                                    const v = content.replaceAll("<p><br></p>", "");
-                                    setUpdateObject(old => ({ ...old, [pair.leftKey.key]: v }));
-                                }
-                            }}
-                        />
-                    </div>;
-                })}
-            </div>
-            <div className="vr" />
-            <div className="d-flex flex-column flex-grow-1 overflow-hidden">
-                <small className="fw-semibold mb-1">{pairs[1].rightKey.name}</small>
-                <div
-                    ref={side1Scroll}
-                    className="flex-grow-1 overflow-auto border rounded p-2 bg-light"
-                    dangerouslySetInnerHTML={{ __html: (doc[pairs[1].rightKey.key] as string) || "" }}
-                />
-            </div>
-        </div>
-    </div>;
-}
 
 export function DateInput({ accessKey, doc }: InputProps<JurisprudenciaDocumentDateKey>) {
     let [, setUpdateObject] = useContext(UpdateContext);
