@@ -93,7 +93,7 @@ services:
       - .:/usr/src/app
       - /usr/src/app/node_modules
       - rss_data:/rss
-      - ../jurisprudencia-privada-etl/results:/filesystem-results:ro
+      - ../jurisprudencia-privada-etl/results:/filesystem-results:rw
     depends_on:
       elasticsearch:
         condition: service_healthy
