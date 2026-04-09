@@ -33,19 +33,23 @@ async function getClient(): Promise<Client> {
             size: 1000
         })
 
-        // Deduplicate: keep the first occurrence of each key, delete the rest
-        const seenKeys = new Set<string>();
-        const toDelete: string[] = [];
-        const uniqueHits: typeof r.hits.hits = [];
+        // Deduplicate: for each key, keep the entry with the most boolean flags set to true
+        const countTrue = (src: any) => Object.values(src ?? {}).filter(v => v === true).length;
+        const bestByKey = new Map<string, { id: string, score: number, source: JurisprudenciaKey }>();
         for (const hit of r.hits.hits) {
             const k = hit._source?.key;
-            if (!k || seenKeys.has(k)) {
-                if (hit._id) toDelete.push(hit._id);
-            } else {
-                seenKeys.add(k);
-                uniqueHits.push(hit);
+            if (!k || !hit._id) continue;
+            const score = countTrue(hit._source);
+            const existing = bestByKey.get(k);
+            if (!existing || score > existing.score) {
+                bestByKey.set(k, { id: hit._id, score, source: hit._source! });
             }
         }
+        const keepIds = new Set(Array.from(bestByKey.values()).map(v => v.id));
+        const toDelete: string[] = r.hits.hits
+            .filter(h => h._id && !keepIds.has(h._id))
+            .map(h => h._id!);
+        const seenKeys = new Set(bestByKey.keys());
         if (toDelete.length > 0) {
             console.log(`keys-info: removing ${toDelete.length} duplicate entries`);
             await client.bulk({
