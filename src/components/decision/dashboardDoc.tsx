@@ -49,19 +49,15 @@ export function TextPairInput({ leftKey, rightKey, doc }: { leftKey: Jurispruden
     let leftInitial = doc[leftKey.key] || "";
     let rightInitial = doc[rightKey.key] || "";
     let [leftHtml, setLeftHtml] = useState<string>(leftInitial);
-    let [rightHtml, setRightHtml] = useState<string>(rightInitial);
     let leftWrapRef = useRef<HTMLDivElement>(null);
-    let rightWrapRef = useRef<HTMLDivElement>(null);
+    let rightScrollRef = useRef<HTMLDivElement>(null);
     let syncingRef = useRef(false);
 
     const getEditor = (wrapRef: MutableRefObject<HTMLDivElement | null>) =>
         wrapRef.current?.querySelector<HTMLElement>(".ql-editor") ?? null;
 
-    const syncScroll = useCallback((source: MutableRefObject<HTMLDivElement | null>, target: MutableRefObject<HTMLDivElement | null>) => {
-        if (syncingRef.current) return;
-        const sourceEl = getEditor(source);
-        const targetEl = getEditor(target);
-        if (!sourceEl || !targetEl) return;
+    const syncScroll = useCallback((sourceEl: HTMLElement | null, targetEl: HTMLElement | null) => {
+        if (syncingRef.current || !sourceEl || !targetEl) return;
         syncingRef.current = true;
         const ratio = sourceEl.scrollTop / (sourceEl.scrollHeight - sourceEl.clientHeight || 1);
         targetEl.scrollTop = ratio * (targetEl.scrollHeight - targetEl.clientHeight);
@@ -70,10 +66,10 @@ export function TextPairInput({ leftKey, rightKey, doc }: { leftKey: Jurispruden
 
     useEffect(() => {
         const leftEl = getEditor(leftWrapRef);
-        const rightEl = getEditor(rightWrapRef);
+        const rightEl = rightScrollRef.current;
         if (!leftEl || !rightEl) return;
-        const onLeftScroll = () => syncScroll(leftWrapRef, rightWrapRef);
-        const onRightScroll = () => syncScroll(rightWrapRef, leftWrapRef);
+        const onLeftScroll = () => syncScroll(leftEl, rightEl);
+        const onRightScroll = () => syncScroll(rightEl, leftEl);
         leftEl.addEventListener("scroll", onLeftScroll);
         rightEl.addEventListener("scroll", onRightScroll);
         return () => {
@@ -90,20 +86,19 @@ export function TextPairInput({ leftKey, rightKey, doc }: { leftKey: Jurispruden
         }
     };
 
-    const onRightChange = (content: string, _delta: any, source: string) => {
-        if (source === 'user') {
-            let v = content.replaceAll("<p><br></p>", "");
-            setUpdateObject(old => ({ ...old, [rightKey.key]: v }));
-            setRightHtml(v);
-        }
-    };
-
     const leftChanged = leftHtml !== leftInitial;
-    const rightChanged = rightHtml !== rightInitial;
 
     return <div className="border rounded mb-2 p-2">
-        <div className="d-flex gap-2" style={{ height: "400px" }}>
-            <div className="d-flex flex-column flex-grow-1 overflow-hidden" ref={leftWrapRef}>
+        <div className="row g-2" style={{ height: "400px" }}>
+            <div className="col-3 d-flex flex-column h-100">
+                <small className="fw-semibold mb-1">{rightKey.name}</small>
+                <div
+                    ref={rightScrollRef}
+                    className="flex-grow-1 overflow-auto border rounded p-2 bg-light"
+                    dangerouslySetInnerHTML={{ __html: rightInitial }}
+                />
+            </div>
+            <div className="col-6 d-flex flex-column h-100" ref={leftWrapRef}>
                 <small className={"fw-semibold mb-1" + (leftChanged ? " text-warning" : "")}>{leftKey.name}{leftChanged ? "*" : ""}</small>
                 <ReactQuill
                     className="flex-grow-1 overflow-hidden"
@@ -112,16 +107,7 @@ export function TextPairInput({ leftKey, rightKey, doc }: { leftKey: Jurispruden
                     onChange={onLeftChange}
                 />
             </div>
-            <div className="vr" />
-            <div className="d-flex flex-column flex-grow-1 overflow-hidden" ref={rightWrapRef}>
-                <small className={"fw-semibold mb-1" + (rightChanged ? " text-warning" : "")}>{rightKey.name}{rightChanged ? "*" : ""}</small>
-                <ReactQuill
-                    className="flex-grow-1 overflow-hidden"
-                    theme="snow"
-                    defaultValue={rightInitial}
-                    onChange={onRightChange}
-                />
-            </div>
+            <div className="col-3" />
         </div>
     </div>;
 }
