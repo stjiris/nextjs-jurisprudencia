@@ -38,10 +38,13 @@ export default function Header(props: { keys_to_remove: string[] }) {
             <nav>
                 <ul className="container d-flex nav align-items-center justify-content-evenly flex-wrap">
                     {authed && <><li className="nav-link py-1 px-2 mx-1">
-                        <Link href="/editar/criar"
-                            className={`${pathname.startsWith("/editar/criar") ? "active" : ""} border-0 nav-link fs-6 bg-transparent`}
-                        >Criar Acórdão</Link>
+                        <Link href="/pesquisa?STATE=importação"
+                            className="border-0 nav-link fs-6 bg-transparent">Por Anonimizar</Link>
                     </li>
+                        <li className="nav-link py-1 px-2 mx-1">
+                            <Link href="/pesquisa?STATE=preparação"
+                                className="border-0 nav-link fs-6 bg-transparent">Por Publicar</Link>
+                        </li>
                         <li className="nav-link py-1 px-2 mx-1">
                             <Link href="/user"
                                 className={`border-0 nav-link fs-6 bg-transparent`}>Utilizador</Link>
