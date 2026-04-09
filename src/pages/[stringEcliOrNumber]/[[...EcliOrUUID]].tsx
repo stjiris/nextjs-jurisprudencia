@@ -11,7 +11,7 @@ import { LoggerServerSideProps } from "@/core/logger-api";
 import GenericPage from "@/components/main_pages/genericPageStructure";
 import DecisionView from "@/components/decision/DecisionView";
 
-const MUST_HAVE = ["UUID", "Número de Processo", "Fonte", "ECLI", "URL", "Sumário", "Texto"]
+const MUST_HAVE = ["UUID", "Número de Processo", "Fonte", "ECLI", "URL", "Sumário", "Texto", "Área", "Data"]
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
     LoggerServerSideProps(ctx);

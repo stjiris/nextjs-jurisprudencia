@@ -30,15 +30,16 @@ async function getClient(): Promise<Client> {
     else {
         let r = await client.search<JurisprudenciaKey>({
             index: KEYS_INFO_INDEX_VERSION,
-            size: JurisprudenciaDocumentKeys.length
+            size: 1000
         })
-        if (r.hits.hits.length < JurisprudenciaDocumentKeys.length) {
-            let create = JurisprudenciaDocumentKeys.filter(k => !r.hits.hits.some(h => h._source?.key === k));
+        const presentKeys = new Set(r.hits.hits.map(h => h._source?.key).filter(Boolean));
+        const missingKeys = JurisprudenciaDocumentKeys.filter(k => !presentKeys.has(k));
+        if (missingKeys.length > 0) {
             await client.bulk<JurisprudenciaKey, JurisprudenciaKey>({
                 index: KEYS_INFO_INDEX_VERSION,
-                operations: create.flatMap((key, i) => [
+                operations: missingKeys.flatMap((key, i) => [
                     { create: {} },
-                    { key: key, name: key, description: "Sem descrição", active: false, filtersSuggest: false, filtersShow: false, filtersOrder: r.hits.hits.length + 1, indicesList: false, indicesGroup: false, documentShow: false, authentication: false, editorEnabled: false, editorRestricted: false, editorSuggestions: false }
+                    { key: key, name: key, description: "Sem descrição", active: false, filtersSuggest: false, filtersShow: false, filtersOrder: presentKeys.size + i + 1, indicesList: false, indicesGroup: false, documentShow: false, authentication: false, editorEnabled: false, editorRestricted: false, editorSuggestions: false }
                 ]),
                 refresh: "true"
             }).then(r => console.log(r.items[0]))
