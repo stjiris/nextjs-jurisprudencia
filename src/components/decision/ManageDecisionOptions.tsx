@@ -6,7 +6,7 @@ import Link from "next/link";
 
 
 export default function ManageDecisionOptions(props: { doc: JurisprudenciaDocument, id: string, keys: JurisprudenciaKey[] }) {
-	const { post, loading, error, response } = useFetchPost<{ id: string; doc: JurisprudenciaDocument }, { ok: boolean; message: string, token?: string }>('/api/anonimizar');
+	const { post, loading, error, response } = useFetchPost<{ id: string; doc: JurisprudenciaDocument; jurisUrl?: string }, { ok: boolean; message: string, token?: string }>('/api/anonimizar');
 
 	const anonimizadorUrl = process.env.NEXT_PUBLIC_ANONIMIZADOR_URL;
 	async function handleAnonimizar() {
