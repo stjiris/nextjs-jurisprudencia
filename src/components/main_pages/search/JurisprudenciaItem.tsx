@@ -34,7 +34,7 @@ export default function JurisprudenciaItem({ hit, searchId }: { hit: SearchHandl
         </div>
 
         {hit._source?.Sumário && !hit.highlight?.Sumário ? (
-            <div className="col-12 col-lg-8 rounded" style={{ backgroundColor: "var(--secondary-gold)" }}>
+            <div className="col-12 col-lg-8 rounded" style={{ backgroundColor: "var(--secondary-gold)", whiteSpace: "pre-line" }}>
                 <b>{keys?.Sumário.name}:</b>{' '}
                 {(() => {
                     const summary = hit.highlight?.Sumário || hit._source.Sumário;
