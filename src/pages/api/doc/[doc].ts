@@ -2,6 +2,7 @@ import { authenticatedHandler } from "@/core/user/authenticate";
 import { NextApiRequest, NextApiResponse } from "next";
 import { createDoc, deleteDoc, existsDoc, getDoc, updateDoc } from "@/core/doc";
 import LoggerApi from "@/core/logger-api";
+import { sendSyncEditEmail } from "@/core/email-sync";
 
 export default LoggerApi(async function docApiHandler(
     req: NextApiRequest,
@@ -33,7 +34,22 @@ export default LoggerApi(async function docApiHandler(
                     console.error("doc PUT: moveDecision failed:", fsErr);
                 }
             }
-            return res.json(await updateDoc(id, content))
+            const result = await updateDoc(id, content);
+
+            // Propagate edits to external deployment if document is público
+            if (process.env.SYNC_ROLE === "interno") {
+                const uuid = current._source?.UUID;
+                const state = (content.STATE ?? current._source?.STATE) as string | undefined;
+                if (uuid && state === "público") {
+                    try {
+                        await sendSyncEditEmail(uuid, content);
+                    } catch (emailErr) {
+                        console.error("doc PUT: Failed to send sync edit email:", emailErr);
+                    }
+                }
+            }
+
+            return res.json(result);
         }
         catch(e){
             return res.status(400).json({})

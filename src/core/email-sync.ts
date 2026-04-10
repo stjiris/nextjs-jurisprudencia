@@ -8,28 +8,32 @@ import { updateDoc } from "./doc";
 
 const SYNC_SUBJECT_PREFIX = "[JURIS-SYNC]";
 
-export type SyncAction = "publicar" | "tornar-privado";
+export type SyncAction = "publicar" | "tornar-privado" | "editar";
 
 interface SyncPayload {
     action: SyncAction;
     uuid: string;
     ts: number;
+    content?: Record<string, any>; // only for "editar"
     sig: string;
 }
 
 // --- Signature helpers ---
 
-function computeSig(secret: string, action: SyncAction, uuid: string, ts: number): string {
-    const data = JSON.stringify({ action, uuid, ts });
+function computeSig(secret: string, action: SyncAction, uuid: string, ts: number, content?: Record<string, any>): string {
+    const contentHash = content
+        ? crypto.createHash("sha256").update(JSON.stringify(content)).digest("hex")
+        : undefined;
+    const data = JSON.stringify({ action, uuid, ts, ...(contentHash ? { contentHash } : {}) });
     return crypto.createHmac("sha256", secret).update(data).digest("hex");
 }
 
-function buildSyncPayload(action: SyncAction, uuid: string): SyncPayload {
+function buildSyncPayload(action: SyncAction, uuid: string, content?: Record<string, any>): SyncPayload {
     const secret = process.env.SYNC_SECRET;
     if (!secret) throw new Error("SYNC_SECRET not configured");
     const ts = Date.now();
-    const sig = computeSig(secret, action, uuid, ts);
-    return { action, uuid, ts, sig };
+    const sig = computeSig(secret, action, uuid, ts, content);
+    return { action, uuid, ts, ...(content ? { content } : {}), sig };
 }
 
 function verifySyncPayload(payload: SyncPayload): boolean {
@@ -38,13 +42,13 @@ function verifySyncPayload(payload: SyncPayload): boolean {
         console.error("[email-sync] SYNC_SECRET not configured, cannot verify payload");
         return false;
     }
-    const { action, uuid, ts, sig } = payload;
+    const { action, uuid, ts, content, sig } = payload;
     // Reject emails older than 24 hours (to handle polling delays)
     if (Date.now() - ts > 86_400_000) {
         console.warn("[email-sync] Payload expired (>24h old)");
         return false;
     }
-    const expected = computeSig(secret, action, uuid, ts);
+    const expected = computeSig(secret, action, uuid, ts, content);
     try {
         return crypto.timingSafeEqual(Buffer.from(sig, "hex"), Buffer.from(expected, "hex"));
     } catch {
@@ -54,7 +58,7 @@ function verifySyncPayload(payload: SyncPayload): boolean {
 
 // --- SMTP: sending ---
 
-export async function sendSyncEmail(action: SyncAction, uuid: string): Promise<void> {
+async function sendSyncEmailInternal(action: SyncAction, uuid: string, content?: Record<string, any>): Promise<void> {
     const host = process.env.SYNC_SMTP_HOST;
     const port = parseInt(process.env.SYNC_SMTP_PORT || "587");
     const secure = process.env.SYNC_SMTP_SECURE === "true";
@@ -67,7 +71,7 @@ export async function sendSyncEmail(action: SyncAction, uuid: string): Promise<v
         throw new Error("Missing SMTP configuration (SYNC_SMTP_HOST, SYNC_SMTP_USER, SYNC_SMTP_PASS, SYNC_SMTP_FROM, SYNC_SMTP_TO)");
     }
 
-    const payload = buildSyncPayload(action, uuid);
+    const payload = buildSyncPayload(action, uuid, content);
 
     const transporter = nodemailer.createTransport({
         host,
@@ -87,6 +91,14 @@ export async function sendSyncEmail(action: SyncAction, uuid: string): Promise<v
     console.log(`[email-sync] Sent ${action} for UUID ${uuid} to ${to}`);
 }
 
+export async function sendSyncEmail(action: "publicar" | "tornar-privado", uuid: string): Promise<void> {
+    return sendSyncEmailInternal(action, uuid);
+}
+
+export async function sendSyncEditEmail(uuid: string, content: Record<string, any>): Promise<void> {
+    return sendSyncEmailInternal("editar", uuid, content);
+}
+
 // --- Elasticsearch: find doc by UUID ---
 
 async function findDocIdByUUID(uuid: string): Promise<string | null> {
@@ -103,16 +115,25 @@ async function findDocIdByUUID(uuid: string): Promise<string | null> {
 
 // --- Apply action on external deployment ---
 
-async function applyAction(action: SyncAction, uuid: string): Promise<boolean> {
+async function applyAction(action: SyncAction, uuid: string, content?: Record<string, any>): Promise<boolean> {
     const docId = await findDocIdByUUID(uuid);
     if (!docId) {
         console.warn(`[email-sync] Document with UUID ${uuid} not found in this deployment, skipping`);
         return false;
     }
 
-    const newState = action === "publicar" ? "público" : "privado";
-    await updateDoc(docId, { STATE: newState });
-    console.log(`[email-sync] Applied action=${action} (STATE=${newState}) to UUID=${uuid} (id=${docId})`);
+    if (action === "editar") {
+        if (!content) {
+            console.warn(`[email-sync] editar action missing content for UUID ${uuid}`);
+            return false;
+        }
+        await updateDoc(docId, content);
+        console.log(`[email-sync] Applied editar to UUID=${uuid} (id=${docId})`);
+    } else {
+        const newState = action === "publicar" ? "público" : "privado";
+        await updateDoc(docId, { STATE: newState });
+        console.log(`[email-sync] Applied action=${action} (STATE=${newState}) to UUID=${uuid} (id=${docId})`);
+    }
     return true;
 }
 
@@ -207,7 +228,7 @@ export async function pollAndProcessSyncEmails(): Promise<{ processed: number; e
 
                 // Apply the action
                 try {
-                    const ok = await applyAction(payload.action, payload.uuid);
+                    const ok = await applyAction(payload.action, payload.uuid, payload.content);
                     if (ok) processed++;
                 } catch (actionErr) {
                     console.error(`[email-sync] Failed to apply action ${payload.action} for UUID ${payload.uuid}:`, actionErr);
