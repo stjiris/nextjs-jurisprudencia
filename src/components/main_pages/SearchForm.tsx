@@ -260,6 +260,8 @@ function DateRangeInput({ label, name, precision, onPrecision, defaultValue, inp
                         ref={monthRef}
                         defaultValue={monthSelectDefault}
                         className="form-select form-select-sm rounded-0"
+                        style={{ color: monthSelectDefault ? undefined : 'var(--bs-secondary-color, #6c757d)' }}
+                        onChange={(e) => { e.currentTarget.style.color = e.currentTarget.value ? '' : 'var(--bs-secondary-color, #6c757d)'; }}
                     >
                         <option value="">Mês</option>
                         {MONTHS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
