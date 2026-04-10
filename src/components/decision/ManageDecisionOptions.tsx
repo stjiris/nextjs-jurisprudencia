@@ -6,7 +6,9 @@ import Link from "next/link";
 
 
 export default function ManageDecisionOptions(props: { doc: JurisprudenciaDocument, id: string, keys: JurisprudenciaKey[] }) {
-	const { post, loading } = useFetchPost<{ id: string; doc: JurisprudenciaDocument; jurisUrl?: string; forceOriginal?: boolean }, { ok: boolean; message: string, token?: string }>('/api/anonimizar/enviar');
+	const { post: postAnonimizar, loading: loadingAnon } = useFetchPost<{ id: string; doc: JurisprudenciaDocument; jurisUrl?: string; forceOriginal?: boolean }, { ok: boolean; message: string, token?: string }>('/api/anonimizar/enviar');
+	const { post: postPublicar, loading: loadingPublicar } = useFetchPost<{ id: string }, { ok: boolean; message?: string }>('/api/gestao/publicar');
+	const { post: postTornarPrivado, loading: loadingPrivado } = useFetchPost<{ id: string }, { ok: boolean; message?: string }>('/api/gestao/tornar-privado');
 
 	const anonimizadorUrl = process.env.NEXT_PUBLIC_ANONIMIZADOR_URL;
 	const hasOriginal = !!(props.doc["Texto Não Anonimizado"]);
@@ -16,9 +18,11 @@ export default function ManageDecisionOptions(props: { doc: JurisprudenciaDocume
 	const isPrivado = state === "privado";
 	const isPublico = state === "público";
 
+	const loadingGestao = loadingPublicar || loadingPrivado;
+
 	async function handleAnonimizar(forceOriginal = false) {
 		try {
-			const result = await post({ id: props.id, doc: props.doc, jurisUrl: window.location.href, forceOriginal });
+			const result = await postAnonimizar({ id: props.id, doc: props.doc, jurisUrl: window.location.href, forceOriginal });
 
 			if (!result.ok) {
 				alert("Falha ao anonimizar: " + result.message);
@@ -41,6 +45,40 @@ export default function ManageDecisionOptions(props: { doc: JurisprudenciaDocume
 		}
 	}
 
+	async function handlePublicar() {
+		try {
+			const result = await postPublicar({ id: props.id });
+			if (!result.ok) {
+				alert("Falha ao publicar: " + (result.message || "erro desconhecido"));
+				return;
+			}
+			if (result.message) {
+				alert(result.message);
+			}
+			window.location.reload();
+		} catch (err: any) {
+			console.error("Publicar error:", err);
+			alert("Falha ao publicar: " + (err?.message || "erro desconhecido"));
+		}
+	}
+
+	async function handleTornarPrivado() {
+		try {
+			const result = await postTornarPrivado({ id: props.id });
+			if (!result.ok) {
+				alert("Falha ao tornar privado: " + (result.message || "erro desconhecido"));
+				return;
+			}
+			if (result.message) {
+				alert(result.message);
+			}
+			window.location.reload();
+		} catch (err: any) {
+			console.error("Tornar privado error:", err);
+			alert("Falha ao tornar privado: " + (err?.message || "erro desconhecido"));
+		}
+	}
+
 	return (
 		<>
 			<div>
@@ -54,27 +92,27 @@ export default function ManageDecisionOptions(props: { doc: JurisprudenciaDocume
 					<>
 						{" || "}
 						<Link href="#"
-							className={loading ? "text-muted" : ""}
+							className={loadingAnon ? "text-muted" : ""}
 							title="Anonimizar"
 							onClick={(e) => {
 								e.preventDefault();
-								if (!loading) handleAnonimizar(false);
+								if (!loadingAnon) handleAnonimizar(false);
 							}}>
 							<i className="bi bi-shield-lock me-1"></i>
-							{loading ? "Enviando…" : "Anonimizar"}
+							{loadingAnon ? "Enviando…" : "Anonimizar"}
 						</Link>
 						{hasOriginal && (
 							<>
 								{" || "}
 								<Link href="#"
-									className={loading ? "text-muted" : ""}
+									className={loadingAnon ? "text-muted" : ""}
 									title="Anonimizar do original, ignorando a anonimização anterior"
 									onClick={(e) => {
 										e.preventDefault();
-										if (!loading) handleAnonimizar(true);
+										if (!loadingAnon) handleAnonimizar(true);
 									}}>
 									<i className="bi bi-shield me-1"></i>
-									{loading ? "Enviando…" : "Anonimizar Original"}
+									{loadingAnon ? "Enviando…" : "Anonimizar Original"}
 								</Link>
 							</>
 						)}
@@ -86,17 +124,29 @@ export default function ManageDecisionOptions(props: { doc: JurisprudenciaDocume
 				<div>
 					<b>Gestão:   </b>
 					{(isPreparacao || isPrivado) && (
-						<Link href="#" onClick={(e) => e.preventDefault()}>
+						<Link href="#"
+							className={loadingGestao ? "text-muted" : ""}
+							title="Publicar documento"
+							onClick={(e) => {
+								e.preventDefault();
+								if (!loadingGestao) handlePublicar();
+							}}>
 							<i className="bi bi-globe me-1"></i>
-							Publicar
+							{loadingPublicar ? "A publicar…" : "Publicar"}
 						</Link>
 					)}
 					{(isPreparacao || isPublico) && (
 						<>
 							{(isPreparacao || isPrivado) && " || "}
-							<Link href="#" onClick={(e) => e.preventDefault()}>
+							<Link href="#"
+								className={loadingGestao ? "text-muted" : ""}
+								title="Tornar documento privado"
+								onClick={(e) => {
+									e.preventDefault();
+									if (!loadingGestao) handleTornarPrivado();
+								}}>
 								<i className="bi bi-lock me-1"></i>
-								Tornar Privado
+								{loadingPrivado ? "A tornar privado…" : "Tornar Privado"}
 							</Link>
 						</>
 					)}
