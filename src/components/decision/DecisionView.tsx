@@ -34,7 +34,10 @@ export default function DecisionView(props: { doc: JurisprudenciaDocument, id: s
                         </div>
                     </div>
                     <div className="row border-bottom">
-                        <div className="col-6"><b>N.º de Processo: </b>{props.doc["Número de Processo"]}</div>
+                        <div className="col-6 d-flex align-items-baseline">
+                            <b style={{ minWidth: 175, flexShrink: 0 }}>N.º de Processo:</b>
+                            <span>{props.doc["Número de Processo"]}</span>
+                        </div>
                         <div className="col-6 text-end">
                             {props.doc.URL && props.doc.URL.length > 0 && props.doc.URL !== "«sem valor»" && <><small><Link className="bi bi-box-arrow-up-right" href={props.doc.URL} target="_blank" >{new URL(props.doc.URL!).host}</Link></small>&nbsp;</>}
                             <small><b>Fonte:&nbsp;</b><span>{props.doc.Fonte}</span></small>

@@ -11,7 +11,10 @@ export default function ManageDecisionOptions(props: { doc: JurisprudenciaDocume
 	const { post: postTornarPrivado, loading: loadingPrivado } = useFetchPost<{ id: string }, { ok: boolean; message?: string }>('/api/gestao/tornar-privado');
 
 	const anonimizadorUrl = process.env.NEXT_PUBLIC_ANONIMIZADOR_URL;
-	const hasOriginal = !!(props.doc["Texto Não Anonimizado"]);
+	const hasOriginal = !!(
+		(props.doc["Sumário Não Anonimizado"] && props.doc.Sumário) ||
+		(props.doc["Texto Não Anonimizado"] && props.doc.Texto)
+	);
 	const state = props.doc.STATE;
 	const isImportacao = state === "importação";
 	const isPreparacao = state === "preparação";
@@ -79,77 +82,83 @@ export default function ManageDecisionOptions(props: { doc: JurisprudenciaDocume
 		}
 	}
 
+	const LABEL_WIDTH = 175;
+
 	return (
 		<>
-			<div>
-				<b>Anonimização:   </b>
-				<Link href={`/editar/${encodeURIComponent(props.id)}`}>
-					<i className="bi bi-pencil-square me-1"></i>
-					Abrir editor
-				</Link>
+			<div className="d-flex align-items-baseline">
+				<b style={{ minWidth: LABEL_WIDTH, flexShrink: 0 }}>Anonimização:</b>
+				<span>
+					<Link href={`/editar/${encodeURIComponent(props.id)}`}>
+						<i className="bi bi-pencil-square me-1"></i>
+						Abrir editor
+					</Link>
 
-				{anonimizadorUrl && (
-					<>
-						{" || "}
-						<Link href="#"
-							className={loadingAnon ? "text-muted" : ""}
-							title="Anonimizar"
-							onClick={(e) => {
-								e.preventDefault();
-								if (!loadingAnon) handleAnonimizar(false);
-							}}>
-							<i className="bi bi-shield-lock me-1"></i>
-							{loadingAnon ? "Enviando…" : "Anonimizar"}
-						</Link>
-						{hasOriginal && (
-							<>
-								{" || "}
-								<Link href="#"
-									className={loadingAnon ? "text-muted" : ""}
-									title="Anonimizar do original, ignorando a anonimização anterior"
-									onClick={(e) => {
-										e.preventDefault();
-										if (!loadingAnon) handleAnonimizar(true);
-									}}>
-									<i className="bi bi-shield me-1"></i>
-									{loadingAnon ? "Enviando…" : "Anonimizar Original"}
-								</Link>
-							</>
-						)}
-					</>
-				)}
+					{anonimizadorUrl && (
+						<>
+							{" || "}
+							<Link href="#"
+								className={loadingAnon ? "text-muted" : ""}
+								title="Anonimizar"
+								onClick={(e) => {
+									e.preventDefault();
+									if (!loadingAnon) handleAnonimizar(false);
+								}}>
+								<i className="bi bi-shield-lock me-1"></i>
+								{loadingAnon ? "Enviando…" : "Anonimizar"}
+							</Link>
+							{hasOriginal && (
+								<>
+									{" || "}
+									<Link href="#"
+										className={loadingAnon ? "text-muted" : ""}
+										title="Anonimizar do original, ignorando a anonimização anterior"
+										onClick={(e) => {
+											e.preventDefault();
+											if (!loadingAnon) handleAnonimizar(true);
+										}}>
+										<i className="bi bi-shield me-1"></i>
+										{loadingAnon ? "Enviando…" : "Anonimizar Original"}
+									</Link>
+								</>
+							)}
+						</>
+					)}
+				</span>
 			</div>
 
 			{!isImportacao && (
-				<div>
-					<b>Gestão:   </b>
-					{(isPreparacao || isPrivado) && (
-						<Link href="#"
-							className={loadingGestao ? "text-muted" : ""}
-							title="Publicar documento"
-							onClick={(e) => {
-								e.preventDefault();
-								if (!loadingGestao) handlePublicar();
-							}}>
-							<i className="bi bi-globe me-1"></i>
-							{loadingPublicar ? "A publicar…" : "Publicar"}
-						</Link>
-					)}
-					{(isPreparacao || isPublico) && (
-						<>
-							{(isPreparacao || isPrivado) && " || "}
+				<div className="d-flex align-items-baseline">
+					<b style={{ minWidth: LABEL_WIDTH, flexShrink: 0 }}>Gestão:</b>
+					<span>
+						{(isPreparacao || isPrivado) && (
 							<Link href="#"
 								className={loadingGestao ? "text-muted" : ""}
-								title="Tornar documento privado"
+								title="Publicar documento"
 								onClick={(e) => {
 									e.preventDefault();
-									if (!loadingGestao) handleTornarPrivado();
+									if (!loadingGestao) handlePublicar();
 								}}>
-								<i className="bi bi-lock me-1"></i>
-								{loadingPrivado ? "A tornar privado…" : "Tornar Privado"}
+								<i className="bi bi-globe me-1"></i>
+								{loadingPublicar ? "A publicar…" : "Publicar"}
 							</Link>
-						</>
-					)}
+						)}
+						{(isPreparacao || isPublico) && (
+							<>
+								{(isPreparacao || isPrivado) && " || "}
+								<Link href="#"
+									className={loadingGestao ? "text-muted" : ""}
+									title="Tornar documento privado"
+									onClick={(e) => {
+										e.preventDefault();
+										if (!loadingGestao) handleTornarPrivado();
+									}}>
+									<i className="bi bi-lock me-1"></i>
+									{loadingPrivado ? "A tornar privado…" : "Tornar Privado"}
+								</Link>
+							</>
+						)}
+					</span>
 				</div>
 			)}
 		</>
