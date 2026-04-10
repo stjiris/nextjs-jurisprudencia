@@ -2,7 +2,6 @@ import LoggerApi from "@/core/logger-api";
 import { authenticatedHandler } from "@/core/user/authenticate";
 import type { NextApiRequest, NextApiResponse } from "next";
 import crypto from "crypto";
-const { loadDocumentFile, loadAnonimizedEntities } = await import("@stjiris/filesystem-lib");
 
 type AnonimizarResponse = {
     ok: boolean;
@@ -63,6 +62,8 @@ export default LoggerApi(async function anonimizarHandler(
 
         const token = doc.UUID;
 
+        const { loadDocumentFile, loadAnonimizedEntities } = await import("@stjiris/filesystem-lib");
+
         let nlpJson = null;
         try {
             nlpJson = loadDocumentFile(doc, "nlp");
@@ -74,7 +75,7 @@ export default LoggerApi(async function anonimizarHandler(
         let savedEntities: Record<string, string[]> | null = null;
         if (!forceOriginal) {
             try {
-                const anonFile = loadAnonimizedEntities(doc);
+                const anonFile = typeof loadAnonimizedEntities === "function" ? loadAnonimizedEntities(doc) : null;
                 if (anonFile) {
                     const textoSrc = doc["Texto Não Anonimizado"] || doc["Texto"] || "";
                     const sumarioSrc = doc["Sumário Não Anonimizado"] || doc["Sumário"];
