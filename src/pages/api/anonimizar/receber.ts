@@ -1,7 +1,7 @@
 import LoggerApi from "@/core/logger-api";
 import { getDoc, updateDoc } from "@/core/doc";
 import { NextApiRequest, NextApiResponse } from "next";
-const { saveAnonimizedDocument } = await import("@stjiris/filesystem-lib");
+const { saveAnonimizedDocument, saveAnonimizedEntities } = await import("@stjiris/filesystem-lib");
 
 export default LoggerApi(async function receberHandler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method !== "POST") {
@@ -13,7 +13,7 @@ export default LoggerApi(async function receberHandler(req: NextApiRequest, res:
         return res.status(401).json({ ok: false, message: "Unauthorized" });
     }
 
-    const { jurisId, anonimizedTexto, anonimizedSumario, originalTexto, originalSumario } = req.body;
+    const { jurisId, anonimizedTexto, anonimizedSumario, originalTexto, originalSumario, entities } = req.body;
 
     if (!jurisId || !anonimizedTexto) {
         return res.status(400).json({ ok: false, message: "Missing jurisId or anonimizedTexto" });
@@ -48,6 +48,15 @@ export default LoggerApi(async function receberHandler(req: NextApiRequest, res:
             await saveAnonimizedDocument(current._source, anonimizedTexto, anonimizedSumario || undefined);
         } catch (fsErr) {
             console.error("receber: failed to save anonymized files to filesystem:", fsErr);
+        }
+
+        // Save Anonimizado.json with the final entities (best-effort)
+        if (entities) {
+            try {
+                saveAnonimizedEntities(current._source, entities);
+            } catch (fsErr) {
+                console.error("receber: failed to save Anonimizado.json to filesystem:", fsErr);
+            }
         }
 
         return res.status(200).json({ ok: true });
