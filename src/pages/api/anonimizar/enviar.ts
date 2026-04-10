@@ -58,7 +58,7 @@ export default LoggerApi(async function anonimizarHandler(
             });
         }
 
-        console.log("/api/anonimizar payload:");
+        console.log("/api/anonimizar/enviar payload:");
         console.log(JSON.stringify({ id, docPreview: Object.keys(doc), forceOriginal }, null, 2));
 
         const token = doc.UUID;
@@ -123,7 +123,7 @@ export default LoggerApi(async function anonimizarHandler(
             message: "Documento enviado para o segundo app com sucesso",
         });
     } catch (err) {
-        console.error("Error in /api/anonimizar:", err);
+        console.error("Error in /api/anonimizar/enviar:", err);
         return res.status(503).json({
             ok: false,
             message: "Internal server error",
