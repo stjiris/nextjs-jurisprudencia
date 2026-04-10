@@ -1,6 +1,7 @@
 import LoggerApi from "@/core/logger-api";
 import { getDoc, updateDoc } from "@/core/doc";
 import { NextApiRequest, NextApiResponse } from "next";
+import crypto from "crypto";
 const { saveAnonimizedDocument, saveAnonimizedEntities } = await import("@stjiris/filesystem-lib");
 
 export default LoggerApi(async function receberHandler(req: NextApiRequest, res: NextApiResponse) {
@@ -53,7 +54,9 @@ export default LoggerApi(async function receberHandler(req: NextApiRequest, res:
         // Save Anonimizado.json with the final entities (best-effort)
         if (entities) {
             try {
-                saveAnonimizedEntities(current._source, entities);
+                const textoHash = crypto.createHash("sha256").update(originalTexto || "").digest("hex");
+                const sumarioHash = originalSumario ? crypto.createHash("sha256").update(originalSumario).digest("hex") : undefined;
+                saveAnonimizedEntities(current._source, entities, textoHash, sumarioHash);
             } catch (fsErr) {
                 console.error("receber: failed to save Anonimizado.json to filesystem:", fsErr);
             }

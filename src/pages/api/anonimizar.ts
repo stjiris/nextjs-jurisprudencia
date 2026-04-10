@@ -1,7 +1,8 @@
 import LoggerApi from "@/core/logger-api";
 import { authenticatedHandler } from "@/core/user/authenticate";
 import type { NextApiRequest, NextApiResponse } from "next";
-const { loadDocumentFile } = await import("@stjiris/filesystem-lib");
+import crypto from "crypto";
+const { loadDocumentFile, loadAnonimizedEntities } = await import("@stjiris/filesystem-lib");
 
 type AnonimizarResponse = {
     ok: boolean;
@@ -48,7 +49,7 @@ export default LoggerApi(async function anonimizarHandler(
     }
 
     try {
-        const { doc, id, jurisUrl } = req.body;
+        const { doc, id, jurisUrl, forceOriginal } = req.body;
 
         if (!doc || !id) {
             return res.status(400).json({
@@ -58,7 +59,7 @@ export default LoggerApi(async function anonimizarHandler(
         }
 
         console.log("/api/anonimizar payload:");
-        console.log(JSON.stringify({ id, docPreview: Object.keys(doc) }, null, 2));
+        console.log(JSON.stringify({ id, docPreview: Object.keys(doc), forceOriginal }, null, 2));
 
         const token = doc.UUID;
 
@@ -68,7 +69,29 @@ export default LoggerApi(async function anonimizarHandler(
         } catch (nlpErr) {
             console.warn("Failed to load NLP document, proceeding without it:", nlpErr);
         }
-        console.log(nlpJson);
+
+        // Try to load saved entities from Anonimizado.json and validate against current text hashes
+        let savedEntities: Record<string, string[]> | null = null;
+        if (!forceOriginal) {
+            try {
+                const anonFile = loadAnonimizedEntities(doc);
+                if (anonFile) {
+                    const textoSrc = doc["Texto Não Anonimizado"] || doc["Texto"] || "";
+                    const sumarioSrc = doc["Sumário Não Anonimizado"] || doc["Sumário"];
+                    const textoHash = crypto.createHash("sha256").update(textoSrc).digest("hex");
+                    const textoValid = textoHash === anonFile._textoHash;
+                    const sumarioValid = !anonFile._sumarioHash ||
+                        (sumarioSrc && crypto.createHash("sha256").update(sumarioSrc).digest("hex") === anonFile._sumarioHash);
+                    if (textoValid && sumarioValid) {
+                        const { _textoHash, _sumarioHash, ...entities } = anonFile;
+                        savedEntities = entities as Record<string, string[]>;
+                    }
+                }
+            } catch (err) {
+                console.warn("Failed to load/validate Anonimizado.json:", err);
+            }
+        }
+
         const sendRes = await fetch(`${anonimizadorUrl}/api/juris/save_document`, {
             method: "POST",
             headers: {
@@ -80,6 +103,7 @@ export default LoggerApi(async function anonimizarHandler(
                 document: doc,
                 nlp: nlpJson,
                 jurisUrl,
+                entities: savedEntities,
                 ts: Date.now(),
             }),
         });
