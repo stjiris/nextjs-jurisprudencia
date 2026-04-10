@@ -95,7 +95,9 @@ function DefaultRow(props: { accessKey: JurisprudenciaDocumentKey, showkey?: str
     if (typeof value === "string" && value.length === 0) return <></>
     if (typeof value === "object" && "Show" in value && "Original" in value && value.Show.length === 0 && value.Original.length === 0) return <></>
     return props.doc[props.accessKey] ? <Row style={props.style}>
-        <div className="col-12"><b>{props.showkey ? props.showkey : props.accessKey}:</b> <Properties accessKey={props.accessKey} accessValue={props.doc[props.accessKey]} noLink={props.noLink} />
+        <div className="col-12 d-flex">
+            <b style={{ minWidth: 175, flexShrink: 0 }}>{props.showkey ? props.showkey : props.accessKey}:</b>
+            <span><Properties accessKey={props.accessKey} accessValue={props.doc[props.accessKey]} noLink={props.noLink} /></span>
         </div>
     </Row> : <></>
 }
