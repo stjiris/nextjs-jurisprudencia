@@ -182,6 +182,25 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
 
     let dateWhen = "pre" as keyof SearchFilters;
     if (afters.indexOf("MinDate") >= 0 || afters.indexOf("MaxDate") >= 0) dateWhen = "after";
+
+    // Expand MinYear/MinMonth → MinDate (first day of that month/year)
+    // Expand MaxYear/MaxMonth → MaxDate (last day of that month/year)
+    const minYearParam = Array.isArray(body.MinYear) ? body.MinYear[0] : body.MinYear;
+    const minMonthParam = Array.isArray(body.MinMonth) ? body.MinMonth[0] : body.MinMonth;
+    const maxYearParam = Array.isArray(body.MaxYear) ? body.MaxYear[0] : body.MaxYear;
+    const maxMonthParam = Array.isArray(body.MaxMonth) ? body.MaxMonth[0] : body.MaxMonth;
+
+    if (minYearParam) {
+        const month = minMonthParam ? minMonthParam.padStart(2, "0") : "01";
+        (body as any).MinDate = `${minYearParam}-${month}-01`;
+    }
+    if (maxYearParam) {
+        const year = parseInt(maxYearParam);
+        const month = maxMonthParam ? parseInt(maxMonthParam) : 12;
+        const lastDay = new Date(year, month, 0).getDate(); // month is 1-indexed; new Date(y, m, 0) = last day of month m
+        (body as any).MaxDate = `${maxYearParam}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+    }
+
     let minDate = Array.isArray(body.MinDate) ? body.MinDate[0] : body.MinDate;
     let maxDate = Array.isArray(body.MaxDate) ? body.MaxDate[0] : body.MaxDate;
 

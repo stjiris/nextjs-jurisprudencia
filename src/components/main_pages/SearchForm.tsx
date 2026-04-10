@@ -26,60 +26,49 @@ function submit(form: HTMLFormElement, router: ReturnType<typeof useNavRouter>) 
     router.push(`?${searchParams.toString()}`);
 }
 
+const MONTHS = [
+    { value: "1",  label: "Jan" }, { value: "2",  label: "Fev" },
+    { value: "3",  label: "Mar" }, { value: "4",  label: "Abr" },
+    { value: "5",  label: "Mai" }, { value: "6",  label: "Jun" },
+    { value: "7",  label: "Jul" }, { value: "8",  label: "Ago" },
+    { value: "9",  label: "Set" }, { value: "10", label: "Out" },
+    { value: "11", label: "Nov" }, { value: "12", label: "Dez" },
+];
+
 export default function SearchForm({ count, filtersUsed }: { count: number; filtersUsed: Record<string, string[]> }) {
     const form = useRef<HTMLFormElement>(null);
     const router = useNavRouter();
 
-    const dataInicio = useRef<HTMLInputElement>(null);
-    const dataFim = useRef<HTMLInputElement>(null);
-
-    const maxTouched = useRef(false);
+    const minYearRef  = useRef<HTMLInputElement>(null);
+    const minMonthRef = useRef<HTMLSelectElement>(null);
+    const maxYearRef  = useRef<HTMLInputElement>(null);
+    const maxMonthRef = useRef<HTMLSelectElement>(null);
 
     const resetDatas = useCallback(() => {
-        if (dataInicio.current) dataInicio.current.value = "";
-        if (dataFim.current) dataFim.current.value = "";
-        maxTouched.current = false;
+        if (minYearRef.current)  minYearRef.current.value  = "";
+        if (minMonthRef.current) minMonthRef.current.value = "";
+        if (maxYearRef.current)  maxYearRef.current.value  = "";
+        if (maxMonthRef.current) maxMonthRef.current.value = "";
     }, []);
-
-    function validateDates() {
-        const start = dataInicio.current?.value || "";
-        const end = dataFim.current?.value || "";
-
-        if (dataFim.current) dataFim.current.setCustomValidity("");
-
-        if (start && end && start > end) {
-            dataFim.current?.setCustomValidity(
-                "Data final deve ser igual ou posterior à data inicial"
-            );
-            return false;
-        }
-        return true;
-    }
 
     useEffect(() => {
         const el = form.current;
         if (!el) return;
 
         const handleChange = () => {
-            if (!validateDates()) return el.reportValidity();
-
-            let removedName: string | null = null;
-            if (!maxTouched.current && dataFim.current) {
-                removedName = dataFim.current.name;
-                dataFim.current.removeAttribute("name");
-            }
+            // Save date values before reset (reset clears uncontrolled inputs)
+            const minYear  = minYearRef.current?.value  || "";
+            const minMonth = minMonthRef.current?.value || "";
+            const maxYear  = maxYearRef.current?.value  || "";
+            const maxMonth = maxMonthRef.current?.value || "";
 
             submit(el, router);
 
-            if (removedName && dataFim.current) {
-                dataFim.current.name = removedName;
-            }
-
-            const a = dataInicio.current?.value;
-            const b = dataFim.current?.value;
             el.reset();
-            if (a && dataInicio.current) dataInicio.current.value = a;
-            if (b && dataFim.current) dataFim.current.value = b;
+            if (minYear  && minYearRef.current)  minYearRef.current.value  = minYear;
+            if (minMonth && minMonthRef.current) minMonthRef.current.value = minMonth;
+            if (maxYear  && maxYearRef.current)  maxYearRef.current.value  = maxYear;
+            if (maxMonth && maxMonthRef.current) maxMonthRef.current.value = maxMonth;
         };
 
         el.addEventListener("change", handleChange);
@@ -87,11 +76,13 @@ export default function SearchForm({ count, filtersUsed }: { count: number; filt
     }, [router]);
 
     const search = useSearchParams();
-    const term = search.get("term");
-    const group = search.get("group");
-    const q = search.get("q");
-    const minDate = search.get("MinDate");
-    const maxDate = search.get("MaxDate");
+    const term     = search.get("term");
+    const group    = search.get("group");
+    const q        = search.get("q");
+    const minYear  = search.get("MinYear")  || "";
+    const minMonth = search.get("MinMonth") || "";
+    const maxYear  = search.get("MaxYear")  || "";
+    const maxMonth = search.get("MaxMonth") || "";
     const keys = useKeysFromContext();
 
     return (
@@ -124,35 +115,39 @@ export default function SearchForm({ count, filtersUsed }: { count: number; filt
                 <div className="input-group input-group-sm my-1">
                     <label className="input-group-text rounded-0" style={{ minWidth: 50 }}>De:</label>
                     <input
-                        type="date"
-                        name="MinDate"
-                        ref={dataInicio}
-                        defaultValue={minDate || ""}
-                        max={maxDate || undefined}
+                        type="number"
+                        name="MinYear"
+                        ref={minYearRef}
+                        placeholder="Ano"
+                        min="1900"
+                        max="2100"
+                        defaultValue={minYear}
                         className="form-control"
-                        onChange={() => {
-                            validateDates();
-                            if (!maxTouched.current && dataFim.current) {
-                                dataFim.current.value = dataInicio.current?.value || "";
-                            }
-                        }}
+                        style={{ minWidth: 0 }}
                     />
+                    <select name="MinMonth" ref={minMonthRef} defaultValue={minMonth} className="form-select form-select-sm rounded-0">
+                        <option value="">--</option>
+                        {MONTHS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                    </select>
                 </div>
 
                 <div className="input-group input-group-sm my-1">
                     <label className="input-group-text rounded-0" style={{ minWidth: 50 }}>Até:</label>
                     <input
-                        type="date"
-                        name="MaxDate"
-                        ref={dataFim}
-                        defaultValue={maxDate || ""}
-                        min={minDate || undefined}
+                        type="number"
+                        name="MaxYear"
+                        ref={maxYearRef}
+                        placeholder="Ano"
+                        min="1900"
+                        max="2100"
+                        defaultValue={maxYear}
                         className="form-control"
-                        onChange={() => {
-                            maxTouched.current = true;
-                            validateDates();
-                        }}
+                        style={{ minWidth: 0 }}
                     />
+                    <select name="MaxMonth" ref={maxMonthRef} defaultValue={maxMonth} className="form-select form-select-sm rounded-0">
+                        <option value="">--</option>
+                        {MONTHS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                    </select>
                 </div>
 
                 <div className="form-check my-1">
