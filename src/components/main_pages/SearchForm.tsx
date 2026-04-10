@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter as useNavRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useKeysFromContext } from "@/contexts/keys";
 import { FORM_KEY, SwapableFilterList, UsedFilters } from "./SwapableFilterList";
 
@@ -26,29 +26,40 @@ function submit(form: HTMLFormElement, router: ReturnType<typeof useNavRouter>) 
     router.push(`?${searchParams.toString()}`);
 }
 
-const MONTHS = [
-    { value: "1",  label: "Jan" }, { value: "2",  label: "Fev" },
-    { value: "3",  label: "Mar" }, { value: "4",  label: "Abr" },
-    { value: "5",  label: "Mai" }, { value: "6",  label: "Jun" },
-    { value: "7",  label: "Jul" }, { value: "8",  label: "Ago" },
-    { value: "9",  label: "Set" }, { value: "10", label: "Out" },
-    { value: "11", label: "Nov" }, { value: "12", label: "Dez" },
-];
+type DatePrecision = "ano" | "mes" | "dia";
+
+function detectPrecision(date: string): DatePrecision {
+    if (/^\d{4}$/.test(date))       return "ano";
+    if (/^\d{4}-\d{2}$/.test(date)) return "mes";
+    return "dia";
+}
 
 export default function SearchForm({ count, filtersUsed }: { count: number; filtersUsed: Record<string, string[]> }) {
     const form = useRef<HTMLFormElement>(null);
     const router = useNavRouter();
+    const minDateRef = useRef<HTMLInputElement>(null);
+    const maxDateRef = useRef<HTMLInputElement>(null);
 
-    const minYearRef  = useRef<HTMLInputElement>(null);
-    const minMonthRef = useRef<HTMLSelectElement>(null);
-    const maxYearRef  = useRef<HTMLInputElement>(null);
-    const maxMonthRef = useRef<HTMLSelectElement>(null);
+    const search = useSearchParams();
+    const term     = search.get("term");
+    const group    = search.get("group");
+    const q        = search.get("q");
+    const minDate  = search.get("MinDate") || "";
+    const maxDate  = search.get("MaxDate") || "";
+    const keys = useKeysFromContext();
+
+    const [minPrecision, setMinPrecision] = useState<DatePrecision>(() => minDate ? detectPrecision(minDate) : "dia");
+    const [maxPrecision, setMaxPrecision] = useState<DatePrecision>(() => maxDate ? detectPrecision(maxDate) : "dia");
+
+    // Sync precision if URL changes (e.g. navigating to a bookmarked URL)
+    useEffect(() => { if (minDate) setMinPrecision(detectPrecision(minDate)); }, [minDate]);
+    useEffect(() => { if (maxDate) setMaxPrecision(detectPrecision(maxDate)); }, [maxDate]);
 
     const resetDatas = useCallback(() => {
-        if (minYearRef.current)  minYearRef.current.value  = "";
-        if (minMonthRef.current) minMonthRef.current.value = "";
-        if (maxYearRef.current)  maxYearRef.current.value  = "";
-        if (maxMonthRef.current) maxMonthRef.current.value = "";
+        if (minDateRef.current) minDateRef.current.value = "";
+        if (maxDateRef.current) maxDateRef.current.value = "";
+        setMinPrecision("dia");
+        setMaxPrecision("dia");
     }, []);
 
     useEffect(() => {
@@ -56,34 +67,19 @@ export default function SearchForm({ count, filtersUsed }: { count: number; filt
         if (!el) return;
 
         const handleChange = () => {
-            // Save date values before reset (reset clears uncontrolled inputs)
-            const minYear  = minYearRef.current?.value  || "";
-            const minMonth = minMonthRef.current?.value || "";
-            const maxYear  = maxYearRef.current?.value  || "";
-            const maxMonth = maxMonthRef.current?.value || "";
+            const minVal = minDateRef.current?.value || "";
+            const maxVal = maxDateRef.current?.value || "";
 
             submit(el, router);
 
             el.reset();
-            if (minYear  && minYearRef.current)  minYearRef.current.value  = minYear;
-            if (minMonth && minMonthRef.current) minMonthRef.current.value = minMonth;
-            if (maxYear  && maxYearRef.current)  maxYearRef.current.value  = maxYear;
-            if (maxMonth && maxMonthRef.current) maxMonthRef.current.value = maxMonth;
+            if (minVal && minDateRef.current) minDateRef.current.value = minVal;
+            if (maxVal && maxDateRef.current) maxDateRef.current.value = maxVal;
         };
 
         el.addEventListener("change", handleChange);
         return () => el.removeEventListener("change", handleChange);
     }, [router]);
-
-    const search = useSearchParams();
-    const term     = search.get("term");
-    const group    = search.get("group");
-    const q        = search.get("q");
-    const minYear  = search.get("MinYear")  || "";
-    const minMonth = search.get("MinMonth") || "";
-    const maxYear  = search.get("MaxYear")  || "";
-    const maxMonth = search.get("MaxMonth") || "";
-    const keys = useKeysFromContext();
 
     return (
         <form ref={form} method="get" className="position-sticky" style={{ top: 0 }}>
@@ -112,43 +108,22 @@ export default function SearchForm({ count, filtersUsed }: { count: number; filt
                     defaultValue={q || ""}
                 />
 
-                <div className="input-group input-group-sm my-1">
-                    <label className="input-group-text rounded-0" style={{ minWidth: 50 }}>De:</label>
-                    <input
-                        type="number"
-                        name="MinYear"
-                        ref={minYearRef}
-                        placeholder="Ano"
-                        min="1900"
-                        max="2100"
-                        defaultValue={minYear}
-                        className="form-control"
-                        style={{ minWidth: 0 }}
-                    />
-                    <select name="MinMonth" ref={minMonthRef} defaultValue={minMonth} className="form-select form-select-sm rounded-0">
-                        <option value="">--</option>
-                        {MONTHS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                    </select>
-                </div>
-
-                <div className="input-group input-group-sm my-1">
-                    <label className="input-group-text rounded-0" style={{ minWidth: 50 }}>Até:</label>
-                    <input
-                        type="number"
-                        name="MaxYear"
-                        ref={maxYearRef}
-                        placeholder="Ano"
-                        min="1900"
-                        max="2100"
-                        defaultValue={maxYear}
-                        className="form-control"
-                        style={{ minWidth: 0 }}
-                    />
-                    <select name="MaxMonth" ref={maxMonthRef} defaultValue={maxMonth} className="form-select form-select-sm rounded-0">
-                        <option value="">--</option>
-                        {MONTHS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                    </select>
-                </div>
+                <DateRangeInput
+                    label="De:"
+                    name="MinDate"
+                    precision={minPrecision}
+                    onPrecision={setMinPrecision}
+                    defaultValue={minDate}
+                    inputRef={minDateRef}
+                />
+                <DateRangeInput
+                    label="Até:"
+                    name="MaxDate"
+                    precision={maxPrecision}
+                    onPrecision={setMaxPrecision}
+                    defaultValue={maxDate}
+                    inputRef={maxDateRef}
+                />
 
                 <div className="form-check my-1">
                     <input
@@ -167,5 +142,70 @@ export default function SearchForm({ count, filtersUsed }: { count: number; filt
                 <SwapableFilterList filtersUsed={filtersUsed} />
             </div>
         </form>
+    );
+}
+
+function DateRangeInput({ label, name, precision, onPrecision, defaultValue, inputRef }: {
+    label: string;
+    name: string;
+    precision: DatePrecision;
+    onPrecision: (p: DatePrecision) => void;
+    defaultValue: string;
+    inputRef: React.RefObject<HTMLInputElement>;
+}) {
+    // Derive the right defaultValue for each input type from whatever format is in the URL
+    const yearDefault  = defaultValue.slice(0, 4);
+    const monthDefault = defaultValue.length >= 7 ? defaultValue.slice(0, 7) : "";
+    const dayDefault   = defaultValue.length === 10 ? defaultValue : "";
+
+    return (
+        <div className="my-1">
+            <div className="d-flex gap-1 mb-1">
+                <small className="input-group-text rounded-0 px-1" style={{ minWidth: 50 }}>{label}</small>
+                {(["ano", "mes", "dia"] as DatePrecision[]).map(p => (
+                    <button
+                        key={p}
+                        type="button"
+                        className={`btn btn-outline-secondary btn-sm px-1 py-0${precision === p ? " active" : ""}`}
+                        onClick={() => onPrecision(p)}
+                    >
+                        {p === "ano" ? "Ano" : p === "mes" ? "Mês" : "Dia"}
+                    </button>
+                ))}
+            </div>
+            {precision === "ano" && (
+                <input
+                    key="ano"
+                    type="number"
+                    name={name}
+                    ref={inputRef}
+                    placeholder="Ano (ex: 2025)"
+                    min="1900"
+                    max="2100"
+                    defaultValue={yearDefault}
+                    className="form-control form-control-sm rounded-0"
+                />
+            )}
+            {precision === "mes" && (
+                <input
+                    key="mes"
+                    type="month"
+                    name={name}
+                    ref={inputRef}
+                    defaultValue={monthDefault}
+                    className="form-control form-control-sm rounded-0"
+                />
+            )}
+            {precision === "dia" && (
+                <input
+                    key="dia"
+                    type="date"
+                    name={name}
+                    ref={inputRef}
+                    defaultValue={dayDefault}
+                    className="form-control form-control-sm rounded-0"
+                />
+            )}
+        </div>
     );
 }

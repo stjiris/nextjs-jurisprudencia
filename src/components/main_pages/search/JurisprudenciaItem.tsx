@@ -3,8 +3,9 @@ import { useKeysFromContext } from "@/contexts/keys";
 import { HighlightFragment, SearchHandlerResponseItem } from "@/types/search";
 import { JurisprudenciaDocumentGenericKey, JurisprudenciaDocumentTextKeys } from "@stjiris/jurisprudencia-document";
 import Link from "next/link";
+import { useState } from "react";
 
-const SUMARY_SIZE = 450
+const SUMARY_SIZE = 550
 
 export default function JurisprudenciaItem({ hit, searchId }: { hit: SearchHandlerResponseItem, searchId?: string }) {
     const keys = useKeysFromContext().records;
@@ -34,28 +35,7 @@ export default function JurisprudenciaItem({ hit, searchId }: { hit: SearchHandl
         </div>
 
         {hit._source?.Sumário && !hit.highlight?.Sumário ? (
-            <div className="col-12 col-lg-8 rounded" style={{ backgroundColor: "var(--secondary-gold)", whiteSpace: "pre-line" }}>
-                <b>{keys?.Sumário.name}:</b>{' '}
-                {(() => {
-                    const summary = hit.highlight?.Sumário || hit._source.Sumário;
-                    const text = typeof summary === 'string' ? summary : summary.join(' ');
-                    const cleanText = text.replace(/<[^>]*>/g, '');
-                    const isTruncated = cleanText.length > SUMARY_SIZE;
-                    return (
-                        <>
-                            {cleanText.substring(0, SUMARY_SIZE)}
-                            {isTruncated && (
-                                <>
-                                    ...{' '}
-                                    <Link href={hit._source?.ECLI?.startsWith("ECLI:PT:STJ:") ? `/ecli/${hit._source.ECLI}${searchParam}` : `/${encodeURIComponent(numeroProcesso!)}/${hit._source?.UUID}${searchParam}`}>
-                                        mais...
-                                    </Link>
-                                </>
-                            )}
-                        </>
-                    );
-                })()}
-            </div>
+            <SumarioPreview sumario={hit._source.Sumário} sumarioName={keys?.Sumário.name} />
         ) : ""}
 
         {hit._source?.Sumário && hit.highlight?.Sumário ? <details className="col-12">
@@ -98,6 +78,31 @@ export default function JurisprudenciaItem({ hit, searchId }: { hit: SearchHandl
             </div>
         </details> : ""}
     </article>
+}
+
+function SumarioPreview({ sumario, sumarioName }: { sumario: string; sumarioName?: string }) {
+    const cleanText = sumario.replace(/<[^>]*>/g, '');
+    const isTruncated = cleanText.length > SUMARY_SIZE;
+    const [expanded, setExpanded] = useState(false);
+
+    return (
+        <div className="col-12 col-lg-8 rounded" style={{ backgroundColor: "var(--secondary-gold)", whiteSpace: "pre-line" }}>
+            <b>{sumarioName}:</b>{' '}
+            {expanded ? cleanText : cleanText.substring(0, SUMARY_SIZE)}
+            {isTruncated && (
+                <>
+                    {!expanded && '... '}
+                    <button
+                        type="button"
+                        className="btn btn-link btn-sm p-0 align-baseline"
+                        onClick={() => setExpanded(e => !e)}
+                    >
+                        {expanded ? 'menos' : 'mais'}
+                    </button>
+                </>
+            )}
+        </div>
+    );
 }
 
 function showOrOriginal(hit: SearchHandlerResponseItem, key: JurisprudenciaDocumentGenericKey) {
