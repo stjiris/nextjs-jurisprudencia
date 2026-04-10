@@ -15,8 +15,13 @@ function submit(form: HTMLFormElement, router: ReturnType<typeof useNavRouter>) 
         for (const v of values) searchParams.append(key, v as string);
     }
 
-    const keysOrder = new URLSearchParams(window.location.search).get(FORM_KEY);
+    const currentParams = new URLSearchParams(window.location.search);
+    const keysOrder = currentParams.get(FORM_KEY);
     if (keysOrder) searchParams.set(FORM_KEY, keysOrder);
+    const rpp = currentParams.get("rpp");
+    if (rpp) searchParams.set("rpp", rpp);
+    const sort = currentParams.get("sort");
+    if (sort) searchParams.set("sort", sort);
 
     router.push(`?${searchParams.toString()}`);
 }
