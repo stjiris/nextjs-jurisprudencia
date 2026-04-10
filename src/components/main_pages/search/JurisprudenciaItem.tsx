@@ -87,20 +87,19 @@ function SumarioPreview({ sumario, sumarioName }: { sumario: string; sumarioName
 
     return (
         <div className="col-12 col-lg-8 rounded" style={{ backgroundColor: "var(--secondary-gold)", whiteSpace: "pre-line" }}>
+            {isTruncated && (
+                <button
+                    type="button"
+                    className="btn btn-link p-0 me-1 align-baseline"
+                    style={{ color: 'inherit', lineHeight: 1 }}
+                    onClick={() => setExpanded(e => !e)}
+                >
+                    <i className={`bi ${expanded ? 'bi-caret-down-fill' : 'bi-caret-right-fill'}`} />
+                </button>
+            )}
             <b>{sumarioName}:</b>{' '}
             {expanded ? cleanText : cleanText.substring(0, SUMARY_SIZE)}
-            {isTruncated && (
-                <>
-                    {!expanded && '... '}
-                    <button
-                        type="button"
-                        className="btn btn-link btn-sm p-0 align-baseline"
-                        onClick={() => setExpanded(e => !e)}
-                    >
-                        {expanded ? 'menos' : 'mais'}
-                    </button>
-                </>
-            )}
+            {!expanded && isTruncated && '...'}
         </div>
     );
 }
