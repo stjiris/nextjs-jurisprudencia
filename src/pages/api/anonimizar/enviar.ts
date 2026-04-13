@@ -2,23 +2,6 @@ import LoggerApi from "@/core/logger-api";
 import { authenticatedHandler } from "@/core/user/authenticate";
 import type { NextApiRequest, NextApiResponse } from "next";
 import crypto from "crypto";
-import fs from "fs";
-import path from "path";
-
-const ROOT_PATH = process.env.LOCAL_ROOT || "results";
-const FILESYSTEM_PATH = "/FileSystem";
-
-function loadAnonimizedEntitiesLocal(doc: Record<string, any>): Record<string, any> | null {
-    try {
-        const { generateFilePath } = require("@stjiris/filesystem-lib");
-        const dirPath = `${ROOT_PATH}${FILESYSTEM_PATH}${generateFilePath(doc)}`;
-        const filePath = path.join(dirPath, "Anonimizado.json");
-        if (!fs.existsSync(filePath)) return null;
-        return JSON.parse(fs.readFileSync(filePath, "utf-8"));
-    } catch {
-        return null;
-    }
-}
 
 type AnonimizarResponse = {
     ok: boolean;
@@ -33,8 +16,6 @@ export default LoggerApi(async function anonimizarHandler(
     const anonimizadorUrl = process.env.ANONIMIZADOR_URL;
     const anonimizadorSecret = process.env.ANONIMIZADOR_SECRET;
 
-    console.log(anonimizadorUrl);
-    console.log(anonimizadorSecret);
     if (!anonimizadorUrl) {
         return res.status(500).json({
             ok: false,
@@ -74,12 +55,9 @@ export default LoggerApi(async function anonimizarHandler(
             });
         }
 
-        console.log("/api/anonimizar/enviar payload:");
-        console.log(JSON.stringify({ id, docPreview: Object.keys(doc) }, null, 2));
-
         const token = doc.UUID;
 
-        const { loadDocumentFile } = await import("@stjiris/filesystem-lib");
+        const { loadDocumentFile, loadAnonimizedEntities } = await import("@stjiris/filesystem-lib");
 
         let nlpJson = null;
         try {
@@ -88,10 +66,10 @@ export default LoggerApi(async function anonimizarHandler(
             console.warn("Failed to load NLP document, proceeding without it:", nlpErr);
         }
 
-        // Try to load saved entities from Anonimizado.json and validate against current text hashes
+        // Load saved entities from Anonimizado.json and validate against current text hashes
         let savedEntities: Record<string, string[]> | null = null;
         try {
-            const anonFile = loadAnonimizedEntitiesLocal(doc);
+            const anonFile = loadAnonimizedEntities(doc);
             if (anonFile) {
                 const textoSrc = doc["Texto Não Anonimizado"] || doc["Texto"] || "";
                 const sumarioSrc = doc["Sumário Não Anonimizado"] || doc["Sumário"];
@@ -102,9 +80,12 @@ export default LoggerApi(async function anonimizarHandler(
                 if (textoValid && sumarioValid) {
                     const { _textoHash, _sumarioHash, ...entities } = anonFile;
                     savedEntities = entities as Record<string, string[]>;
+                    console.log("enviar: restored entities from Anonimizado.json for", id);
                 } else {
-                    console.warn("Anonimizado.json hash mismatch — entities not restored. textoValid:", textoValid, "sumarioValid:", sumarioValid);
+                    console.warn("enviar: Anonimizado.json hash mismatch — entities not restored. textoValid:", textoValid, "sumarioValid:", sumarioValid);
                 }
+            } else {
+                console.log("enviar: no Anonimizado.json found for", id);
             }
         } catch (err) {
             console.warn("Failed to load/validate Anonimizado.json:", err);

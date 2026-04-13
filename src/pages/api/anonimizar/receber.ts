@@ -2,30 +2,6 @@ import LoggerApi from "@/core/logger-api";
 import { getDoc, updateDoc } from "@/core/doc";
 import { NextApiRequest, NextApiResponse } from "next";
 import crypto from "crypto";
-import fs from "fs";
-import path from "path";
-
-const ROOT_PATH = process.env.LOCAL_ROOT || "results";
-const FILESYSTEM_PATH = "/FileSystem";
-
-function getAnonimizadoJsonPath(doc: Record<string, any>): string | null {
-    try {
-        const { generateFilePath } = require("@stjiris/filesystem-lib");
-        const dirPath = `${ROOT_PATH}${FILESYSTEM_PATH}${generateFilePath(doc)}`;
-        return path.join(dirPath, "Anonimizado.json");
-    } catch {
-        return null;
-    }
-}
-
-function saveAnonimizedEntitiesLocal(doc: Record<string, any>, entities: Record<string, string[]>, textoHash: string, sumarioHash?: string) {
-    const filePath = getAnonimizadoJsonPath(doc);
-    if (!filePath) return;
-    fs.mkdirSync(path.dirname(filePath), { recursive: true });
-    const data: Record<string, any> = { _textoHash: textoHash, ...entities };
-    if (sumarioHash) data._sumarioHash = sumarioHash;
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
-}
 
 export default LoggerApi(async function receberHandler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method !== "POST") {
@@ -67,9 +43,10 @@ export default LoggerApi(async function receberHandler(req: NextApiRequest, res:
 
         await updateDoc(jurisId, update);
 
+        const { saveAnonimizedDocument, saveAnonimizedEntities } = await import("@stjiris/filesystem-lib");
+
         // Save Anonimizado.docx and Anonimizado.pdf to the filesystem (best-effort)
         try {
-            const { saveAnonimizedDocument } = await import("@stjiris/filesystem-lib");
             await saveAnonimizedDocument(current._source, anonimizedTexto, anonimizedSumario || undefined);
         } catch (fsErr) {
             console.error("receber: failed to save anonymized files to filesystem:", fsErr);
@@ -80,7 +57,8 @@ export default LoggerApi(async function receberHandler(req: NextApiRequest, res:
             try {
                 const textoHash = crypto.createHash("sha256").update(originalTexto || "").digest("hex");
                 const sumarioHash = originalSumario ? crypto.createHash("sha256").update(originalSumario).digest("hex") : undefined;
-                saveAnonimizedEntitiesLocal(current._source, entities, textoHash, sumarioHash);
+                saveAnonimizedEntities(current._source, entities, textoHash, sumarioHash);
+                console.log("receber: saved Anonimizado.json for", jurisId);
             } catch (fsErr) {
                 console.error("receber: failed to save Anonimizado.json to filesystem:", fsErr);
             }
