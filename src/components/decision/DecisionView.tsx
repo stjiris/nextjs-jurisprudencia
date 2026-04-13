@@ -14,6 +14,7 @@ export default function DecisionView(props: { doc: JurisprudenciaDocument, id: s
     let proc = props.doc["Número de Processo"]!;
     let uuid = props.doc["UUID"]!;
     let related = useFetch<JurisprudenciaDocument[]>(`/api/related/${encodeURIComponent(proc)}/${uuid}`, []) || []
+    const keyName = Object.fromEntries(props.keys.map(k => [k.key, k.name]));
     const hasAnon     = !!(props.doc["Texto"] || props.doc["Sumário"]);
     const hasOriginal = !!(props.doc["Texto Não Anonimizado"] || props.doc["Sumário Não Anonimizado"]);
     const canSwitch   = hasAnon && hasOriginal;
@@ -85,12 +86,12 @@ export default function DecisionView(props: { doc: JurisprudenciaDocument, id: s
                             </div>
                         </div>}
                         {sumario && <>
-                            <h6 className="border-top border-2"><b>{sumarioIsOriginal && props.doc["Sumário Não Anonimizado"] ? "Sumário Não Anonimizado" : "Sumário"}</b></h6>
+                            <h6 className="border-top border-2"><b>{sumarioIsOriginal && props.doc["Sumário Não Anonimizado"] ? (keyName["Sumário Não Anonimizado"] || "Sumário Não Anonimizado") : (keyName["Sumário"] || "Sumário")}</b></h6>
                             <div className="p-2" dangerouslySetInnerHTML={{ __html: sumario }}></div>
                         </>}
 
                         {texto && <>
-                            <h6 className="border-top border-2"><b>{textoIsOriginal && props.doc["Texto Não Anonimizado"] ? "Texto Integral Não Anonimizado" : "Texto Integral"}</b></h6>
+                            <h6 className="border-top border-2"><b>{textoIsOriginal && props.doc["Texto Não Anonimizado"] ? (keyName["Texto Não Anonimizado"] || "Texto Integral Não Anonimizado") : (keyName["Texto"] || "Texto Integral")}</b></h6>
                             <div className="p-2" dangerouslySetInnerHTML={{ __html: texto }}></div>
                         </>}
                     </div>
