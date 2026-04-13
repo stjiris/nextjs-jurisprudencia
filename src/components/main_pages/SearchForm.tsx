@@ -222,7 +222,8 @@ function DateRangeInput({ label, name, isMin, precision, onPrecision, defaultVal
     const monthDefault = defaultValue.length >= 7 ? String(parseInt(defaultValue.slice(5, 7))) : "";
     const dayDefault   = defaultValue.length === 10 ? String(parseInt(defaultValue.slice(8, 10))) : "";
 
-    const prevEmpty = useRef(!yearDefault);
+    const prevEmpty    = useRef(!yearDefault);
+    const datePickerRef = useRef<HTMLInputElement>(null);
 
     const prefix = name === "MinDate" ? "Min" : "Max";
 
@@ -234,8 +235,19 @@ function DateRangeInput({ label, name, isMin, precision, onPrecision, defaultVal
     const autoDay   = isMin ? "1" : "31";
     const autoMonth = isMin ? "1" : "12"; // Jan or Dez
 
-    const inputCls    = "form-control form-control-sm rounded-0";
+    const inputCls      = "form-control form-control-sm rounded-0";
     const disabledStyle = { color: "var(--bs-secondary-color, #6c757d)", backgroundColor: "var(--bs-tertiary-bg, #f8f9fa)" };
+
+    function handlePickerChange(e: React.ChangeEvent<HTMLInputElement>) {
+        const val = e.target.value; // "YYYY-MM-DD"
+        if (!val) return;
+        const [y, m, d] = val.split("-");
+        if (yearRef.current)               yearRef.current.value  = y;
+        if (monthActive && monthRef.current) monthRef.current.value = String(parseInt(m));
+        if (dayActive   && dayRef.current)   dayRef.current.value   = String(parseInt(d));
+        // Bubble a change event from the year input to trigger auto-submit
+        yearRef.current?.dispatchEvent(new Event("change", { bubbles: true }));
+    }
 
     return (
         <div className="my-1">
@@ -303,6 +315,27 @@ function DateRangeInput({ label, name, isMin, precision, onPrecision, defaultVal
                     className={inputCls}
                     onInput={(e) => onYearInput(e, prevEmpty)}
                 />
+
+                {/* Hidden native date picker + calendar icon trigger */}
+                <input
+                    type="date"
+                    ref={datePickerRef}
+                    onChange={handlePickerChange}
+                    style={{ position: "absolute", opacity: 0, width: 0, height: 0, pointerEvents: "none", border: 0, padding: 0 }}
+                    tabIndex={-1}
+                    aria-hidden="true"
+                />
+                <button
+                    type="button"
+                    className="btn btn-outline-secondary btn-sm px-2"
+                    title="Escolher data"
+                    onClick={() => {
+                        try { datePickerRef.current?.showPicker(); }
+                        catch { datePickerRef.current?.click(); }
+                    }}
+                >
+                    <i className="bi bi-calendar3" />
+                </button>
             </div>
         </div>
     );
