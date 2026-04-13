@@ -58,7 +58,7 @@ export default LoggerApi(async function anonimizarHandler(
         }
 
         console.log("/api/anonimizar/enviar payload:");
-        console.log(JSON.stringify({ id, docPreview: Object.keys(doc), forceOriginal }, null, 2));
+        console.log(JSON.stringify({ id, docPreview: Object.keys(doc) }, null, 2));
 
         const token = doc.UUID;
 
