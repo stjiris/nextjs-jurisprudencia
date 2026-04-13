@@ -14,8 +14,11 @@ export default function DecisionView(props: { doc: JurisprudenciaDocument, id: s
     let proc = props.doc["Número de Processo"]!;
     let uuid = props.doc["UUID"]!;
     let related = useFetch<JurisprudenciaDocument[]>(`/api/related/${encodeURIComponent(proc)}/${uuid}`, []) || []
-    let [showOriginal, setShowOriginal] = useState(false);
-    let hasNonAnon = auth && !!((props.doc["Texto Não Anonimizado"] && props.doc["Texto"]) || (props.doc["Sumário Não Anonimizado"] && props.doc["Sumário"]));
+    const hasAnon     = !!(props.doc["Texto"] || props.doc["Sumário"]);
+    const hasOriginal = !!(props.doc["Texto Não Anonimizado"] || props.doc["Sumário Não Anonimizado"]);
+    const canSwitch   = hasAnon && hasOriginal;
+    const showToggle  = !!auth && (hasAnon || hasOriginal);
+    let [showOriginal, setShowOriginal] = useState(!hasAnon && hasOriginal);
     let sumario = showOriginal ? (props.doc["Sumário Não Anonimizado"] ?? props.doc.Sumário) : (props.doc.Sumário || props.doc["Sumário Não Anonimizado"]);
     let texto = showOriginal ? (props.doc["Texto Não Anonimizado"] ?? props.doc.Texto) : (props.doc.Texto || props.doc["Texto Não Anonimizado"]);
     const sumarioIsOriginal = showOriginal || !props.doc.Sumário;
@@ -65,14 +68,20 @@ export default function DecisionView(props: { doc: JurisprudenciaDocument, id: s
                 </div>
                 <div className="row justify-content-center">
                     <div className="col-12 col-md-10 mt-3">
-                        {hasNonAnon && <div className="mb-2">
+                        {showToggle && <div className="mb-2">
                             <div
-                                onClick={() => setShowOriginal(v => !v)}
-                                title={showOriginal ? "Ver texto anonimizado" : "Ver texto original (não anonimizado)"}
-                                style={{ display: "inline-flex", border: "1px solid var(--primary-red)", borderRadius: "4px", fontSize: "0.8rem", cursor: "pointer", userSelect: "none", overflow: "hidden" }}
+                                style={{ display: "inline-flex", border: "1px solid var(--primary-red)", borderRadius: "4px", fontSize: "0.8rem", userSelect: "none", overflow: "hidden" }}
                             >
-                                <span style={{ padding: "3px 12px", color: "var(--primary-red)", backgroundColor: showOriginal ? "transparent" : "var(--secondary-gold)", transition: "background-color 0.2s ease" }}>Anonimizado</span>
-                                <span style={{ padding: "3px 12px", color: "var(--primary-red)", backgroundColor: showOriginal ? "var(--secondary-gold)" : "transparent", borderLeft: "1px solid var(--primary-red)", transition: "background-color 0.2s ease" }}>Original</span>
+                                <span
+                                    onClick={() => canSwitch && setShowOriginal(true)}
+                                    title={hasOriginal ? "Ver texto original (não anonimizado)" : "Sem versão original"}
+                                    style={{ minWidth: "7rem", textAlign: "center", padding: "3px 12px", color: "var(--primary-red)", backgroundColor: showOriginal ? "var(--secondary-gold)" : "transparent", transition: "background-color 0.2s ease", cursor: canSwitch ? "pointer" : "default", opacity: hasOriginal ? 1 : 0.4 }}
+                                >Original</span>
+                                <span
+                                    onClick={() => canSwitch && setShowOriginal(false)}
+                                    title={hasAnon ? "Ver texto anonimizado" : "Sem versão anonimizada"}
+                                    style={{ minWidth: "7rem", textAlign: "center", padding: "3px 12px", color: "var(--primary-red)", backgroundColor: !showOriginal ? "var(--secondary-gold)" : "transparent", borderLeft: "1px solid var(--primary-red)", transition: "background-color 0.2s ease", cursor: canSwitch ? "pointer" : "default", opacity: hasAnon ? 1 : 0.4 }}
+                                >Anonimizado</span>
                             </div>
                         </div>}
                         {sumario && <>
