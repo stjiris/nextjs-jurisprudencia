@@ -132,6 +132,8 @@ services:
       - POSTFIX_INET_PROTOCOLS=ipv4
       - ENABLE_FAIL2BAN=0
       - SMTP_ONLY=0
+    ports:
+      - "127.0.0.1:143:143"
     volumes:
       - mailserver_data:/var/mail
       - mailserver_state:/var/mail-state
