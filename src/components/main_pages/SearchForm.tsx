@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useRouter as useNavRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useKeysFromContext } from "@/contexts/keys";
-import { FORM_KEY, SwapableFilterList, UsedFilters } from "./SwapableFilterList";
+import { FORM_KEY, SwapableFilterList } from "./SwapableFilterList";
 
 // Helper field names combined into MinDate/MaxDate on submit
 const DATE_HELPERS = new Set(["_MinDay", "_MinMonth", "_MinYear", "_MaxDay", "_MaxMonth", "_MaxYear"]);
+
+const CURRENT_YEAR = new Date().getFullYear();
 
 function submit(form: HTMLFormElement, router: ReturnType<typeof useNavRouter>) {
     const fd = new FormData(form);
@@ -19,7 +21,6 @@ function submit(form: HTMLFormElement, router: ReturnType<typeof useNavRouter>) 
         for (const v of values) searchParams.append(key, v as string);
     }
 
-    // Combine day+month+year helpers into MinDate / MaxDate
     // Precision is implicit: YYYY if only year, YYYY-MM if year+month, YYYY-MM-DD if all three
     for (const prefix of ["Min", "Max"] as const) {
         const year  = (fd.get(`_${prefix}Year`)  as string | null)?.trim();
@@ -46,17 +47,6 @@ function submit(form: HTMLFormElement, router: ReturnType<typeof useNavRouter>) 
     router.push(`?${searchParams.toString()}`);
 }
 
-const MONTHS = [
-    { value: "1",  label: "Jan" }, { value: "2",  label: "Fev" },
-    { value: "3",  label: "Mar" }, { value: "4",  label: "Abr" },
-    { value: "5",  label: "Mai" }, { value: "6",  label: "Jun" },
-    { value: "7",  label: "Jul" }, { value: "8",  label: "Ago" },
-    { value: "9",  label: "Set" }, { value: "10", label: "Out" },
-    { value: "11", label: "Nov" }, { value: "12", label: "Dez" },
-];
-
-const CURRENT_YEAR = new Date().getFullYear();
-
 // Intercept spinner clicks on an empty year input so up→current year, down→stays empty
 function onYearInput(e: React.FormEvent<HTMLInputElement>, prevEmpty: React.MutableRefObject<boolean>) {
     const inp = e.currentTarget;
@@ -65,13 +55,14 @@ function onYearInput(e: React.FormEvent<HTMLInputElement>, prevEmpty: React.Muta
     prevEmpty.current = !inp.value;
 }
 
-type DatePrecision = "ano" | "mes" | "dia";
-
-function detectPrecision(date: string): DatePrecision {
-    if (/^\d{4}$/.test(date))       return "ano";
-    if (/^\d{4}-\d{2}$/.test(date)) return "mes";
-    return "dia";
-}
+const MONTHS = [
+    { value: "1",  label: "Jan" }, { value: "2",  label: "Fev" },
+    { value: "3",  label: "Mar" }, { value: "4",  label: "Abr" },
+    { value: "5",  label: "Mai" }, { value: "6",  label: "Jun" },
+    { value: "7",  label: "Jul" }, { value: "8",  label: "Ago" },
+    { value: "9",  label: "Set" }, { value: "10", label: "Out" },
+    { value: "11", label: "Nov" }, { value: "12", label: "Dez" },
+];
 
 export default function SearchForm({ count, filtersUsed }: { count: number; filtersUsed: Record<string, string[]> }) {
     const form = useRef<HTMLFormElement>(null);
@@ -92,29 +83,45 @@ export default function SearchForm({ count, filtersUsed }: { count: number; filt
     const maxDate = search.get("MaxDate") || "";
     const keys = useKeysFromContext();
 
-    const [minPrecision, setMinPrecision] = useState<DatePrecision>(() => minDate ? detectPrecision(minDate) : "dia");
-    const [maxPrecision, setMaxPrecision] = useState<DatePrecision>(() => maxDate ? detectPrecision(maxDate) : "dia");
-
-    // Sync precision if URL changes (e.g. navigating to a bookmarked URL)
-    useEffect(() => { if (minDate) setMinPrecision(detectPrecision(minDate)); }, [minDate]);
-    useEffect(() => { if (maxDate) setMaxPrecision(detectPrecision(maxDate)); }, [maxDate]);
-
     const resetDatas = useCallback(() => {
-        if (minDayRef.current)   minDayRef.current.value   = "";
-        if (minMonthRef.current) minMonthRef.current.value = "";
-        if (minYearRef.current)  minYearRef.current.value  = "";
-        if (maxDayRef.current)   maxDayRef.current.value   = "";
-        if (maxMonthRef.current) maxMonthRef.current.value = "";
-        if (maxYearRef.current)  maxYearRef.current.value  = "";
-        setMinPrecision("dia");
-        setMaxPrecision("dia");
+        if (minDayRef.current)   { minDayRef.current.value   = ""; }
+        if (minMonthRef.current) { minMonthRef.current.value = ""; minMonthRef.current.style.color = "var(--bs-secondary-color, #6c757d)"; }
+        if (minYearRef.current)  { minYearRef.current.value  = ""; }
+        if (maxDayRef.current)   { maxDayRef.current.value   = ""; }
+        if (maxMonthRef.current) { maxMonthRef.current.value = ""; maxMonthRef.current.style.color = "var(--bs-secondary-color, #6c757d)"; }
+        if (maxYearRef.current)  { maxYearRef.current.value  = ""; }
     }, []);
 
     useEffect(() => {
         const el = form.current;
         if (!el) return;
 
-        const handleChange = () => {
+        const handleChange = (e: Event) => {
+            const target = e.target as HTMLElement;
+
+            // Auto-fill: day filled → fill month (default) + year (current) if empty
+            // Auto-fill: month filled → fill year (current) if empty
+            for (const [dayRef, monthRef, yearRef, autoMonth] of [
+                [minDayRef, minMonthRef, minYearRef, "1"],
+                [maxDayRef, maxMonthRef, maxYearRef, "12"],
+            ] as const) {
+                if (target === dayRef.current && dayRef.current?.value) {
+                    if (monthRef.current && !monthRef.current.value) {
+                        monthRef.current.value = autoMonth;
+                        monthRef.current.style.color = "";
+                    }
+                    if (yearRef.current && !yearRef.current.value) {
+                        yearRef.current.value = String(CURRENT_YEAR);
+                    }
+                }
+                if (target === monthRef.current && monthRef.current?.value) {
+                    if (yearRef.current && !yearRef.current.value) {
+                        yearRef.current.value = String(CURRENT_YEAR);
+                    }
+                }
+            }
+
+            // Save date field values before reset
             const minDay   = minDayRef.current?.value   || "";
             const minMonth = minMonthRef.current?.value || "";
             const minYear  = minYearRef.current?.value  || "";
@@ -125,11 +132,12 @@ export default function SearchForm({ count, filtersUsed }: { count: number; filt
             submit(el, router);
 
             el.reset();
+
             if (minDay   && minDayRef.current)   minDayRef.current.value   = minDay;
-            if (minMonth && minMonthRef.current) minMonthRef.current.value = minMonth;
+            if (minMonth && minMonthRef.current) { minMonthRef.current.value = minMonth; minMonthRef.current.style.color = ""; }
             if (minYear  && minYearRef.current)  minYearRef.current.value  = minYear;
             if (maxDay   && maxDayRef.current)   maxDayRef.current.value   = maxDay;
-            if (maxMonth && maxMonthRef.current) maxMonthRef.current.value = maxMonth;
+            if (maxMonth && maxMonthRef.current) { maxMonthRef.current.value = maxMonth; maxMonthRef.current.style.color = ""; }
             if (maxYear  && maxYearRef.current)  maxYearRef.current.value  = maxYear;
         };
 
@@ -168,8 +176,6 @@ export default function SearchForm({ count, filtersUsed }: { count: number; filt
                     label="De:"
                     name="MinDate"
                     isMin={true}
-                    precision={minPrecision}
-                    onPrecision={setMinPrecision}
                     defaultValue={minDate}
                     yearRef={minYearRef}
                     monthRef={minMonthRef}
@@ -179,8 +185,6 @@ export default function SearchForm({ count, filtersUsed }: { count: number; filt
                     label="Até:"
                     name="MaxDate"
                     isMin={false}
-                    precision={maxPrecision}
-                    onPrecision={setMaxPrecision}
                     defaultValue={maxDate}
                     yearRef={maxYearRef}
                     monthRef={maxMonthRef}
@@ -207,12 +211,10 @@ export default function SearchForm({ count, filtersUsed }: { count: number; filt
     );
 }
 
-function DateRangeInput({ label, name, isMin, precision, onPrecision, defaultValue, yearRef, monthRef, dayRef }: {
+function DateRangeInput({ label, name, isMin, defaultValue, yearRef, monthRef, dayRef }: {
     label: string;
     name: string;
     isMin: boolean;
-    precision: DatePrecision;
-    onPrecision: (p: DatePrecision) => void;
     defaultValue: string;
     yearRef: React.RefObject<HTMLInputElement>;
     monthRef: React.RefObject<HTMLSelectElement>;
@@ -222,80 +224,49 @@ function DateRangeInput({ label, name, isMin, precision, onPrecision, defaultVal
     const monthDefault = defaultValue.length >= 7 ? String(parseInt(defaultValue.slice(5, 7))) : "";
     const dayDefault   = defaultValue.length === 10 ? String(parseInt(defaultValue.slice(8, 10))) : "";
 
-    const prevEmpty    = useRef(!yearDefault);
+    const prevEmpty     = useRef(!yearDefault);
     const datePickerRef = useRef<HTMLInputElement>(null);
 
-    const prefix = name === "MinDate" ? "Min" : "Max";
-
-    // Which fields are user-editable vs auto-filled
-    const dayActive   = precision === "dia";
-    const monthActive = precision === "dia" || precision === "mes";
-
-    // Auto-fill display values for disabled fields
-    const autoDay   = isMin ? "1" : "31";
-    const autoMonth = isMin ? "1" : "12"; // Jan or Dez
-
-    const inputCls      = "form-control form-control-sm rounded-0";
-    const disabledStyle = { color: "var(--bs-secondary-color, #6c757d)", backgroundColor: "var(--bs-tertiary-bg, #f8f9fa)" };
+    const prefix   = name === "MinDate" ? "Min" : "Max";
+    const inputCls = "form-control form-control-sm rounded-0";
+    const grey     = "var(--bs-secondary-color, #6c757d)";
 
     function handlePickerChange(e: React.ChangeEvent<HTMLInputElement>) {
         const val = e.target.value; // "YYYY-MM-DD"
         if (!val) return;
         const [y, m, d] = val.split("-");
-        if (yearRef.current)               yearRef.current.value  = y;
-        if (monthActive && monthRef.current) monthRef.current.value = String(parseInt(m));
-        if (dayActive   && dayRef.current)   dayRef.current.value   = String(parseInt(d));
-        // Bubble a change event from the year input to trigger auto-submit
+        if (dayRef.current)   dayRef.current.value   = String(parseInt(d));
+        if (monthRef.current) { monthRef.current.value = String(parseInt(m)); monthRef.current.style.color = ""; }
+        if (yearRef.current)  yearRef.current.value   = y;
+        // Trigger form change to auto-submit
         yearRef.current?.dispatchEvent(new Event("change", { bubbles: true }));
     }
 
     return (
         <div className="my-1">
-            <div className="d-flex gap-1 mb-1">
-                <small className="input-group-text rounded-0 px-1" style={{ minWidth: 50 }}>{label}</small>
-                {(["dia", "mes", "ano"] as DatePrecision[]).map(p => (
-                    <button
-                        key={p}
-                        type="button"
-                        className={`btn btn-outline-secondary btn-sm px-1 py-0${precision === p ? " active" : ""}`}
-                        onClick={() => onPrecision(p)}
-                    >
-                        {p === "ano" ? "Ano" : p === "mes" ? "Mês" : "Dia"}
-                    </button>
-                ))}
-            </div>
-
+            <small className="d-block mb-1 text-muted">{label}</small>
             <div className="input-group input-group-sm">
                 {/* Day */}
                 <input
-                    key={`day-${precision}`}
                     type="number"
-                    name={dayActive ? `_${prefix}Day` : undefined}
-                    ref={dayActive ? dayRef : undefined}
+                    name={`_${prefix}Day`}
+                    ref={dayRef}
                     min="1"
                     max="31"
                     placeholder="DD"
-                    defaultValue={dayActive ? dayDefault : autoDay}
-                    disabled={!dayActive}
+                    defaultValue={dayDefault}
                     className={inputCls}
-                    style={!dayActive ? disabledStyle : undefined}
                 />
 
                 {/* Month */}
                 <select
-                    key={`month-${precision}`}
-                    name={monthActive ? `_${prefix}Month` : undefined}
-                    ref={monthActive ? monthRef : undefined}
-                    disabled={!monthActive}
-                    defaultValue={monthActive ? monthDefault : autoMonth}
+                    name={`_${prefix}Month`}
+                    ref={monthRef}
+                    defaultValue={monthDefault}
                     className="form-select form-select-sm rounded-0"
-                    style={
-                        !monthActive ? disabledStyle :
-                        !monthDefault ? { color: "var(--bs-secondary-color, #6c757d)" } :
-                        undefined
-                    }
+                    style={{ color: monthDefault ? undefined : grey }}
                     onChange={(e) => {
-                        if (monthActive) e.currentTarget.style.color = e.currentTarget.value ? "" : "var(--bs-secondary-color, #6c757d)";
+                        e.currentTarget.style.color = e.currentTarget.value ? "" : grey;
                     }}
                 >
                     <option value="">Mês</option>
@@ -304,7 +275,6 @@ function DateRangeInput({ label, name, isMin, precision, onPrecision, defaultVal
 
                 {/* Year */}
                 <input
-                    key={`year-${precision}`}
                     type="number"
                     name={`_${prefix}Year`}
                     ref={yearRef}
@@ -316,7 +286,7 @@ function DateRangeInput({ label, name, isMin, precision, onPrecision, defaultVal
                     onInput={(e) => onYearInput(e, prevEmpty)}
                 />
 
-                {/* Hidden native date picker + calendar icon trigger */}
+                {/* Hidden native date picker */}
                 <input
                     type="date"
                     ref={datePickerRef}
