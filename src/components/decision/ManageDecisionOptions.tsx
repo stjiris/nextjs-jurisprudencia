@@ -6,15 +6,11 @@ import Link from "next/link";
 
 
 export default function ManageDecisionOptions(props: { doc: JurisprudenciaDocument, id: string, keys: JurisprudenciaKey[] }) {
-	const { post: postAnonimizar, loading: loadingAnon } = useFetchPost<{ id: string; doc: JurisprudenciaDocument; jurisUrl?: string; forceOriginal?: boolean }, { ok: boolean; message: string, token?: string }>('/api/anonimizar/enviar');
+	const { post: postAnonimizar, loading: loadingAnon } = useFetchPost<{ id: string; doc: JurisprudenciaDocument; jurisUrl?: string }, { ok: boolean; message: string, token?: string }>('/api/anonimizar/enviar');
 	const { post: postPublicar, loading: loadingPublicar } = useFetchPost<{ id: string }, { ok: boolean; message?: string }>('/api/gestao/publicar');
 	const { post: postTornarPrivado, loading: loadingPrivado } = useFetchPost<{ id: string }, { ok: boolean; message?: string }>('/api/gestao/tornar-privado');
 
 	const anonimizadorUrl = process.env.NEXT_PUBLIC_ANONIMIZADOR_URL;
-	const hasOriginal = !!(
-		(props.doc["Sumário Não Anonimizado"] && props.doc.Sumário) ||
-		(props.doc["Texto Não Anonimizado"] && props.doc.Texto)
-	);
 	const state = props.doc.STATE;
 	const isImportacao = state === "importação";
 	const isPreparacao = state === "preparação";
@@ -23,9 +19,9 @@ export default function ManageDecisionOptions(props: { doc: JurisprudenciaDocume
 
 	const loadingGestao = loadingPublicar || loadingPrivado;
 
-	async function handleAnonimizar(forceOriginal = false) {
+	async function handleAnonimizar() {
 		try {
-			const result = await postAnonimizar({ id: props.id, doc: props.doc, jurisUrl: window.location.href, forceOriginal });
+			const result = await postAnonimizar({ id: props.id, doc: props.doc, jurisUrl: window.location.href });
 
 			if (!result.ok) {
 				alert("Falha ao anonimizar: " + result.message);
@@ -102,26 +98,11 @@ export default function ManageDecisionOptions(props: { doc: JurisprudenciaDocume
 								title="Anonimizar"
 								onClick={(e) => {
 									e.preventDefault();
-									if (!loadingAnon) handleAnonimizar(false);
+									if (!loadingAnon) handleAnonimizar();
 								}}>
 								<i className="bi bi-shield-lock me-1"></i>
 								{loadingAnon ? "Enviando…" : "Anonimizar"}
 							</Link>
-							{hasOriginal && (
-								<>
-									{" || "}
-									<Link href="#"
-										className={loadingAnon ? "text-muted" : ""}
-										title="Anonimizar do original, ignorando a anonimização anterior"
-										onClick={(e) => {
-											e.preventDefault();
-											if (!loadingAnon) handleAnonimizar(true);
-										}}>
-										<i className="bi bi-shield me-1"></i>
-										{loadingAnon ? "Enviando…" : "Anonimizar Original"}
-									</Link>
-								</>
-							)}
 						</>
 					)}
 				</span>

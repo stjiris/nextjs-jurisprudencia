@@ -48,7 +48,7 @@ export default LoggerApi(async function anonimizarHandler(
     }
 
     try {
-        const { doc, id, jurisUrl, forceOriginal } = req.body;
+        const { doc, id, jurisUrl } = req.body;
 
         if (!doc || !id) {
             return res.status(400).json({
@@ -73,24 +73,22 @@ export default LoggerApi(async function anonimizarHandler(
 
         // Try to load saved entities from Anonimizado.json and validate against current text hashes
         let savedEntities: Record<string, string[]> | null = null;
-        if (!forceOriginal) {
-            try {
-                const anonFile = typeof loadAnonimizedEntities === "function" ? loadAnonimizedEntities(doc) : null;
-                if (anonFile) {
-                    const textoSrc = doc["Texto Não Anonimizado"] || doc["Texto"] || "";
-                    const sumarioSrc = doc["Sumário Não Anonimizado"] || doc["Sumário"];
-                    const textoHash = crypto.createHash("sha256").update(textoSrc).digest("hex");
-                    const textoValid = textoHash === anonFile._textoHash;
-                    const sumarioValid = !anonFile._sumarioHash ||
-                        (sumarioSrc && crypto.createHash("sha256").update(sumarioSrc).digest("hex") === anonFile._sumarioHash);
-                    if (textoValid && sumarioValid) {
-                        const { _textoHash, _sumarioHash, ...entities } = anonFile;
-                        savedEntities = entities as Record<string, string[]>;
-                    }
+        try {
+            const anonFile = typeof loadAnonimizedEntities === "function" ? loadAnonimizedEntities(doc) : null;
+            if (anonFile) {
+                const textoSrc = doc["Texto Não Anonimizado"] || doc["Texto"] || "";
+                const sumarioSrc = doc["Sumário Não Anonimizado"] || doc["Sumário"];
+                const textoHash = crypto.createHash("sha256").update(textoSrc).digest("hex");
+                const textoValid = textoHash === anonFile._textoHash;
+                const sumarioValid = !anonFile._sumarioHash ||
+                    (sumarioSrc && crypto.createHash("sha256").update(sumarioSrc).digest("hex") === anonFile._sumarioHash);
+                if (textoValid && sumarioValid) {
+                    const { _textoHash, _sumarioHash, ...entities } = anonFile;
+                    savedEntities = entities as Record<string, string[]>;
                 }
-            } catch (err) {
-                console.warn("Failed to load/validate Anonimizado.json:", err);
             }
+        } catch (err) {
+            console.warn("Failed to load/validate Anonimizado.json:", err);
         }
 
         const sendRes = await fetch(`${anonimizadorUrl}/api/juris/save_document`, {

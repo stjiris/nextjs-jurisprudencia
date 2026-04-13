@@ -31,13 +31,13 @@ export default LoggerApi(async function receberHandler(req: NextApiRequest, res:
             STATE: "preparação",
         };
 
-        if (!current._source["Texto Não Anonimizado"] && originalTexto) {
+        if (originalTexto) {
             update["Texto Não Anonimizado"] = originalTexto;
         }
 
         if (anonimizedSumario) {
             update["Sumário"] = anonimizedSumario;
-            if (!current._source["Sumário Não Anonimizado"] && originalSumario) {
+            if (originalSumario) {
                 update["Sumário Não Anonimizado"] = originalSumario;
             }
         }
