@@ -1,14 +1,14 @@
 import GenericPage from "@/components/main_pages/genericPageStructure";
 import { useFetch } from "@/components/useFetch";
 import { LoggerServerSideProps } from "@/core/logger-api";
-import { withAuthentication } from "@/core/user/authenticate";
+import { withRole } from "@/core/user/authenticate";
 import { ExcelFile, ExcelState, FileState } from "@/types/excel";
 import { exportableKeys } from "@/types/keys";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import React, { useEffect, useRef, useState } from "react";
 
-export const getServerSideProps = withAuthentication<{}>(async ctx => {
+export const getServerSideProps = withRole<{}>('importExport', async ctx => {
     LoggerServerSideProps(ctx);
     return {props: {}}
 })

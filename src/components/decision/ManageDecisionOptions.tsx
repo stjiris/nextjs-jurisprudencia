@@ -116,7 +116,7 @@ export default function ManageDecisionOptions(props: { doc: JurisprudenciaDocume
 
 			{!isImportacao && (
 				<div className="d-flex align-items-baseline">
-					<b style={{ minWidth: LABEL_WIDTH, flexShrink: 0 }}>Gestão:</b>
+					<b style={{ minWidth: LABEL_WIDTH, flexShrink: 0 }}>Visibilidade:</b>
 					<span>
 						{(isPreparacao || isPrivado) && (
 							<Link href="#"

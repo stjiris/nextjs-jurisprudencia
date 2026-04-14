@@ -1,5 +1,5 @@
 import { EXCEL_FILES_PATH, EXCEL_IMP_PATH, startBuilder, startParser } from "@/core/excel";
-import { authenticatedHandler } from "@/core/user/authenticate";
+import { authenticatedHandlerWithRole } from "@/core/user/authenticate";
 import { NextApiRequest, NextApiResponse } from "next";
 import { isMainThread } from "worker_threads";
 import formidable from "formidable";
@@ -23,7 +23,7 @@ export default LoggerApi(async function excelStatusHandler(
     req: NextApiRequest,
     res: NextApiResponse
 ){
-    if( !await authenticatedHandler(req) ) return res.status(401).json(false);
+    if( !await authenticatedHandlerWithRole(req, 'importExport') ) return res.status(403).json(false);
 
     let start = new Date();
 

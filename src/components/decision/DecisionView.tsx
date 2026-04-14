@@ -7,7 +7,7 @@ import Link from "next/link";
 import { CSSProperties, ReactNode, useState } from "react";
 import { BadgeFromState } from "../BadgeFromState";
 
-const MUST_HAVE = ["UUID", "Número de Processo", "Fonte", "ECLI", "URL", "Sumário", "Texto"]
+const MUST_HAVE = ["UUID", "Número de Processo", "Fonte", "ECLI", "URL", "Sumário", "Texto", "STATE"]
 
 export default function DecisionView(props: { doc: JurisprudenciaDocument, id: string, keys: JurisprudenciaKey[] }) {
     let auth = useAuth();

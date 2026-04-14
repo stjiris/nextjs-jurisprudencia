@@ -1,7 +1,7 @@
 import GenericPage from "@/components/main_pages/genericPageStructure";
 import { useKeys } from "@/contexts/keys";
 import { LoggerServerSideProps } from "@/core/logger-api";
-import { withAuthentication } from "@/core/user/authenticate";
+import { withRole } from "@/core/user/authenticate";
 import { JurisprudenciaKey, canBeActive, canHaveSuggestions } from "@/types/keys";
 import dynamic from "next/dynamic";
 import { NextRouter, useRouter } from "next/router";
@@ -9,7 +9,7 @@ import { CSSProperties, useEffect, useState } from "react";
 const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
 import 'react-quill/dist/quill.snow.css';
 
-export const getServerSideProps = withAuthentication<{}>(async ctx => {
+export const getServerSideProps = withRole<{}>('filters', async ctx => {
     LoggerServerSideProps(ctx);
     return {props: {}}
 })

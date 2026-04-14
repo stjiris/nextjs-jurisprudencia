@@ -1,4 +1,5 @@
 import { getElasticSearchClient } from "../elasticsearch";
+import { Role } from "./roles";
 
 import crypto, { timingSafeEqual } from "crypto";
 
@@ -14,15 +15,10 @@ export async function getClient(){
             index: USERS_INDEX,
             mappings: {
                 properties: {
-                    "username": {
-                        type: 'keyword'
-                    },
-                    "salt": {
-                        type: 'binary'
-                    },
-                    "hash": {
-                        type: 'binary'
-                    }
+                    "username": { type: 'keyword' },
+                    "salt":     { type: 'binary' },
+                    "hash":     { type: 'binary' },
+                    "role":     { type: 'keyword' }
                 }
             },
             settings: {
@@ -33,7 +29,7 @@ export async function getClient(){
         }).catch(e => {
             console.log(e)
         });
-        await createUser("admin", process.env.ADMIN_PASSWORD || "admin")
+        await createUser("admin", process.env.ADMIN_PASSWORD || "admin", "admin")
     }
     return client;
 }
@@ -41,7 +37,8 @@ export async function getClient(){
 export type User = {
     username: string,
     salt: string,
-    hash: string
+    hash: string,
+    role: Role
 }
 
 export function hashPassword(salt: string, password: string){
@@ -57,7 +54,7 @@ export async function listUsers(from: number=0){
     return await client.search<User>({index: USERS_INDEX, from: from, track_total_hits: true})
 }
 
-export async function createUser(user: string, password: string){
+export async function createUser(user: string, password: string, role: Role = 'editor'){
     let client = await getClient();
     let r = await client.search<User>({index: USERS_INDEX, query: {term: {username: user}}});
     if( r.hits.hits.length > 0 ){
@@ -70,7 +67,8 @@ export async function createUser(user: string, password: string){
             document: {
                 username: user,
                 salt: salt,
-                hash: hashPassword(salt, password)
+                hash: hashPassword(salt, password),
+                role
             },
             refresh: "wait_for"
         })

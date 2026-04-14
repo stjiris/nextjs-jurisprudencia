@@ -2,6 +2,7 @@ import { GetServerSideProps, GetServerSidePropsContext, NextApiHandler, NextApiR
 import { ParsedUrlQuery } from "querystring";
 import { validateSession } from "./session";
 import { getClient, User, USERS_INDEX, compare, hashPassword, readUser } from "./usercrud";
+import { Feature, Role, roleCanAccess } from "./roles";
 import { IncomingMessage } from "http";
 import { NextApiRequestCookies } from "next/dist/server/api-utils";
 
@@ -52,4 +53,48 @@ export async function authenticatedHandler(req: GetServerSidePropsContext["req"]
     let user = req.cookies["user"];
     let session = req.cookies["session"];
     return !!user && !!session && await validateSession(user, session);
+}
+
+/**
+ * Returns the authenticated user's role, or null if not logged in.
+ * Falls back to 'admin' for users created before roles were introduced.
+ */
+export async function getUserRole(req: GetServerSidePropsContext["req"]): Promise<Role | null> {
+    const username = req.cookies["user"];
+    const session = req.cookies["session"];
+    if (!username || !session || !(await validateSession(username, session))) return null;
+    const user = await readUser(username);
+    return (user?._source?.role as Role | undefined) ?? 'admin';
+}
+
+/**
+ * getServerSideProps wrapper that requires a minimum role for a feature.
+ * Redirects to login if not authenticated, to /admin if authenticated but insufficient role.
+ */
+export function withRole<
+        Props extends { [key: string]: any } = { [key: string]: any },
+        Params extends ParsedUrlQuery = ParsedUrlQuery,
+        Preview extends PreviewData = PreviewData>(
+    feature: Feature,
+    sub: GetServerSideProps<Props, Params, Preview>
+): GetServerSideProps<Props, Params, Preview> {
+    return async (ctx) => {
+        const role = await getUserRole(ctx.req);
+        if (!role) {
+            return { redirect: { permanent: false, destination: `/user/login?redirect=${encodeURIComponent(ctx.resolvedUrl)}` } };
+        }
+        if (!roleCanAccess(role, feature)) {
+            return { redirect: { permanent: false, destination: '/admin' } };
+        }
+        return await sub(ctx);
+    };
+}
+
+/**
+ * API route helper that checks auth + minimum role for a feature.
+ * Returns true if the request is allowed.
+ */
+export async function authenticatedHandlerWithRole(req: GetServerSidePropsContext["req"], feature: Feature): Promise<boolean> {
+    const role = await getUserRole(req);
+    return !!role && roleCanAccess(role, feature);
 }

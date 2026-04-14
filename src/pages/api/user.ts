@@ -14,7 +14,10 @@ export default LoggerApi(async function docApiHandler(
     let user = req.cookies["user"]!;
 
     if (req.method === "GET") {
-        return res.json(await readUser(user).then(r => ({ name: r?._source?.username })))
+        return res.json(await readUser(user).then(r => ({
+            name: r?._source?.username,
+            role: r?._source?.role ?? 'admin'  // backwards compat: users without role are admin
+        })))
     }
 
     return res.status(405).json(null)

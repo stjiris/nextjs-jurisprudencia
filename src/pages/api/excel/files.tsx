@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { ExcelFile, FileState } from "@/types/excel";
-import { authenticatedHandler } from "@/core/user/authenticate";
+import { authenticatedHandlerWithRole } from "@/core/user/authenticate";
 import { EXCEL_AGG_PATH, EXCEL_ALL_PATH, EXCEL_IMP_PATH, EXCEL_RES_PATH } from "@/core/excel";
 import { readdir } from "fs/promises";
 import { basename } from "path";
@@ -10,7 +10,7 @@ export default LoggerApi(async function excelStatusHandler(
     req: NextApiRequest,
     res: NextApiResponse<ExcelFile[]>
 ){
-    return authenticatedHandler(req).then(r => r ? listExcelFiles().then(res.json) : res.status(400).json([]));
+    return authenticatedHandlerWithRole(req, 'importExport').then(r => r ? listExcelFiles().then(res.json) : res.status(403).json([]));
 });
 
 function logErr(e: Error): string[]{

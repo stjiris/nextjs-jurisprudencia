@@ -1,16 +1,24 @@
 import { GetServerSideProps } from "next";
-import { withAuthentication } from "@/core/user/authenticate";
+import { getUserRole, withAuthentication } from "@/core/user/authenticate";
+import { Feature, Role, roleCanAccess } from "@/core/user/roles";
 import Link from "next/link";
 import { ReactNode } from "react";
 import { LoggerServerSideProps } from "@/core/logger-api";
 import GenericPage from "@/components/main_pages/genericPageStructure";
 
-export const getServerSideProps = withAuthentication<{}>(async ctx => {
+interface IndexPageProps {
+    role: Role;
+}
+
+export const getServerSideProps = withAuthentication<IndexPageProps>(async ctx => {
     LoggerServerSideProps(ctx);
-    return {props: {}}
+    const role = await getUserRole(ctx.req) ?? 'editor';
+    return { props: { role } }
 })
 
-export default function IndexPage() {
+export default function IndexPage({ role }: IndexPageProps) {
+    const can = (feature: Feature) => roleCanAccess(role, feature);
+
     return <GenericPage title="Jurisprudência STJ - Administração">
         <div className="row justify-content-sm-center">
             <div className="col-sm-12 col-md-8 col-xl-6">
@@ -22,12 +30,12 @@ export default function IndexPage() {
                         <LinkEntry link="/editar/criar" title="Criar Acórdão">
                             <p>Criar acordão manualmente</p>
                         </LinkEntry>
-                        <LinkEntry link="/admin/excel" title="Importar/Exportar">
+                        {can('importExport') && <LinkEntry link="/admin/excel" title="Importar/Exportar">
                             <p>Importar ou exportar excel para atualização dos dados</p>
-                        </LinkEntry>
-                        <LinkEntry link="/admin/filters" title="Filtros">
+                        </LinkEntry>}
+                        {can('filters') && <LinkEntry link="/admin/filters" title="Filtros">
                             <p>Gerir filtros escondidos ou removidos</p>
-                        </LinkEntry>
+                        </LinkEntry>}
                     </div>
                 </div>
             </div>

@@ -1,6 +1,6 @@
 import { getKey, updateKey } from "@/core/keys";
 import LoggerApi from "@/core/logger-api";
-import { authenticatedHandler } from "@/core/user/authenticate";
+import { authenticatedHandlerWithRole } from "@/core/user/authenticate";
 import { JurisprudenciaKey } from "@/types/keys";
 import { JurisprudenciaDocumentKey } from "@stjiris/jurisprudencia-document";
 
@@ -11,7 +11,7 @@ export default LoggerApi(async function getExcelHandler(
     res: NextApiResponse<JurisprudenciaKey | null>
     ){
     if( req.method !== "PUT" ) return res.status(405).json(null);
-    if( !(await authenticatedHandler(req)) ) return res.status(401).json(null);
+    if( !(await authenticatedHandlerWithRole(req, 'filters')) ) return res.status(403).json(null);
 
     let key = (Array.isArray(req.query.key) ? req.query.key[0] : req.query.key!) as JurisprudenciaDocumentKey;
     let attr = (Array.isArray(req.query.attr) ? req.query.attr[0] : req.query.attr!) as keyof JurisprudenciaKey;
