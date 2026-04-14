@@ -59,6 +59,12 @@ export default LoggerApi(async function docApiHandler(
     if( req.method === "DELETE" ){
         let document = await getDoc(id);
         if( document._source?.STATE === "eliminado" ){
+            try {
+                const { markForReintroduction } = await import("@stjiris/filesystem-lib");
+                markForReintroduction(document._source);
+            } catch (fsErr) {
+                console.error("doc DELETE: markForReintroduction failed:", fsErr);
+            }
             return res.json(await deleteDoc(id))
         }
         else if( document._source ){
