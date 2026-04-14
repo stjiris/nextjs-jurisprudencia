@@ -57,7 +57,7 @@ export const getServerSideProps: GetServerSideProps = LoggerServerSideProps(asyn
     let includes = keys.filter(k => k.documentShow || MUST_HAVE.includes(k.key)).map(k => k.key);
     let excludes = keys.filter(k => !k.documentShow && !MUST_HAVE.includes(k.key)).map(k => k.key);
     if (authed) {
-        includes = [...new Set([...includes, ...NON_ANON_FIELDS])];
+        includes = [...new Set([...includes, ...NON_ANON_FIELDS])] as typeof includes;
         excludes = excludes.filter(k => !NON_ANON_FIELDS.includes(k));
     }
     let r = await search({ bool: { must } }, { pre: [], after: [] }, 0, {}, 100, { _source: { includes, excludes } }, authed);
