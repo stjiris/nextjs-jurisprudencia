@@ -15,7 +15,7 @@ export default LoggerApi(async function adminUsersHandler(
     if (req.method === 'POST') {
         const { username, password, role } = req.body;
         if (!username || !password) return res.status(400).json({ ok: false, message: 'username and password required' });
-        if (!ROLES.includes(role)) return res.status(400).json({ ok: false, message: `role must be one of: ${ROLES.join(', ')}` });
+        if (!role || !(ROLES as readonly string[]).includes(role)) return res.status(400).json({ ok: false, message: `role must be one of: ${ROLES.join(', ')}` });
         const created = await createUser(username, password, role as Role);
         if (!created) return res.status(409).json({ ok: false, message: 'User already exists' });
         return res.json({ ok: true });
