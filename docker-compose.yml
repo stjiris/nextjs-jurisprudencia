@@ -132,6 +132,7 @@ services:
       - POSTFIX_INET_PROTOCOLS=ipv4
       - ENABLE_FAIL2BAN=0
       - SMTP_ONLY=0
+      - ENABLE_SUBMISSION=1
     ports:
       - "143:143"
       - "587:587"
