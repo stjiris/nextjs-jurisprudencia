@@ -245,6 +245,8 @@ export async function pollAndProcessSyncEmails(): Promise<{ processed: number; e
         await imapClient.logout();
     }
 
-    console.log(`[email-sync] Poll complete: ${processed} processed, ${errors} errors`);
+    if (processed > 0 || errors > 0) {
+        console.log(`[email-sync] Poll complete: ${processed} processed, ${errors} errors`);
+    }
     return { processed, errors };
 }

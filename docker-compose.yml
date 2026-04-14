@@ -154,8 +154,8 @@ services:
   email_sync:
     image: alpine/curl
     command: >
-      sh -c "echo '[email-sync] Polling service started' && while true; do
-        curl -sf -X POST 'http://server_externo:3000${NEXT_BASE_PATH}/api/gestao/email-sync' -o /dev/null && echo '[email-sync] Poll OK' || echo '[email-sync] Poll failed';
+      sh -c "while true; do
+        curl -sf -X POST 'http://server_externo:3000${NEXT_BASE_PATH}/api/gestao/email-sync' -o /dev/null;
         sleep 10;
       done"
     restart: unless-stopped
