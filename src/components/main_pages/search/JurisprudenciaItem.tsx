@@ -17,7 +17,7 @@ export default function JurisprudenciaItem({ hit, searchId }: { hit: SearchHandl
     const meioProcessual = hit._source?.["Meio Processual"]?.Show?.join(" / ");
     const relator = showOrOriginal(hit, "Relator Nome Profissional").join(" / ");
     const decisao = showOrOriginal(hit, "Decisão").join(" / ");
-    const descritores = showOrOriginal(hit, "Descritores").join(", ");
+    const descritores = showOrOriginal(hit, "Descritores").join(" / ");
     return <article className="row border-top result">
         <div className="col-12 pt-1">
             <div>

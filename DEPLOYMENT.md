@@ -73,6 +73,16 @@ SYNC_SMTP_TO=sync@mail.juris.internal
 > `SYNC_SMTP_PASS` must match the password used in externo step 3.  
 > `SYNC_SMTP_HOST` is a plain hostname or IP — no `https://`.
 
+Also add the SharePoint credentials to `.env` (needed by clitools to pull documents):
+
+```env
+TENANT_ID=<azure-tenant-id>
+CLIENT_ID=<azure-client-id>
+CLIENT_SECRET=<azure-client-secret>
+SITE_ID=<sharepoint-site-id>
+DRIVES='["Anonimização"]'
+```
+
 **2. Start**
 
 ```bash

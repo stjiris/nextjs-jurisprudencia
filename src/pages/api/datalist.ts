@@ -27,11 +27,11 @@ export default LoggerApi(async function datalistHandler(
     let finalAgg: AggregationsAggregationContainer = {
         terms: {
             field: agg.terms?.field?.replace("keyword", "raw"),
-            size: 20,
+            size: prefix ? 20 : 10,
             order: {
                 _key: "asc"
             },
-            ...(prefix ? { include: `(?i)${prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}.*` } : {})
+            ...(prefix ? { include: `(?i).*${prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}.*` } : {})
         }
     }
     const sfilters = { pre: [], after: [] } as SearchFilters;
