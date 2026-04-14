@@ -13,7 +13,7 @@ export default LoggerApi(async function adminUsersHandler(
     }
 
     if (req.method === 'POST') {
-        const { username, password, role } = JSON.parse(req.body);
+        const { username, password, role } = req.body;
         if (!username || !password) return res.status(400).json({ ok: false, message: 'username and password required' });
         if (!ROLES.includes(role)) return res.status(400).json({ ok: false, message: `role must be one of: ${ROLES.join(', ')}` });
         const created = await createUser(username, password, role as Role);
@@ -22,7 +22,7 @@ export default LoggerApi(async function adminUsersHandler(
     }
 
     if (req.method === 'DELETE') {
-        const { username } = JSON.parse(req.body);
+        const { username } = req.body;
         if (!username) return res.status(400).json({ ok: false, message: 'username required' });
         if (username === 'admin') return res.status(400).json({ ok: false, message: 'Cannot delete admin' });
         await deleteUser(username);

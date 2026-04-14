@@ -28,6 +28,7 @@ export default function UsersPage({ users: initialUsers }: UsersPageProps) {
         setError('');
         const res = await fetch('/api/admin/users', {
             method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password, role })
         });
         const data = await res.json();
@@ -40,6 +41,7 @@ export default function UsersPage({ users: initialUsers }: UsersPageProps) {
         if (!confirm(`Apagar utilizador "${u}"?`)) return;
         const res = await fetch('/api/admin/users', {
             method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username: u })
         });
         const data = await res.json();
