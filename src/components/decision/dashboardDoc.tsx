@@ -10,10 +10,7 @@ import { useFetch } from "../useFetch";
 import { createFilter } from "react-select";
 
 export const ReactQuill = dynamic(
-    async () => {
-        await import('react-quill/dist/quill.snow.css');
-        return import('react-quill').then(mod => mod.default);
-    },
+    () => import('react-quill').then(mod => mod.default),
     { ssr: false }
 );
 
