@@ -143,8 +143,7 @@ services:
       - NET_ADMIN
     restart: unless-stopped
     profiles:
-      - interno
-      - dev
+      - externo
     networks:
       - juris-network
 
