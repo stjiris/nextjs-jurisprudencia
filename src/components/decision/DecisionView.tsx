@@ -9,7 +9,7 @@ import { BadgeFromState } from "../BadgeFromState";
 
 const MUST_HAVE = ["UUID", "Número de Processo", "Fonte", "ECLI", "URL", "Sumário", "Texto", "STATE"]
 
-export default function DecisionView(props: { doc: JurisprudenciaDocument, id: string, keys: JurisprudenciaKey[] }) {
+export default function DecisionView(props: { doc: JurisprudenciaDocument, id: string, keys: JurisprudenciaKey[], isExterno?: boolean }) {
     let auth = useAuth();
     let proc = props.doc["Número de Processo"]!;
     let uuid = props.doc["UUID"]!;

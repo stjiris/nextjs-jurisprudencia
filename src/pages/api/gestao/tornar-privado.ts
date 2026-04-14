@@ -37,18 +37,17 @@ export default LoggerApi(async function tornarPrivadoHandler(
             return res.status(409).json({ ok: false, message: `Cannot tornar-privado a document in state '${state}'` });
         }
 
-        await updateDoc(id, { STATE: "privado" });
-
-        // Propagate to external deployment if this is the internal deployment
+        // On interno, send sync email first — if it fails, abort the state change
         if (process.env.SYNC_ROLE === "interno" && uuid) {
             try {
                 await sendSyncEmail("tornar-privado", uuid);
             } catch (emailErr) {
-                // Log but don't fail the request — local state change succeeded
                 console.error("[gestao/tornar-privado] Failed to send sync email:", emailErr);
-                return res.status(200).json({ ok: true, message: "Estado atualizado, mas falhou a propagação por email" });
+                return res.status(500).json({ ok: false, message: "Falhou a propagação por email. Estado não foi alterado." });
             }
         }
+
+        await updateDoc(id, { STATE: "privado" });
 
         return res.status(200).json({ ok: true });
     } catch (err) {

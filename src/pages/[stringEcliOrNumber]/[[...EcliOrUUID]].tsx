@@ -65,13 +65,14 @@ export const getServerSideProps: GetServerSideProps = LoggerServerSideProps(asyn
         ctx.res.statusCode = 404;
         return { props: {} }
     }
+    const isExterno = process.env.SYNC_ROLE === "externo";
     if (r.hits.hits.length == 1) {
-        return { props: { doc: r.hits.hits[0]._source, keys, id: r.hits.hits[0]._id } }
+        return { props: { doc: r.hits.hits[0]._source, keys, id: r.hits.hits[0]._id, isExterno } }
     }
-    return { props: { doc: r.hits.hits.map(o => o._source), ids: r.hits.hits.map(o => o._id), keys } }
+    return { props: { doc: r.hits.hits.map(o => o._source), ids: r.hits.hits.map(o => o._id), keys, isExterno } }
 })
 
-export default function MaybeDocumentPage(props: { doc?: JurisprudenciaDocument | JurisprudenciaDocument[], keys: JurisprudenciaKey[], id?: string, ids?: string[] }) {
+export default function MaybeDocumentPage(props: { doc?: JurisprudenciaDocument | JurisprudenciaDocument[], keys: JurisprudenciaKey[], id?: string, ids?: string[], isExterno?: boolean }) {
     let Comp;
     if (!props.doc) {
         Comp = <NoDocumentPage />
@@ -80,7 +81,7 @@ export default function MaybeDocumentPage(props: { doc?: JurisprudenciaDocument 
         Comp = <MultipleDocumentPage docs={props.doc} ids={props.ids!} />
     }
     else {
-        Comp = <DocumentPage doc={props.doc} id={props.id!} keys={props.keys} />
+        Comp = <DocumentPage doc={props.doc} id={props.id!} keys={props.keys} isExterno={props.isExterno} />
     }
 
 
@@ -120,7 +121,7 @@ function MultipleDocumentPage(props: { docs: JurisprudenciaDocument[], ids: stri
     </>
 }
 
-function DocumentPage(props: { doc: JurisprudenciaDocument, id: string, keys: JurisprudenciaKey[] }) {
+function DocumentPage(props: { doc: JurisprudenciaDocument, id: string, keys: JurisprudenciaKey[], isExterno?: boolean }) {
     let proc = props.doc["Número de Processo"]!;
 
     return <>

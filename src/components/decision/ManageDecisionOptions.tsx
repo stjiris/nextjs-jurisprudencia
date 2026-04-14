@@ -6,13 +6,14 @@ import { BadgeFromState } from "../BadgeFromState";
 
 
 
-export default function ManageDecisionOptions(props: { doc: JurisprudenciaDocument, id: string, keys: JurisprudenciaKey[] }) {
+export default function ManageDecisionOptions(props: { doc: JurisprudenciaDocument, id: string, keys: JurisprudenciaKey[], isExterno?: boolean }) {
 	const { post: postAnonimizar, loading: loadingAnon } = useFetchPost<{ id: string; doc: JurisprudenciaDocument; jurisUrl?: string }, { ok: boolean; message: string, token?: string }>('/api/anonimizar/enviar');
 	const { post: postPublicar, loading: loadingPublicar } = useFetchPost<{ id: string }, { ok: boolean; message?: string }>('/api/gestao/publicar');
 	const { post: postTornarPrivado, loading: loadingPrivado } = useFetchPost<{ id: string }, { ok: boolean; message?: string }>('/api/gestao/tornar-privado');
 	const { post: postRestaurar, loading: loadingRestaurar } = useFetchPost<{ id: string }, { ok: boolean; message?: string }>('/api/gestao/restaurar');
 
 	const anonimizadorUrl = process.env.NEXT_PUBLIC_ANONIMIZADOR_URL;
+	const isExterno = props.isExterno ?? false;
 	const state = props.doc.STATE;
 	const isImportacao = state === "importação";
 	const isEliminado = state === "eliminado";
@@ -104,33 +105,35 @@ export default function ManageDecisionOptions(props: { doc: JurisprudenciaDocume
 				<span><BadgeFromState state={state ?? undefined} /></span>
 			</div>
 
-			<div className="d-flex align-items-baseline">
-				<b style={{ minWidth: LABEL_WIDTH, flexShrink: 0 }}>Anonimização:</b>
-				<span>
-					<Link href={`/editar/${encodeURIComponent(props.id)}`}>
-						<i className="bi bi-pencil-square me-1"></i>
-						Abrir editor
-					</Link>
+			{!isExterno && (
+				<div className="d-flex align-items-baseline">
+					<b style={{ minWidth: LABEL_WIDTH, flexShrink: 0 }}>Anonimização:</b>
+					<span>
+						<Link href={`/editar/${encodeURIComponent(props.id)}`}>
+							<i className="bi bi-pencil-square me-1"></i>
+							Abrir editor
+						</Link>
 
-					{anonimizadorUrl && (
-						<>
-							{" || "}
-							<Link href="#"
-								className={loadingAnon ? "text-muted" : ""}
-								title="Anonimizar"
-								onClick={(e) => {
-									e.preventDefault();
-									if (!loadingAnon) handleAnonimizar();
-								}}>
-								<i className="bi bi-shield-lock me-1"></i>
-								{loadingAnon ? "Enviando…" : "Anonimizar"}
-							</Link>
-						</>
-					)}
-				</span>
-			</div>
+						{anonimizadorUrl && (
+							<>
+								{" || "}
+								<Link href="#"
+									className={loadingAnon ? "text-muted" : ""}
+									title="Anonimizar"
+									onClick={(e) => {
+										e.preventDefault();
+										if (!loadingAnon) handleAnonimizar();
+									}}>
+									<i className="bi bi-shield-lock me-1"></i>
+									{loadingAnon ? "Enviando…" : "Anonimizar"}
+								</Link>
+							</>
+						)}
+					</span>
+				</div>
+			)}
 
-			{!isImportacao && (
+			{!isExterno && !isImportacao && (
 				<div className="d-flex align-items-baseline">
 					<b style={{ minWidth: LABEL_WIDTH, flexShrink: 0 }}>Visibilidade:</b>
 					<span>
