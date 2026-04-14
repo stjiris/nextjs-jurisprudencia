@@ -23,13 +23,15 @@ export default LoggerApi(async function datalistHandler(
     if (!agg) {
         return res.status(404).json([]);;
     }
+    const prefix = Array.isArray(req.query.prefix) ? req.query.prefix[0] : req.query.prefix;
     let finalAgg: AggregationsAggregationContainer = {
         terms: {
             field: agg.terms?.field?.replace("keyword", "raw"),
-            size: agg.terms?.size,
+            size: 20,
             order: {
                 _key: "asc"
-            }
+            },
+            ...(prefix ? { include: `(?i)${prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}.*` } : {})
         }
     }
     const sfilters = { pre: [], after: [] } as SearchFilters;

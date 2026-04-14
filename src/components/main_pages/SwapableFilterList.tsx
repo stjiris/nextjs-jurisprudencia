@@ -1,4 +1,4 @@
-import { Dispatch, DragEventHandler, SetStateAction, useEffect, useMemo, useState } from "react";
+import { Dispatch, DragEventHandler, SetStateAction, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ReadonlyURLSearchParams, useSearchParams } from "next/navigation";
 import { JurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
@@ -159,18 +159,29 @@ function FilterList({filtersUsed, accessKey, dontSuggest, showKey}: {filtersUsed
     const searchParams = useSearchParams();
     const router = useRouter()
     const [datalist, setDatalist] = useState<DatalistObj[]>([]);
+    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const handleInput = (e: React.FormEvent<HTMLInputElement>) => {
+        if (dontSuggest) return;
+        const value = e.currentTarget.value;
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        if (!value) { setDatalist([]); return; }
+        debounceRef.current = setTimeout(() => {
+            loadDatalist(router, accessKey, searchParams, value, setDatalist);
+        }, 200);
+    };
 
     return <div className="d-flex flex-column my-1 border pb-1 flex-grow-1">
         <datalist id={datalistId}>
             {datalist.map(({key, count}, i) => <option key={i} value={`"${key}"`} label={count ? `Quantidade: ${count}` : ""}/>)}
         </datalist>
-        <input type="text" className="form-control form-control-sm border-0 border-bottom rounded-0" name={accessKey} autoComplete="off" list={datalistId} placeholder={showKey || accessKey} onFocus={() => !dontSuggest && datalist.length == 0 ? loadDatalist(router, accessKey, searchParams, setDatalist) : null}/>
+        <input type="text" className="form-control form-control-sm border-0 border-bottom rounded-0" name={accessKey} autoComplete="off" list={datalistId} placeholder={showKey || accessKey} onInput={handleInput}/>
         <UsedFilters filtersUsed={filtersUsed} accessKey={accessKey}/>
     </div>
 }
 
-async function loadDatalist(router: NextRouter, accessKey: string, searchParams: ReadonlyURLSearchParams, setDatalist: Dispatch<SetStateAction<DatalistObj[]>>){
-    return fetch(`${router.basePath}/api/datalist?agg=${encodeURIComponent(accessKey)}&${searchParams.toString()}`)
+async function loadDatalist(router: NextRouter, accessKey: string, searchParams: ReadonlyURLSearchParams, prefix: string, setDatalist: Dispatch<SetStateAction<DatalistObj[]>>){
+    return fetch(`${router.basePath}/api/datalist?agg=${encodeURIComponent(accessKey)}&prefix=${encodeURIComponent(prefix)}&${searchParams.toString()}`)
         .then( r => r.json() )
         .catch( e => {
             console.log(e)
