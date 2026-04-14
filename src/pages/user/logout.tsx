@@ -6,8 +6,7 @@ import { GetServerSideProps } from "next";
 import Link from "next/link";
 
 
-export const getServerSideProps : GetServerSideProps<{}> = async (ctx) => {
-    LoggerServerSideProps(ctx);
+export const getServerSideProps : GetServerSideProps<{}> = LoggerServerSideProps(async (ctx) => {
     let user = ctx.req.cookies["user"]
     let session = ctx.req.cookies["session"]
 
@@ -16,7 +15,7 @@ export const getServerSideProps : GetServerSideProps<{}> = async (ctx) => {
     }
     ctx.res.setHeader("Set-cookie", [`user=; HttpOnly; Secure; Path=/; Expires=Thu, Jan 01 1970 00:00:00 UTC`,`session=; HttpOnly; Secure; Path=/; Expires=Thu, Jan 01 1970 00:00:00 UTC`])
     return {redirect: {destination: "/", permanent: false}}
-}
+})
 
 
 export default function Login(props: {}){

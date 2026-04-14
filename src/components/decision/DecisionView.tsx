@@ -83,12 +83,12 @@ export default function DecisionView(props: { doc: JurisprudenciaDocument, id: s
                             </div>
                         </div>}
                         {sumario && <>
-                            <h6 className="border-top border-2"><b>{sumarioIsOriginal && props.doc["Sumário Não Anonimizado"] ? (keyName["Sumário Não Anonimizado"] || "Sumário Não Anonimizado") : (keyName["Sumário"] || "Sumário")}</b></h6>
+                            <h6 className="border-top border-2"><b>{keyName["Sumário"] || "Sumário"}</b></h6>
                             <div className="p-2" dangerouslySetInnerHTML={{ __html: sumario }}></div>
                         </>}
 
                         {texto && <>
-                            <h6 className="border-top border-2"><b>{textoIsOriginal && props.doc["Texto Não Anonimizado"] ? (keyName["Texto Não Anonimizado"] || "Texto Integral Não Anonimizado") : (keyName["Texto"] || "Texto Integral")}</b></h6>
+                            <h6 className="border-top border-2"><b>{keyName["Texto"] || "Texto Integral"}</b></h6>
                             <div className="p-2" dangerouslySetInnerHTML={{ __html: texto }}></div>
                         </>}
                     </div>

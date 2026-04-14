@@ -9,10 +9,9 @@ import { CSSProperties, useEffect, useState } from "react";
 const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
 import 'react-quill/dist/quill.snow.css';
 
-export const getServerSideProps = withRole<{}>('filters', async ctx => {
-    LoggerServerSideProps(ctx);
+export const getServerSideProps = LoggerServerSideProps(withRole<{}>('filters', async ctx => {
     return {props: {}}
-})
+}))
 
 export default function ExcelPage() {
     let [bell, setBell] = useState(0);

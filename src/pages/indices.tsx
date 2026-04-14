@@ -20,23 +20,22 @@ interface IndicesPageProps extends FormProps {
     limits: number
 }
 
-export const getServerSideProps = withForm<IndicesPageProps>(async (ctx, formProps) => {
-    LoggerServerSideProps(ctx);
+export const getServerSideProps = LoggerServerSideProps(withForm<IndicesPageProps>(async (ctx, formProps) => {
     const limits = Array.isArray(ctx.query.LIMIT_ROWS) ? parseInt(ctx.query.LIMIT_ROWS[0]) : parseInt(ctx.query.LIMIT_ROWS || "5000") || 5000;
     const term = Array.isArray(ctx.query.term) ? ctx.query.term[0] : ctx.query.term  || "Área";
     let group = "Secção";
     if( "group" in ctx.query ){
         group = Array.isArray(ctx.query.group) ? ctx.query.group[0] : ctx.query.group!;
     }
-    
+
     return {
         ...formProps,
         term,
         group,
         limits
     }
-    
-});
+
+}));
 
 export default function Indices(props: IndicesPageProps){
     return <GenericPageWithForm escapeChildren={<HistogramModal />} {...props} title="Jurisprudência STJ - Índices">

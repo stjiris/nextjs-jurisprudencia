@@ -8,10 +8,9 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import React, { useEffect, useRef, useState } from "react";
 
-export const getServerSideProps = withRole<{}>('importExport', async ctx => {
-    LoggerServerSideProps(ctx);
+export const getServerSideProps = LoggerServerSideProps(withRole<{}>('importExport', async ctx => {
     return {props: {}}
-})
+}))
 
 const intl = new Intl.DateTimeFormat("pt-PT", {dateStyle: "short", timeStyle: "long"})
 

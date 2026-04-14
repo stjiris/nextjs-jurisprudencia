@@ -9,13 +9,11 @@ interface UserIndexProps {
     user: SearchHit<User>;
 }
 
-export const getServerSideProps = withAuthentication<UserIndexProps>(async (ctx) => {
-    LoggerServerSideProps(ctx);
+export const getServerSideProps = LoggerServerSideProps(withAuthentication<UserIndexProps>(async (ctx) => {
     let user = ctx.req.cookies["user"]!;
-    
-    
+
     return {props: {user: (await readUser(user))!} }
-})
+}))
 
 export default function UserIndex({user}: UserIndexProps){
     return <GenericPage title="Jurisprudência STJ - Utilizador">

@@ -10,11 +10,10 @@ interface IndexPageProps {
     role: Role;
 }
 
-export const getServerSideProps = withAuthentication<IndexPageProps>(async ctx => {
-    LoggerServerSideProps(ctx);
+export const getServerSideProps = LoggerServerSideProps(withAuthentication<IndexPageProps>(async ctx => {
     const role = await getUserRole(ctx.req) ?? 'editor';
     return { props: { role } }
-})
+}))
 
 export default function IndexPage({ role }: IndexPageProps) {
     const can = (feature: Feature) => roleCanAccess(role, feature);

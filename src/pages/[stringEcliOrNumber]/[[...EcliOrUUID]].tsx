@@ -13,8 +13,7 @@ import DecisionView from "@/components/decision/DecisionView";
 
 const MUST_HAVE = ["UUID", "Número de Processo", "Fonte", "ECLI", "URL", "Sumário", "Texto", "Área", "Data"]
 
-export const getServerSideProps: GetServerSideProps = async (ctx) => {
-    LoggerServerSideProps(ctx);
+export const getServerSideProps: GetServerSideProps = LoggerServerSideProps(async (ctx) => {
     let { stringEcliOrNumber, EcliOrUUID, search: searchId } = ctx.query;
     if (!stringEcliOrNumber) {
         return {
@@ -70,7 +69,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
         return { props: { doc: r.hits.hits[0]._source, keys, id: r.hits.hits[0]._id } }
     }
     return { props: { doc: r.hits.hits.map(o => o._source), ids: r.hits.hits.map(o => o._id), keys } }
-}
+})
 
 export default function MaybeDocumentPage(props: { doc?: JurisprudenciaDocument | JurisprudenciaDocument[], keys: JurisprudenciaKey[], id?: string, ids?: string[] }) {
     let Comp;

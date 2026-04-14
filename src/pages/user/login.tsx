@@ -8,8 +8,7 @@ interface LoginProps {
     response?: AuthenticateResponse
 }
 
-export const getServerSideProps : GetServerSideProps<LoginProps> = async (ctx) => {
-    LoggerServerSideProps(ctx);
+export const getServerSideProps : GetServerSideProps<LoginProps> = LoggerServerSideProps(async (ctx) => {
     let redirect = Array.isArray(ctx.query.redirect) ? ctx.query.redirect[0] : ctx.query.redirect || `/admin`
     if( ctx.req.method === "POST" ){
         let requestPostDataParams = await new Promise<URLSearchParams>((resolve) => {
@@ -40,7 +39,7 @@ export const getServerSideProps : GetServerSideProps<LoginProps> = async (ctx) =
     }
 
     return {props: {}}
-}
+})
 
 
 export default function Login(props: LoginProps){

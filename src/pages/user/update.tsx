@@ -7,8 +7,7 @@ import { SearchHit } from "@elastic/elasticsearch/lib/api/types";
 import Link from "next/link";
 
 
-export const getServerSideProps = withAuthentication<UpdateProps>(async (ctx) => {
-    LoggerServerSideProps(ctx);
+export const getServerSideProps = LoggerServerSideProps(withAuthentication<UpdateProps>(async (ctx) => {
     if( ctx.req.method === "POST" ){
         let requestPostDataParams = await new Promise<URLSearchParams>((resolve) => {
             let _data = ""
@@ -28,7 +27,7 @@ export const getServerSideProps = withAuthentication<UpdateProps>(async (ctx) =>
         return {props: {success: success, user: (await readUser(ctx.req.cookies["user"]!))!}}
     }
     return {props: {user: (await readUser(ctx.req.cookies["user"]!))!}}
-})
+}))
 
 type UpdateProps = {
     success?: boolean

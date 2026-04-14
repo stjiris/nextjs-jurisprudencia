@@ -10,11 +10,10 @@ interface UsersPageProps {
     users: (User & { id: string })[]
 }
 
-export const getServerSideProps: GetServerSideProps<UsersPageProps> = withRole('manageUsers', async (ctx) => {
-    LoggerServerSideProps(ctx);
+export const getServerSideProps: GetServerSideProps<UsersPageProps> = LoggerServerSideProps(withRole('manageUsers', async (ctx) => {
     let r = await listUsers();
     return { props: { users: r.hits.hits.map(({ _id, _source: u }) => ({ id: _id || "", username: u?.username || "", salt: u?.salt || "", hash: u?.hash || "", role: u?.role ?? 'admin' })) } }
-})
+}))
 
 export default function UsersPage({ users: initialUsers }: UsersPageProps) {
     const [users, setUsers] = useState(initialUsers);

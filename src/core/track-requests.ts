@@ -71,14 +71,14 @@ export async function trackApiRequest(req: NextApiRequest, res: NextApiResponse,
     })
 }
 
-export async function trackSspRequest(req: IncomingMessage, res: ServerResponse<IncomingMessage>, start: Date, end: Date){
+export async function trackSspRequest(req: IncomingMessage, status: number, start: Date, end: Date){
     let client = await getClient();
     return await client.index({
         index: REQUEST_INDEX,
         body: {
             method: req.method,
             url: req.url,
-            status: res.statusCode,
+            status,
             start: start.toISOString(),
             end: end.toISOString(),
             duration: (+end) - (+start),

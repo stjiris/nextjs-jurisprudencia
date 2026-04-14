@@ -13,10 +13,9 @@ import { LoggerServerSideProps } from "@/core/logger-api";
 import { DateInput, ExactInput, ShowCode, TextInput, TextPairInput, TokenSelection, UpdateContext, UpdateObject, ExactInputWithSuggestions, ExactInputRestricted } from "@/components/decision/dashboardDoc";
 import GenericPage from "@/components/main_pages/genericPageStructure";
 
-export const getServerSideProps = withAuthentication<{}>(async ctx => {
-    LoggerServerSideProps(ctx);
+export const getServerSideProps = LoggerServerSideProps(withAuthentication<{}>(async ctx => {
     return { props: {} }
-})
+}))
 
 interface UpdateProps {
     id: string

@@ -17,8 +17,7 @@ interface PesquisaProps extends FormProps{
     pages: number
 }
 
-export const getServerSideProps = withForm<PesquisaProps>(async (ctx, formProps) => {
-    LoggerServerSideProps(ctx);
+export const getServerSideProps = LoggerServerSideProps(withForm<PesquisaProps>(async (ctx, formProps) => {
     let searchId = await saveSearch(ctx.resolvedUrl)
     let searchedArray = await getSearchedArray(Array.isArray(ctx.query.q) ? ctx.query.q.join(" ") : ctx.query.q || "")
     let rpp = parseInt(ctx.query.rpp as string || "10")
@@ -30,7 +29,7 @@ export const getServerSideProps = withForm<PesquisaProps>(async (ctx, formProps)
         pages,
         searchId
     }
-})
+}))
 
 export default function Pesquisa(props: PesquisaProps){
     const searchParams = useSearchParams();
