@@ -133,6 +133,7 @@ services:
       - ENABLE_FAIL2BAN=0
       - SMTP_ONLY=0
       - ENABLE_SUBMISSION=1
+      - POSTFIX_MYDESTINATION=localhost
     ports:
       - "143:143"
       - "587:587"
