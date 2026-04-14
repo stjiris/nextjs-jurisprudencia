@@ -134,6 +134,7 @@ services:
       - SMTP_ONLY=0
     ports:
       - "143:143"
+      - "587:587"
     volumes:
       - mailserver_data:/var/mail
       - mailserver_state:/var/mail-state
@@ -143,6 +144,7 @@ services:
     restart: unless-stopped
     profiles:
       - interno
+      - dev
     networks:
       - juris-network
 
