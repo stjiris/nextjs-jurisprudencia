@@ -126,7 +126,7 @@ services:
       - juris-network
   mailserver:
     image: ghcr.io/docker-mailserver/docker-mailserver:latest
-    hostname: mail.juris.internal
+    hostname: mailserver.juris.internal
     environment:
       - SSL_TYPE=
       - POSTFIX_INET_PROTOCOLS=ipv4
