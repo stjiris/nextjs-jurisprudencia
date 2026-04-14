@@ -101,7 +101,7 @@ export default function ManageDecisionOptions(props: { doc: JurisprudenciaDocume
 		<>
 			<div className="d-flex align-items-baseline">
 				<b style={{ minWidth: LABEL_WIDTH, flexShrink: 0 }}>Estado:</b>
-				<span><BadgeFromState state={state} /></span>
+				<span><BadgeFromState state={state ?? undefined} /></span>
 			</div>
 
 			<div className="d-flex align-items-baseline">
