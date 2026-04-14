@@ -171,7 +171,7 @@ export async function pollAndProcessSyncEmails(): Promise<{ processed: number; e
             const messages: { uid: number; envelope: any; source: Buffer }[] = [];
 
             for await (const msg of imapClient.fetch({ seen: false }, { envelope: true, source: true, uid: true })) {
-                messages.push({ uid: msg.uid, envelope: msg.envelope, source: msg.source });
+                if (msg.source) messages.push({ uid: msg.uid, envelope: msg.envelope, source: msg.source });
             }
 
             for (const msg of messages) {
