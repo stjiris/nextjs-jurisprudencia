@@ -10,10 +10,12 @@ export default function ManageDecisionOptions(props: { doc: JurisprudenciaDocume
 	const { post: postAnonimizar, loading: loadingAnon } = useFetchPost<{ id: string; doc: JurisprudenciaDocument; jurisUrl?: string }, { ok: boolean; message: string, token?: string }>('/api/anonimizar/enviar');
 	const { post: postPublicar, loading: loadingPublicar } = useFetchPost<{ id: string }, { ok: boolean; message?: string }>('/api/gestao/publicar');
 	const { post: postTornarPrivado, loading: loadingPrivado } = useFetchPost<{ id: string }, { ok: boolean; message?: string }>('/api/gestao/tornar-privado');
+	const { post: postRestaurar, loading: loadingRestaurar } = useFetchPost<{ id: string }, { ok: boolean; message?: string }>('/api/gestao/restaurar');
 
 	const anonimizadorUrl = process.env.NEXT_PUBLIC_ANONIMIZADOR_URL;
 	const state = props.doc.STATE;
 	const isImportacao = state === "importação";
+	const isEliminado = state === "eliminado";
 	const isPreparacao = state === "preparação";
 	const isPrivado = state === "privado";
 	const isPublico = state === "público";
@@ -79,6 +81,20 @@ export default function ManageDecisionOptions(props: { doc: JurisprudenciaDocume
 		}
 	}
 
+	async function handleRestaurar() {
+		try {
+			const result = await postRestaurar({ id: props.id });
+			if (!result.ok) {
+				alert("Falha ao restaurar: " + (result.message || "erro desconhecido"));
+				return;
+			}
+			window.location.reload();
+		} catch (err: any) {
+			console.error("Restaurar error:", err);
+			alert("Falha ao restaurar: " + (err?.message || "erro desconhecido"));
+		}
+	}
+
 	const LABEL_WIDTH = 175;
 
 	return (
@@ -118,6 +134,18 @@ export default function ManageDecisionOptions(props: { doc: JurisprudenciaDocume
 				<div className="d-flex align-items-baseline">
 					<b style={{ minWidth: LABEL_WIDTH, flexShrink: 0 }}>Visibilidade:</b>
 					<span>
+						{isEliminado && (
+							<Link href="#"
+								className={loadingRestaurar ? "text-muted" : ""}
+								title="Restaurar documento para preparação"
+								onClick={(e) => {
+									e.preventDefault();
+									if (!loadingRestaurar) handleRestaurar();
+								}}>
+								<i className="bi bi-arrow-counterclockwise me-1"></i>
+								{loadingRestaurar ? "A restaurar…" : "Restaurar"}
+							</Link>
+						)}
 						{(isPreparacao || isPrivado) && (
 							<Link href="#"
 								className={loadingGestao ? "text-muted" : ""}
