@@ -23,7 +23,7 @@ USER clitools
 WORKDIR /home/clitools
 
 # util to convert between versions (used by jurisprudencia-privada-etl)
-RUN git clone -b 12to13 https://github.com/stjiris/version-converter && cd version-converter && npm install && npm run build
+RUN git clone https://github.com/stjiris/version-converter && cd version-converter && npm install && npm run build
 
 # sharepoint ETL — built once at image build time, executed by cron
 RUN git clone https://github.com/stjiris/jurisprudencia-privada-etl && cd jurisprudencia-privada-etl && npm install && npm run build
