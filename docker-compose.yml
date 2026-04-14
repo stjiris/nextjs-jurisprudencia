@@ -6,6 +6,7 @@ volumes:
   mailserver_data: {}
   mailserver_state: {}
   mailserver_config: {}
+  etl_results: {}
 networks:
   juris-network:
     name: juris-network
@@ -78,7 +79,7 @@ services:
     volumes:
       - excel_data:/usr/src/app/files:rw
       - rss_data:/rss
-      - ../jurisprudencia-privada-etl/results:/filesystem-results:ro
+      - etl_results:/filesystem-results:ro
     depends_on:
       elasticsearch:
         condition: service_healthy
@@ -176,10 +177,6 @@ services:
       RSS_LINK: ${RSS_LINK:-http://localhost:3000/jurisprudencia}
       RSS_MAX_FEED_SIZE: 200
     volumes:
-      - ../jurisprudencia-privada-etl:/home/clitools/jurisprudencia-privada-etl:rw
-      - ../jurisprudencia-etl:/home/clitools/jurisprudencia-etl:rw
-      - ../version-converter:/home/clitools/version-converter:rw
-      - ../backup-jurisprudencia:/home/clitools/backup-jurisprudencia:rw
       - rss_data:/rss
     profiles:
       - externo
@@ -197,6 +194,7 @@ services:
       RSS_LINK: ${RSS_LINK:-http://localhost:3000/jurisprudencia}
       RSS_MAX_FEED_SIZE: 200
     volumes:
+      - etl_results:/home/clitools/jurisprudencia-privada-etl/results
       - rss_data:/rss
     profiles:
       - interno
