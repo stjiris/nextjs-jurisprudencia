@@ -4,6 +4,7 @@ import { withRole } from "@/core/user/authenticate";
 import { ROLES, Role } from "@/core/user/roles";
 import { listUsers, User } from "@/core/user/usercrud";
 import { GetServerSideProps } from "next";
+import { useRouter } from "next/router";
 import { useState } from "react";
 
 interface UsersPageProps {
@@ -16,6 +17,7 @@ export const getServerSideProps: GetServerSideProps<UsersPageProps> = LoggerServ
 }))
 
 export default function UsersPage({ users: initialUsers }: UsersPageProps) {
+    const router = useRouter();
     const [users, setUsers] = useState(initialUsers);
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
@@ -25,27 +27,35 @@ export default function UsersPage({ users: initialUsers }: UsersPageProps) {
     async function handleCreate(e: React.FormEvent) {
         e.preventDefault();
         setError('');
-        const res = await fetch('/api/admin/users', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password, role })
-        });
-        const data = await res.json();
-        if (!data.ok) { setError(data.message); return; }
-        setUsers(u => [...u, { id: '', username, salt: '', hash: '', role }]);
-        setUsername(''); setPassword('');
+        try {
+            const res = await fetch(`${router.basePath}/api/admin/users`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password, role })
+            });
+            const data = await res.json();
+            if (!data.ok) { setError(data.message); return; }
+            setUsers(u => [...u, { id: '', username, salt: '', hash: '', role }]);
+            setUsername(''); setPassword('');
+        } catch (err: any) {
+            setError(err?.message || 'Erro desconhecido');
+        }
     }
 
     async function handleDelete(u: string) {
         if (!confirm(`Apagar utilizador "${u}"?`)) return;
-        const res = await fetch('/api/admin/users', {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: u })
-        });
-        const data = await res.json();
-        if (!data.ok) { alert(data.message); return; }
-        setUsers(us => us.filter(x => x.username !== u));
+        try {
+            const res = await fetch(`${router.basePath}/api/admin/users`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: u })
+            });
+            const data = await res.json();
+            if (!data.ok) { alert(data.message); return; }
+            setUsers(us => us.filter(x => x.username !== u));
+        } catch (err: any) {
+            alert(err?.message || 'Erro desconhecido');
+        }
     }
 
     return <GenericPage title="Jurisprudência STJ - Utilizadores">
