@@ -36,6 +36,9 @@ export default function IndexPage({ role }: IndexPageProps) {
                         {can('filters') && <LinkEntry link="/admin/filters" title="Filtros">
                             <p>Gerir filtros escondidos ou removidos</p>
                         </LinkEntry>}
+                        {can('manageUsers') && <LinkEntry link="/admin/users" title="Utilizadores">
+                            <p>Criar e gerir utilizadores</p>
+                        </LinkEntry>}
                     </div>
                 </div>
             </div>
