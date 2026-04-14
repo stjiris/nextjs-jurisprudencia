@@ -1,6 +1,6 @@
 FROM node:20.10-bookworm-slim
 
-RUN apt update && apt install vim cron git curl -y
+RUN apt update && apt install vim cron git -y
 
 RUN useradd -m clitools
 
@@ -22,9 +22,6 @@ RUN git clone https://github.com/stjiris/jurisprudencia-rss.git && cd jurisprude
 # At minute 45 past every 3rd hour from 9 through 18 on every day-of-week from Monday through Friday.
 RUN (crontab -l; echo "45 9-18/3 * * 1-5 cd /home/clitools/jurisprudencia-rss && /usr/local/bin/node dist >> ../jurisprudencia-rss.stdout.log 2>> ../jurisprudencia-rss.stderr.log") | crontab -
 
-# email sync - poll every minute
-RUN printf '%s\n' '#!/bin/sh' '. /etc/environment' 'curl -sf -X POST "http://server_externo:3000${NEXT_BASE_PATH}/api/gestao/email-sync" -o /dev/null' > /home/clitools/email-sync.sh && chmod +x /home/clitools/email-sync.sh
-RUN (crontab -l; echo "* * * * * /home/clitools/email-sync.sh >> /home/clitools/email-sync.stdout.log 2>> /home/clitools/email-sync.stderr.log") | crontab -
 
 COPY entrypoint.sh .
 
