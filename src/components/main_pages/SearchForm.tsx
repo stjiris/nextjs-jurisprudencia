@@ -201,7 +201,7 @@ export default function SearchForm({ count, filtersUsed }: { count: number; filt
                         className="form-check-input"
                     />
                     <label htmlFor="checkbox-has-text" className="form-check-label">
-                        Tem de ter {keys?.records?.Texto?.name}
+                        Tem de ter {keys?.records?.Texto?.name} de Acordão
                     </label>
                 </div>
 
@@ -253,7 +253,7 @@ function DateRangeInput({ label, name, isMin, defaultValue, yearRef, monthRef, d
                     ref={dayRef}
                     min="1"
                     max="31"
-                    placeholder="DD"
+                    placeholder="dia"
                     defaultValue={dayDefault}
                     className={inputCls}
                 />
@@ -269,7 +269,7 @@ function DateRangeInput({ label, name, isMin, defaultValue, yearRef, monthRef, d
                         e.currentTarget.style.color = e.currentTarget.value ? "" : grey;
                     }}
                 >
-                    <option value="">Mês</option>
+                    <option value="">mês</option>
                     {MONTHS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
                 </select>
 

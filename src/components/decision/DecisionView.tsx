@@ -29,14 +29,11 @@ export default function DecisionView(props: { doc: JurisprudenciaDocument, id: s
         <div className="container">
             <div className="row justify-content-center">
                 <div className="col-12 col-md-11 container border border-dark">
-                    <div className="row border-bottom">
+                    {auth && <div className="row border-bottom border-2 border-dark pb-1">
                         <div className="col-md-10">
-                            {auth &&
-                                <div>
-                                    <ManageDecisionOptions {...props} />
-                                </div>}
+                            <ManageDecisionOptions {...props} />
                         </div>
-                    </div>
+                    </div>}
                     <div className="row border-bottom">
                         <div className="col-6 d-flex align-items-baseline">
                             <b style={{ minWidth: 175, flexShrink: 0 }}>N.º de Processo:</b>

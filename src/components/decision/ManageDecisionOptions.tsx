@@ -2,6 +2,7 @@ import { JurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
 import { useFetchPost } from "../useFetch";
 import { JurisprudenciaKey } from "@/types/keys";
 import Link from "next/link";
+import { BadgeFromState } from "../BadgeFromState";
 
 
 
@@ -83,6 +84,11 @@ export default function ManageDecisionOptions(props: { doc: JurisprudenciaDocume
 	return (
 		<>
 			<div className="d-flex align-items-baseline">
+				<b style={{ minWidth: LABEL_WIDTH, flexShrink: 0 }}>Estado:</b>
+				<span><BadgeFromState state={state} /></span>
+			</div>
+
+			<div className="d-flex align-items-baseline">
 				<b style={{ minWidth: LABEL_WIDTH, flexShrink: 0 }}>Anonimização:</b>
 				<span>
 					<Link href={`/editar/${encodeURIComponent(props.id)}`}>
@@ -124,20 +130,17 @@ export default function ManageDecisionOptions(props: { doc: JurisprudenciaDocume
 								{loadingPublicar ? "A publicar…" : "Publicar"}
 							</Link>
 						)}
-						{(isPreparacao || isPublico) && (
-							<>
-								{(isPreparacao || isPrivado) && " || "}
-								<Link href="#"
-									className={loadingGestao ? "text-muted" : ""}
-									title="Tornar documento privado"
-									onClick={(e) => {
-										e.preventDefault();
-										if (!loadingGestao) handleTornarPrivado();
-									}}>
-									<i className="bi bi-lock me-1"></i>
-									{loadingPrivado ? "A tornar privado…" : "Tornar Privado"}
-								</Link>
-							</>
+						{isPublico && (
+							<Link href="#"
+								className={loadingGestao ? "text-muted" : ""}
+								title="Tornar documento privado"
+								onClick={(e) => {
+									e.preventDefault();
+									if (!loadingGestao) handleTornarPrivado();
+								}}>
+								<i className="bi bi-lock me-1"></i>
+								{loadingPrivado ? "A tornar privado…" : "Tornar Privado"}
+							</Link>
 						)}
 					</span>
 				</div>
