@@ -161,11 +161,15 @@ function FilterList({filtersUsed, accessKey, dontSuggest, showKey}: {filtersUsed
     const [datalist, setDatalist] = useState<DatalistObj[]>([]);
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+    const handleFocus = () => {
+        if (dontSuggest || datalist.length > 0) return;
+        loadDatalist(router, accessKey, searchParams, "", setDatalist);
+    };
+
     const handleInput = (e: React.FormEvent<HTMLInputElement>) => {
         if (dontSuggest) return;
         const value = e.currentTarget.value;
         if (debounceRef.current) clearTimeout(debounceRef.current);
-        if (!value) { setDatalist([]); return; }
         debounceRef.current = setTimeout(() => {
             loadDatalist(router, accessKey, searchParams, value, setDatalist);
         }, 200);
@@ -175,7 +179,7 @@ function FilterList({filtersUsed, accessKey, dontSuggest, showKey}: {filtersUsed
         <datalist id={datalistId}>
             {datalist.map(({key, count}, i) => <option key={i} value={`"${key}"`} label={count ? `Quantidade: ${count}` : ""}/>)}
         </datalist>
-        <input type="text" className="form-control form-control-sm border-0 border-bottom rounded-0" name={accessKey} autoComplete="off" list={datalistId} placeholder={showKey || accessKey} onInput={handleInput}/>
+        <input type="text" className="form-control form-control-sm border-0 border-bottom rounded-0" name={accessKey} autoComplete="off" list={datalistId} placeholder={showKey || accessKey} onFocus={handleFocus} onInput={handleInput}/>
         <UsedFilters filtersUsed={filtersUsed} accessKey={accessKey}/>
     </div>
 }

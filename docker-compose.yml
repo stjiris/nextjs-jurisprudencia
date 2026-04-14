@@ -55,6 +55,7 @@ services:
       args:
         NEXT_BASE_PATH: ${NEXT_BASE_PATH}
         ANONIMIZADOR_URL: ${ANONIMIZADOR_URL}
+        NEXT_PUBLIC_ANONIMIZADOR_URL: ${ANONIMIZADOR_URL}
     environment:
       ES_URL: http://elasticsearch:9200
       ES_USER: elastic
