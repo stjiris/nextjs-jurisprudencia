@@ -130,30 +130,10 @@ export default function SearchForm({ count, filtersUsed }: { count: number; filt
                 }
             }
 
-            // Save date field values before reset
-            const minDay   = minDayRef.current?.value   || "";
-            const minMonth = minMonthRef.current?.value || "";
-            const minYear  = minYearRef.current?.value  || "";
-            const maxDay   = maxDayRef.current?.value   || "";
-            const maxMonth = maxMonthRef.current?.value || "";
-            const maxYear  = maxYearRef.current?.value  || "";
-
-            // If the change came from a checkbox (e.g. trash), clear filter text inputs
-            // so their stale typed value doesn't get re-submitted alongside the checkboxes
-            if ((target as HTMLInputElement).type === "checkbox") {
-                el.querySelectorAll<HTMLInputElement>("input[list]").forEach(inp => { inp.value = ""; });
-            }
-
             submit(el, router);
 
-            el.reset();
-
-            if (minDay   && minDayRef.current)   minDayRef.current.value   = minDay;
-            if (minMonth && minMonthRef.current) { minMonthRef.current.value = minMonth; minMonthRef.current.style.color = ""; }
-            if (minYear  && minYearRef.current)  minYearRef.current.value  = minYear;
-            if (maxDay   && maxDayRef.current)   maxDayRef.current.value   = maxDay;
-            if (maxMonth && maxMonthRef.current) { maxMonthRef.current.value = maxMonth; maxMonthRef.current.style.color = ""; }
-            if (maxYear  && maxYearRef.current)  maxYearRef.current.value  = maxYear;
+            // Clear filter text inputs so stale typed values don't re-submit on the next change
+            el.querySelectorAll<HTMLInputElement>("input[list]").forEach(inp => { inp.value = ""; });
 
             submitting.current = false;
         };
