@@ -117,21 +117,20 @@ export function SwapableFilterList({filtersUsed}: {filtersUsed: Record<string, s
     </div>
 }
 
-function InvertFilter({accessKey, currValue}: {accessKey: string, currValue: string}){
+function FilterModeButtons({accessKey, value}: {accessKey: string, value: string}){
     const searchParams = useSearchParams();
+    const bare = value.replace(/^(not:|or:)/, "");
+    const isAnd = !value.startsWith("not:") && !value.startsWith("or:");
+    const isOr  = value.startsWith("or:");
+    const isNot = value.startsWith("not:");
 
-    const isNot = currValue.startsWith("not:");
-    const isOr  = currValue.startsWith("or:");
-    // cycle: AND → OR → NOT → AND
-    const newValue = isNot ? currValue.replace(/^not:/, "") :
-                     isOr  ? `not:${currValue.replace(/^or:/, "")}` :
-                              `or:${currValue}`;
+    const href = (newValue: string) => `?${replaceSearchParams(searchParams, accessKey, newValue, value)}`;
 
-    return <Link className="text-body" href={`?${replaceSearchParams(searchParams, accessKey, newValue, currValue)}`} title={isNot ? "Excluir" : isOr ? "OU (clique para excluir)" : "E (clique para OU)"}>
-        {isNot && <><i className="mx-1 bi bi-dash-circle-fill text-danger"></i></>}
-        {isOr  && <><i className="mx-1 bi bi-plus-circle text-primary"></i></>}
-        {!isNot && !isOr && <><i className="mx-1 bi bi-plus-circle-fill"></i></>}
-    </Link>
+    return <span className="d-flex me-1" style={{gap: 2}}>
+        <Link href={href(bare)} title="E — obrigatório" className={"badge text-decoration-none " + (isAnd ? "text-bg-success" : "text-bg-secondary bg-opacity-25 text-body")}>E</Link>
+        <Link href={href(`or:${bare}`)} title="OU — pelo menos um" className={"badge text-decoration-none " + (isOr ? "text-bg-primary" : "text-bg-secondary bg-opacity-25 text-body")}>OU</Link>
+        <Link href={href(`not:${bare}`)} title="NÃO — excluir" className={"badge text-decoration-none " + (isNot ? "text-bg-danger" : "text-bg-secondary bg-opacity-25 text-body")}>NÃO</Link>
+    </span>
 }
 
 function EditableFilterTag({accessKey, value}: {accessKey: string, value: string}){
@@ -163,7 +162,7 @@ function EditableFilterTag({accessKey, value}: {accessKey: string, value: string
 
     return <div className="p-1 m-0 d-flex align-items-center" style={{background: "var(--secondary-gold)", borderBottom: "1px solid var(--primary-gold)"}}>
         <input type="checkbox" className="form-check-input" name={accessKey} value={value} id={id} hidden defaultChecked={true}/>
-        <InvertFilter currValue={value} accessKey={accessKey}/>
+        <FilterModeButtons value={value} accessKey={accessKey}/>
         {editing
             ? <input
                 ref={inputRef}
