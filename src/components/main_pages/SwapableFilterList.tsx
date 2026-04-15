@@ -117,20 +117,25 @@ export function SwapableFilterList({filtersUsed}: {filtersUsed: Record<string, s
     </div>
 }
 
-function FilterModeButtons({accessKey, value}: {accessKey: string, value: string}){
+function InvertFilter({accessKey, currValue}: {accessKey: string, currValue: string}){
     const searchParams = useSearchParams();
-    const bare = value.replace(/^(not:|or:)/, "");
-    const isAnd = !value.startsWith("not:") && !value.startsWith("or:");
-    const isOr  = value.startsWith("or:");
-    const isNot = value.startsWith("not:");
+    const bare = currValue.replace(/^or:/, "");
+    const isNeg = bare.startsWith("not:");
+    const newValue = isNeg ? bare.replace(/^not:/, "") : `not:${bare}`;
+    return <Link className="text-body" href={`?${replaceSearchParams(searchParams, accessKey, newValue, currValue)}`}>
+        <i className={`mx-1 bi bi-dash-circle${isNeg?"-fill":""}`}></i>
+        <i className={`me-1 bi bi-plus-circle${!isNeg?"-fill":""}`}></i>
+    </Link>
+}
 
-    const href = (newValue: string) => `?${replaceSearchParams(searchParams, accessKey, newValue, value)}`;
-
-    return <span className="d-flex me-1" style={{gap: 2}}>
-        <Link href={href(bare)} title="E — obrigatório" className={"badge text-decoration-none " + (isAnd ? "text-bg-success" : "text-bg-secondary bg-opacity-25 text-body")}>E</Link>
-        <Link href={href(`or:${bare}`)} title="OU — pelo menos um" className={"badge text-decoration-none " + (isOr ? "text-bg-primary" : "text-bg-secondary bg-opacity-25 text-body")}>OU</Link>
-        <Link href={href(`not:${bare}`)} title="NÃO — excluir" className={"badge text-decoration-none " + (isNot ? "text-bg-danger" : "text-bg-secondary bg-opacity-25 text-body")}>NÃO</Link>
-    </span>
+function OrToggle({accessKey, currValue}: {accessKey: string, currValue: string}){
+    const searchParams = useSearchParams();
+    const isOr = currValue.startsWith("or:");
+    const bare = currValue.replace(/^(not:|or:)/, "");
+    const newValue = isOr ? bare : `or:${bare}`;
+    return <Link className="text-decoration-none me-1" href={`?${replaceSearchParams(searchParams, accessKey, newValue, currValue)}`} title="OU — pelo menos um destes termos">
+        <small className={isOr ? "text-primary fw-bold" : "text-muted"}>∨</small>
+    </Link>
 }
 
 function EditableFilterTag({accessKey, value}: {accessKey: string, value: string}){
@@ -162,7 +167,8 @@ function EditableFilterTag({accessKey, value}: {accessKey: string, value: string
 
     return <div className="p-1 m-0 d-flex align-items-center" style={{background: "var(--secondary-gold)", borderBottom: "1px solid var(--primary-gold)"}}>
         <input type="checkbox" className="form-check-input" name={accessKey} value={value} id={id} hidden defaultChecked={true}/>
-        <FilterModeButtons value={value} accessKey={accessKey}/>
+        <InvertFilter currValue={value} accessKey={accessKey}/>
+        <OrToggle currValue={value} accessKey={accessKey}/>
         {editing
             ? <input
                 ref={inputRef}
