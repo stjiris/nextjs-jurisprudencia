@@ -133,9 +133,9 @@ function OrToggle({accessKey, currValue}: {accessKey: string, currValue: string}
     const isOr = currValue.startsWith("or:");
     const bare = currValue.replace(/^(not:|or:)/, "");
     const newValue = isOr ? bare : `or:${bare}`;
-    return <Link className="text-body text-decoration-none me-1" href={`?${replaceSearchParams(searchParams, accessKey, newValue, currValue)}`} title="OU — pelo menos um destes termos">
+    return <Link className="text-body text-decoration-none me-1" style={{display: "inline-flex", alignItems: "center"}} href={`?${replaceSearchParams(searchParams, accessKey, newValue, currValue)}`} title="OU — pelo menos um destes termos">
         <span style={{
-            display: "inline-flex", alignItems: "center", justifyContent: "center", verticalAlign: "middle",
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
             width: "1em", height: "1em", borderRadius: "50%", fontSize: "inherit", lineHeight: 1,
             border: isOr ? "none" : "1.5px solid currentColor",
             background: isOr ? "currentColor" : "none",
