@@ -159,23 +159,36 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
                 return { wildcard: { [fieldName]: { value: `*${pattern}*`, case_insensitive: true } } };
             };
 
-            if (must_include.length && hasAdvanced(must_include)) {
-                filters[when].push({
-                    query_string: { query: must_include.join(" "), fields: [fieldName], default_operator: "OR" }
-                });
-            } else if (must_include.length) {
-                // Use should + minimum_should_match:1 (OR within field, AND across fields).
-                // Using `must` would require all values to exist simultaneously in the same field,
-                // which is impossible for single-value fields (Área, Secção, etc.) → always 0 results.
-                filters[when].push({ bool: { should: must_include.map(o => termClause(fieldName, o)), minimum_should_match: 1 } });
-            }
+            // Build must_include and or_include clauses, then combine into a single filter.
+            // Separating them into two filters.pre entries would AND them, which is wrong when
+            // or_include is present — the ∨ button is meant to BROADEN results, not narrow them.
+            //
+            // Intended semantics:
+            //   + A, + B       → must have A AND B  (AND within field, e.g. two descriptors)
+            //   ∨ C            → OR, include docs that match C
+            //   + A, + B, ∨ C → (A AND B) OR C
+            if (must_include.length > 0 || or_include.length > 0) {
+                const mustClauses = hasAdvanced(must_include)
+                    ? [{ query_string: { query: must_include.join(" "), fields: [fieldName], default_operator: "OR" } }]
+                    : must_include.map(o => termClause(fieldName, o));
 
-            if (or_include.length && hasAdvanced(or_include)) {
-                filters[when].push({
-                    query_string: { query: or_include.join(" OR "), fields: [fieldName], default_operator: "OR" }
-                });
-            } else if (or_include.length) {
-                filters[when].push({ bool: { should: or_include.map(o => termClause(fieldName, o)), minimum_should_match: 1 } });
+                const orClauses = hasAdvanced(or_include)
+                    ? [{ query_string: { query: or_include.join(" OR "), fields: [fieldName], default_operator: "OR" } }]
+                    : or_include.map(o => termClause(fieldName, o));
+
+                if (orClauses.length === 0) {
+                    // Only + values: AND semantics (must_or_should is "must" for generic keys)
+                    filters[when].push({ bool: { [must_or_should]: mustClauses } });
+                } else if (mustClauses.length === 0) {
+                    // Only ∨ values: OR semantics
+                    filters[when].push({ bool: { should: orClauses, minimum_should_match: 1 } });
+                } else {
+                    // Mix of + and ∨: (must_include_condition) OR (or_include values)
+                    const mustPart = mustClauses.length === 1
+                        ? mustClauses[0]
+                        : { bool: { [must_or_should]: mustClauses } };
+                    filters[when].push({ bool: { should: [mustPart, ...orClauses], minimum_should_match: 1 } });
+                }
             }
 
             if (must_not.length && hasAdvanced(must_not)) {
