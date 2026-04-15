@@ -228,7 +228,7 @@ function FilterList({filtersUsed, accessKey, dontSuggest, showKey}: {filtersUsed
 
     return <div className="d-flex flex-column my-1 border pb-1 flex-grow-1">
         <datalist id={datalistId}>
-            {datalist.map(({key, count}, i) => <option key={i} value={`"${key}"`} label={count ? `Quantidade: ${count}` : ""}/>)}
+            {datalist.map(({key, count}, i) => <option key={i} value={key} label={count ? `Quantidade: ${count}` : ""}/>)}
         </datalist>
         <input type="text" className="form-control form-control-sm border-0 border-bottom rounded-0" name={accessKey} autoComplete="off" list={datalistId} placeholder={showKey || accessKey} onFocus={handleFocus} onInput={handleInput}/>
         <UsedFilters filtersUsed={filtersUsed} accessKey={accessKey}/>
