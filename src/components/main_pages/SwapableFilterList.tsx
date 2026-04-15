@@ -1,4 +1,4 @@
-import { Dispatch, DragEventHandler, SetStateAction, useEffect, useMemo, useState } from "react";
+import { Dispatch, DragEventHandler, SetStateAction, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ReadonlyURLSearchParams, useSearchParams } from "next/navigation";
 import { JurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
@@ -153,14 +153,57 @@ function OrToggle({accessKey, currValue}: {accessKey: string, currValue: string}
 }
 
 function EditableFilterTag({accessKey, value}: {accessKey: string, value: string}){
+    const prefix = value.match(/^(not:|or:)/)?.[0] ?? "";
     const displayValue = value.replace(/^(not:|or:)/, "");
     const id = `checkbox-${encodeURIComponent(value)}`;
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const [editing, setEditing] = useState(false);
+    const [editValue, setEditValue] = useState(displayValue);
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (editing) inputRef.current?.select();
+    }, [editing]);
+
+    const save = () => {
+        const trimmed = editValue.trim();
+        if (trimmed && trimmed !== displayValue) {
+            router.push(`?${replaceSearchParams(searchParams, accessKey, prefix + trimmed, value)}`);
+        }
+        setEditing(false);
+    };
+
+    const cancel = () => {
+        setEditValue(displayValue);
+        setEditing(false);
+    };
 
     return <div className="p-1 m-0 d-flex align-items-center" style={{background: "var(--secondary-gold)", borderBottom: "1px solid var(--primary-gold)"}}>
-        <input type="checkbox" className="form-check-input" name={accessKey} value={value} id={id} hidden defaultChecked={true}/>
+        <input type="checkbox" className="form-check-input" name={accessKey} value={editing ? prefix + editValue.trim() : value} id={id} hidden defaultChecked={true}/>
         <InvertFilter currValue={value} accessKey={accessKey}/>
         <OrToggle currValue={value} accessKey={accessKey}/>
-        <span className="d-block flex-grow-1 mx-1">{displayValue}</span>
+        {editing
+            ? <input
+                ref={inputRef}
+                autoFocus
+                className="flex-grow-1 mx-1 border-0 bg-transparent p-0"
+                style={{outline: "none", minWidth: 0}}
+                value={editValue}
+                onChange={e => setEditValue(e.target.value)}
+                onBlur={save}
+                onKeyDown={e => {
+                    if (e.key === "Enter")  { e.preventDefault(); save(); }
+                    if (e.key === "Escape") { e.preventDefault(); cancel(); }
+                }}
+              />
+            : <span
+                role="button"
+                className="d-block flex-grow-1 mx-1"
+                style={{cursor: "text"}}
+                onClick={() => { setEditValue(displayValue); setEditing(true); }}
+              >{displayValue}</span>
+        }
         <label role="button" htmlFor={id} className="form-check-label d-flex justify-content-between align-items-center">
             <span className="d-block text-danger"><i className="bi bi-trash"></i></span>
         </label>
