@@ -70,6 +70,7 @@ const MONTHS = [
 export default function SearchForm({ count, filtersUsed }: { count: number; filtersUsed: Record<string, string[]> }) {
     const form = useRef<HTMLFormElement>(null);
     const router = useNavRouter();
+    const submitting = useRef(false);
 
     const minYearRef  = useRef<HTMLInputElement>(null);
     const minMonthRef = useRef<HTMLSelectElement>(null);
@@ -100,6 +101,8 @@ export default function SearchForm({ count, filtersUsed }: { count: number; filt
         if (!el) return;
 
         const handleChange = (e: Event) => {
+            if (submitting.current) return;
+            submitting.current = true;
             const target = e.target as HTMLElement;
 
             // Auto-fill: day filled → fill month (default) + year (current) if empty
@@ -132,6 +135,12 @@ export default function SearchForm({ count, filtersUsed }: { count: number; filt
             const maxMonth = maxMonthRef.current?.value || "";
             const maxYear  = maxYearRef.current?.value  || "";
 
+            // If the change came from a checkbox (e.g. trash), clear filter text inputs
+            // so their stale typed value doesn't get re-submitted alongside the checkboxes
+            if ((target as HTMLInputElement).type === "checkbox") {
+                el.querySelectorAll<HTMLInputElement>("input[list]").forEach(inp => { inp.value = ""; });
+            }
+
             submit(el, router);
 
             el.reset();
@@ -142,6 +151,8 @@ export default function SearchForm({ count, filtersUsed }: { count: number; filt
             if (maxDay   && maxDayRef.current)   maxDayRef.current.value   = maxDay;
             if (maxMonth && maxMonthRef.current) { maxMonthRef.current.value = maxMonth; maxMonthRef.current.style.color = ""; }
             if (maxYear  && maxYearRef.current)  maxYearRef.current.value  = maxYear;
+
+            submitting.current = false;
         };
 
         el.addEventListener("change", handleChange);
