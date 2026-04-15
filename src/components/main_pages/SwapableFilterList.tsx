@@ -142,7 +142,7 @@ function OrToggle({accessKey, currValue}: {accessKey: string, currValue: string}
             color: isOr ? "var(--bs-body-bg, white)" : "currentColor",
             fontWeight: "bold",
         }}>
-            <span style={{fontSize: "0.8em", transform: "translateY(-1px) translateX(-2px)", lineHeight: 0}}>∨</span>
+            <span style={{fontSize: "0.8em", transform: "translateY(-1px) translateX(-1px)", lineHeight: 0}}>∨</span>
         </span>
     </Link>
 }
