@@ -136,12 +136,16 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
 
             // Detect advanced operators in any value
             const hasAdvanced = (arr: string[]) => arr.some((v) => /[\(\)\"\bAND\b|\bOR\b|\bNOT\b]/i.test(v));
-            const termClause = (fieldName: string, o: string) =>
-                o.startsWith('"') && o.endsWith('"')
-                    ? { term: { [fieldName.replace("keyword", "raw")]: { value: o.slice(1, -1) } } }
-                    : fieldName.endsWith('.keyword')
-                        ? { match_phrase: { [fieldName.replace(/\.keyword$/, '')]: o } }
-                        : { wildcard: { [fieldName]: { value: `*${o}*`, case_insensitive: true } } };
+            const asciiFold = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            const termClause = (fieldName: string, o: string) => {
+                if (o.startsWith('"') && o.endsWith('"')) {
+                    // Exact match: use keyword field so the normalizer is applied automatically
+                    return { term: { [fieldName]: { value: o.slice(1, -1) } } };
+                }
+                // Wildcard: strip accents from the pattern to match the asciifolding normalizer on stored values
+                const pattern = fieldName.endsWith('.keyword') ? asciiFold(o) : o;
+                return { wildcard: { [fieldName]: { value: `*${pattern}*`, case_insensitive: true } } };
+            };
 
             if (must_include.length && hasAdvanced(must_include)) {
                 filters[when].push({
