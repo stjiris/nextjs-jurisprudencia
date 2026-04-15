@@ -129,39 +129,34 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
                 when = "after" as keyof SearchFilters;
             }
             let fieldName = (aggObj[aggField] as AggregationsTermsAggregation).field!;
-            let should = filtersUsed[aggName].filter((o) => !o.startsWith("not:"));
+            let must_include = filtersUsed[aggName].filter((o) => !o.startsWith("not:") && !o.startsWith("or:"));
+            let or_include = filtersUsed[aggName].filter((o) => o.startsWith("or:")).map((o) => o.substring(3));
             let must_not = filtersUsed[aggName].filter((o) => o.startsWith("not:")).map((o) => o.substring(4));
-            let must_or_should = !isJurisprudenciaDocumentGenericKey(aggName) || body["_should"]?.includes(aggName) ? "should" : "must"; // AND or OR - if a signle value use alawys OR else default OR but flag for AND
+            let must_or_should = !isJurisprudenciaDocumentGenericKey(aggName) || body["_should"]?.includes(aggName) ? "should" : "must";
 
             // Detect advanced operators in any value
             const hasAdvanced = (arr: string[]) => arr.some((v) => /[\(\)\"\bAND\b|\bOR\b|\bNOT\b]/i.test(v));
-            if (should.length && hasAdvanced(should)) {
+            const termClause = (fieldName: string, o: string) =>
+                o.startsWith('"') && o.endsWith('"')
+                    ? { term: { [fieldName.replace("keyword", "raw")]: { value: o.slice(1, -1) } } }
+                    : { wildcard: { [fieldName]: { value: `*${o}*`, case_insensitive: true } } };
+
+            if (must_include.length && hasAdvanced(must_include)) {
                 filters[when].push({
-                    query_string: {
-                        query: should.join(" "),
-                        fields: [fieldName],
-                        default_operator: "OR"
-                    }
+                    query_string: { query: must_include.join(" "), fields: [fieldName], default_operator: "OR" }
                 });
-            } else if (should.length) {
-                filters[when].push({
-                    bool: {
-                        [must_or_should]: should.map((o) =>
-                            o.startsWith('"') && o.endsWith('"')
-                                ? {
-                                      term: {
-                                          [fieldName.replace("keyword", "raw")]: { value: `${o.slice(1, -1)}` }
-                                      }
-                                  }
-                                : {
-                                      wildcard: {
-                                          [fieldName]: { value: `*${o}*` }
-                                      }
-                                  }
-                        )
-                    }
-                });
+            } else if (must_include.length) {
+                filters[when].push({ bool: { [must_or_should]: must_include.map(o => termClause(fieldName, o)) } });
             }
+
+            if (or_include.length && hasAdvanced(or_include)) {
+                filters[when].push({
+                    query_string: { query: or_include.join(" OR "), fields: [fieldName], default_operator: "OR" }
+                });
+            } else if (or_include.length) {
+                filters[when].push({ bool: { should: or_include.map(o => termClause(fieldName, o)), minimum_should_match: 1 } });
+            }
+
             if (must_not.length && hasAdvanced(must_not)) {
                 filters[when].push({
                     bool: {
@@ -177,23 +172,7 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
                     }
                 });
             } else if (must_not.length) {
-                filters[when].push({
-                    bool: {
-                        must_not: must_not.map((o) =>
-                            o.startsWith('"') && o.endsWith('"')
-                                ? {
-                                      term: {
-                                          [fieldName.replace("keyword", "raw")]: { value: `${o.slice(1, -1)}` }
-                                      }
-                                  }
-                                : {
-                                      wildcard: {
-                                          [fieldName]: { value: `*${o}*` }
-                                      }
-                                  }
-                        )
-                    }
-                });
+                filters[when].push({ bool: { must_not: must_not.map(o => termClause(fieldName, o)) } });
             }
         }
     }

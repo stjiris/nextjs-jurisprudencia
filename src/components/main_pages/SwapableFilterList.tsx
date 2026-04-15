@@ -120,13 +120,67 @@ export function SwapableFilterList({filtersUsed}: {filtersUsed: Record<string, s
 function InvertFilter({accessKey, currValue}: {accessKey: string, currValue: string}){
     const searchParams = useSearchParams();
 
-    const isNeg = currValue.startsWith("not:");
-    const newValue = isNeg ? currValue.replace(/^not:/,"") : `not:${currValue}`;
+    const isNot = currValue.startsWith("not:");
+    const isOr  = currValue.startsWith("or:");
+    // cycle: AND → OR → NOT → AND
+    const newValue = isNot ? currValue.replace(/^not:/, "") :
+                     isOr  ? `not:${currValue.replace(/^or:/, "")}` :
+                              `or:${currValue}`;
 
-    return <Link className="text-body" href={`?${replaceSearchParams(searchParams, accessKey, newValue, currValue)}`}>
-        <i className={`mx-1 bi bi-dash-circle${isNeg?"-fill":""}`}></i>
-        <i className={`me-1 bi bi-plus-circle${!isNeg?"-fill":""}`}></i>
+    return <Link className="text-body" href={`?${replaceSearchParams(searchParams, accessKey, newValue, currValue)}`} title={isNot ? "Excluir" : isOr ? "OU (clique para excluir)" : "E (clique para OU)"}>
+        {isNot && <><i className="mx-1 bi bi-dash-circle-fill text-danger"></i></>}
+        {isOr  && <><i className="mx-1 bi bi-plus-circle text-primary"></i></>}
+        {!isNot && !isOr && <><i className="mx-1 bi bi-plus-circle-fill"></i></>}
     </Link>
+}
+
+function EditableFilterTag({accessKey, value}: {accessKey: string, value: string}){
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const [editing, setEditing] = useState(false);
+    const [draft, setDraft] = useState("");
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    const displayValue = value.replace(/^(not:|or:)/, "");
+    const prefix = value.startsWith("not:") ? "not:" : value.startsWith("or:") ? "or:" : "";
+
+    const startEdit = () => {
+        setDraft(displayValue);
+        setEditing(true);
+        setTimeout(() => inputRef.current?.select(), 0);
+    };
+
+    const confirm = () => {
+        const trimmed = draft.trim();
+        if (trimmed && trimmed !== displayValue) {
+            const newValue = prefix + trimmed;
+            router.replace("?" + replaceSearchParams(searchParams, accessKey, newValue, value).toString(), undefined, { scroll: false, shallow: true });
+        }
+        setEditing(false);
+    };
+
+    const id = `checkbox-${encodeURIComponent(value)}`;
+
+    return <div className="p-1 m-0 d-flex align-items-center" style={{background: "var(--secondary-gold)", borderBottom: "1px solid var(--primary-gold)"}}>
+        <input type="checkbox" className="form-check-input" name={accessKey} value={value} id={id} hidden defaultChecked={true}/>
+        <InvertFilter currValue={value} accessKey={accessKey}/>
+        {editing
+            ? <input
+                ref={inputRef}
+                className="form-control form-control-sm border-0 flex-grow-1 mx-1 py-0 px-1"
+                style={{background: "transparent", minWidth: 0}}
+                value={draft}
+                onChange={e => setDraft(e.target.value)}
+                onBlur={confirm}
+                onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); confirm(); } if (e.key === "Escape") setEditing(false); }}
+                autoFocus
+              />
+            : <span role="button" className="d-block flex-grow-1 mx-1" title="Clique para editar" onClick={startEdit}>{displayValue}</span>
+        }
+        <label role="button" htmlFor={id} className="form-check-label d-flex justify-content-between align-items-center">
+            <span className="d-block text-danger"><i className="bi bi-trash"></i></span>
+        </label>
+    </div>;
 }
 
 export function UsedFilters({filtersUsed, accessKey}: {filtersUsed: Record<string, string[]>, accessKey: string}){
@@ -136,18 +190,7 @@ export function UsedFilters({filtersUsed, accessKey}: {filtersUsed: Record<strin
         for(let [i, value] of filtersUsed[accessKey].entries()){
             if( cache.indexOf(value) == -1){
                 cache.push(value);
-                const id = `checkbox-${encodeURIComponent(value)}`
-                
-                
-
-                comps.push(<div key={i} className="p-1 m-0 d-flex align-items-center" style={{background: "var(--secondary-gold)", borderBottom: "1px solid var(--primary-gold)"}}>
-                    <input type="checkbox" className="form-check-input" name={accessKey} value={value} id={id} hidden defaultChecked={true}/>
-                    <InvertFilter currValue={value} accessKey={accessKey}/>
-                    <span className="d-block flex-grow-1 mx-1">{value.replace(/^not:/, "")}</span>
-                    <label role="button" htmlFor={id} className="form-check-label d-flex justify-content-between align-items-center">
-                        <span className="d-block text-danger"><i className="bi bi-trash"></i></span>
-                    </label>
-                </div>)
+                comps.push(<EditableFilterTag key={i} accessKey={accessKey} value={value}/>)
             }
         }
     }
