@@ -1,5 +1,5 @@
 import { JurisprudenciaDocument, JurisprudenciaDocumentDateKey, JurisprudenciaDocumentExactKey, JurisprudenciaDocumentGenericKey, JurisprudenciaDocumentKey, JurisprudenciaDocumentStateKey, JurisprudenciaDocumentTextKey, PartialJurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
-import { Dispatch, SetStateAction, createContext, useContext, useMemo, useState } from "react";
+import { Dispatch, SetStateAction, createContext, useContext, useEffect, useMemo, useState } from "react";
 
 import { JurisprudenciaKey } from "@/types/keys";
 import { DatalistObj } from "@/types/search";
@@ -11,8 +11,14 @@ import { createFilter } from "react-select";
 
 export const ReactQuill = dynamic(
     () => import('react-quill').then(mod => mod.default),
-    { ssr: false }
+    { ssr: false, loading: () => <div className="form-control h-100 p-0 border-0" style={{minHeight: "10em", background: "#f8f8f8"}} /> }
 );
+
+function useIsMounted() {
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => setMounted(true), []);
+    return mounted;
+}
 
 export type UpdateObject = PartialJurisprudenciaDocument;
 
