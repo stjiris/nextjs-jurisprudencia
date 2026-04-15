@@ -133,8 +133,15 @@ function OrToggle({accessKey, currValue}: {accessKey: string, currValue: string}
     const isOr = currValue.startsWith("or:");
     const bare = currValue.replace(/^(not:|or:)/, "");
     const newValue = isOr ? bare : `or:${bare}`;
-    return <Link className="text-decoration-none me-1" href={`?${replaceSearchParams(searchParams, accessKey, newValue, currValue)}`} title="OU — pelo menos um destes termos">
-        <small className={isOr ? "text-primary fw-bold" : "text-muted"}>∨</small>
+    return <Link className="text-body text-decoration-none me-1" href={`?${replaceSearchParams(searchParams, accessKey, newValue, currValue)}`} title="OU — pelo menos um destes termos">
+        <span style={{
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
+            width: "1em", height: "1em", borderRadius: "50%", fontSize: "inherit", lineHeight: 1,
+            border: isOr ? "none" : "1.5px solid currentColor",
+            background: isOr ? "currentColor" : "none",
+        }}>
+            <span style={{fontSize: "0.6em", fontWeight: "bold", color: isOr ? "var(--bs-body-bg, white)" : "currentColor", lineHeight: 1}}>∨</span>
+        </span>
     </Link>
 }
 
@@ -189,17 +196,11 @@ function EditableFilterTag({accessKey, value}: {accessKey: string, value: string
 }
 
 export function UsedFilters({filtersUsed, accessKey}: {filtersUsed: Record<string, string[]>, accessKey: string}){
-    let cache = [];
-    let comps = [];
-    if( accessKey in filtersUsed ){
-        for(let [i, value] of filtersUsed[accessKey].entries()){
-            if( cache.indexOf(value) == -1){
-                cache.push(value);
-                comps.push(<EditableFilterTag key={i} accessKey={accessKey} value={value}/>)
-            }
-        }
-    }
-    return <>{comps}</>;
+    if (!(accessKey in filtersUsed)) return <></>;
+    const seen = new Set<string>();
+    return <>{filtersUsed[accessKey].filter(v => { if (seen.has(v)) return false; seen.add(v); return true; }).map(value =>
+        <EditableFilterTag key={value} accessKey={accessKey} value={value}/>
+    )}</>;
 }
 
 function FilterList({filtersUsed, accessKey, dontSuggest, showKey}: {filtersUsed: Record<string, string[]>, accessKey: keyof JurisprudenciaDocument | string, dontSuggest?: boolean, showKey?: string}){
@@ -208,6 +209,15 @@ function FilterList({filtersUsed, accessKey, dontSuggest, showKey}: {filtersUsed
     const router = useRouter()
     const [datalist, setDatalist] = useState<DatalistObj[]>([]);
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    // After React commits new datalist options, detach+reattach list so the browser refreshes its popup
+    useEffect(() => {
+        const el = inputRef.current;
+        if (!el || document.activeElement !== el) return;
+        el.removeAttribute('list');
+        el.setAttribute('list', datalistId);
+    }, [datalist]);
 
     const handleFocus = () => {
         if (dontSuggest || datalist.length > 0) return;
@@ -225,9 +235,9 @@ function FilterList({filtersUsed, accessKey, dontSuggest, showKey}: {filtersUsed
 
     return <div className="d-flex flex-column my-1 border pb-1 flex-grow-1">
         <datalist id={datalistId}>
-            {datalist.map(({key, count}, i) => <option key={i} value={`"${key}"`} label={count ? `Quantidade: ${count}` : ""}/>)}
+            {datalist.map(({key, count}) => <option key={key} value={key} label={count ? `(${count})` : ""}/>)}
         </datalist>
-        <input type="text" className="form-control form-control-sm border-0 border-bottom rounded-0" name={accessKey} autoComplete="off" list={datalistId} placeholder={showKey || accessKey} onFocus={handleFocus} onInput={handleInput}/>
+        <input ref={inputRef} type="text" className="form-control form-control-sm border-0 border-bottom rounded-0" name={accessKey} autoComplete="off" list={datalistId} placeholder={showKey || accessKey} onFocus={handleFocus} onInput={handleInput}/>
         <UsedFilters filtersUsed={filtersUsed} accessKey={accessKey}/>
     </div>
 }
