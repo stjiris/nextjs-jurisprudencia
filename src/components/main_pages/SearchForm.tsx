@@ -17,8 +17,11 @@ function submit(form: HTMLFormElement, router: ReturnType<typeof useNavRouter>) 
 
     for (const key of fd.keys()) {
         if (DATE_HELPERS.has(key)) continue;
-        const values = fd.getAll(key).filter(v => String(v).length > 0);
-        for (const v of values) searchParams.append(key, v as string);
+        const seen = new Set<string>();
+        for (const v of fd.getAll(key)) {
+            const s = String(v);
+            if (s.length > 0 && !seen.has(s)) { seen.add(s); searchParams.append(key, s); }
+        }
     }
 
     // Precision is implicit: YYYY if only year, YYYY-MM if year+month, YYYY-MM-DD if all three

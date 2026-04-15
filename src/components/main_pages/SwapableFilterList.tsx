@@ -165,7 +165,7 @@ function EditableFilterTag({accessKey, value}: {accessKey: string, value: string
         const trimmed = draft.trim();
         if (trimmed && trimmed !== displayValue) {
             const newValue = prefix + trimmed;
-            router.replace("?" + replaceSearchParams(searchParams, accessKey, newValue, value).toString(), undefined, { scroll: false, shallow: true });
+            router.replace("?" + replaceSearchParams(searchParams, accessKey, newValue, value).toString(), undefined, { scroll: false });
         }
         setEditing(false);
     };
@@ -209,15 +209,6 @@ function FilterList({filtersUsed, accessKey, dontSuggest, showKey}: {filtersUsed
     const router = useRouter()
     const [datalist, setDatalist] = useState<DatalistObj[]>([]);
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const inputRef = useRef<HTMLInputElement>(null);
-
-    // After React commits new datalist options, detach+reattach list so the browser refreshes its popup
-    useEffect(() => {
-        const el = inputRef.current;
-        if (!el || document.activeElement !== el) return;
-        el.removeAttribute('list');
-        el.setAttribute('list', datalistId);
-    }, [datalist]);
 
     const handleFocus = () => {
         if (dontSuggest || datalist.length > 0) return;
@@ -235,9 +226,9 @@ function FilterList({filtersUsed, accessKey, dontSuggest, showKey}: {filtersUsed
 
     return <div className="d-flex flex-column my-1 border pb-1 flex-grow-1">
         <datalist id={datalistId}>
-            {datalist.map(({key, count}) => <option key={key} value={key} label={count ? `(${count})` : ""}/>)}
+            {datalist.map(({key, count}, i) => <option key={i} value={`"${key}"`} label={count ? `Quantidade: ${count}` : ""}/>)}
         </datalist>
-        <input ref={inputRef} type="text" className="form-control form-control-sm border-0 border-bottom rounded-0" name={accessKey} autoComplete="off" list={datalistId} placeholder={showKey || accessKey} onFocus={handleFocus} onInput={handleInput}/>
+        <input type="text" className="form-control form-control-sm border-0 border-bottom rounded-0" name={accessKey} autoComplete="off" list={datalistId} placeholder={showKey || accessKey} onFocus={handleFocus} onInput={handleInput}/>
         <UsedFilters filtersUsed={filtersUsed} accessKey={accessKey}/>
     </div>
 }
