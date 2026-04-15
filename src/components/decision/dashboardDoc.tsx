@@ -33,6 +33,7 @@ export function TextInput({ accessKey, doc }: InputProps<JurisprudenciaDocumentT
     let [, setUpdateObject] = useContext(UpdateContext);
     let initialValue = doc[accessKey.key] || "";
     let [html, setValue] = useState<string>(initialValue);
+    const mounted = useIsMounted();
 
     let onChange = (content: string, delta: any, source: string) => {
         if (source === 'user') {
@@ -43,12 +44,12 @@ export function TextInput({ accessKey, doc }: InputProps<JurisprudenciaDocumentT
     }
 
     return <InputRow accessKey={accessKey} toSave={html !== initialValue}>
-        <ReactQuill
+        {mounted && <ReactQuill
             className="form-control h-100 p-0 border-0"
             theme="snow"
             defaultValue={initialValue}
             onChange={onChange}
-        />
+        />}
     </InputRow>;
 }
 
@@ -58,6 +59,7 @@ export function TextPairInput({ leftKey, rightKey, doc }: { leftKey: Jurispruden
     let rightInitial = doc[rightKey.key] || "";
     let [leftHtml, setLeftHtml] = useState<string>(leftInitial);
     let [rightHtml, setRightHtml] = useState<string>(rightInitial);
+    const mounted = useIsMounted();
 
     const onLeftChange = (content: string, _delta: any, source: string) => {
         if (source === 'user') {
@@ -82,22 +84,22 @@ export function TextPairInput({ leftKey, rightKey, doc }: { leftKey: Jurispruden
         <div className="d-flex gap-2" style={{ height: "700px" }}>
             <div className="d-flex flex-column" style={{ width: "50%" }}>
                 <small className={"fw-semibold mb-1" + (leftChanged ? " text-warning" : "")}>{leftKey.name}{leftChanged ? "*" : ""}</small>
-                <ReactQuill
+                {mounted && <ReactQuill
                     className="flex-grow-1 overflow-hidden"
                     theme="snow"
                     defaultValue={leftInitial}
                     onChange={onLeftChange}
-                />
+                />}
             </div>
             <div className="vr" />
             <div className="d-flex flex-column" style={{ width: "50%" }}>
                 <small className={"fw-semibold mb-1" + (rightChanged ? " text-warning" : "")}>{rightKey.name}{rightChanged ? "*" : ""}</small>
-                <ReactQuill
+                {mounted && <ReactQuill
                     className="flex-grow-1 overflow-hidden"
                     theme="snow"
                     defaultValue={rightInitial}
                     onChange={onRightChange}
-                />
+                />}
             </div>
         </div>
     </div>;

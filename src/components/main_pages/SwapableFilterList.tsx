@@ -120,13 +120,17 @@ export function SwapableFilterList({filtersUsed}: {filtersUsed: Record<string, s
 function InvertFilter({accessKey, currValue}: {accessKey: string, currValue: string}){
     const searchParams = useSearchParams();
     const isOr = currValue.startsWith("or:");
-    const bare = currValue.replace(/^or:/, "");
-    const isNeg = bare.startsWith("not:");
-    const newValue = isNeg ? bare.replace(/^not:/, "") : `not:${bare}`;
-    return <Link className="text-white" href={`?${replaceSearchParams(searchParams, accessKey, newValue, currValue)}`}>
-        <i className={`mx-1 bi bi-dash-circle${isNeg ? "-fill" : ""}`}></i>
-        <i className={`me-1 bi bi-plus-circle${(!isNeg && !isOr) ? "-fill" : ""}`}></i>
-    </Link>
+    const bare = currValue.replace(/^(or:|not:)/, "");
+    const isNeg = !isOr && currValue.startsWith("not:");
+    const isAnd = !isOr && !isNeg;
+    return <>
+        <Link className="text-body" href={`?${replaceSearchParams(searchParams, accessKey, bare, currValue)}`}>
+            <i className={`mx-1 bi bi-plus-circle${isAnd ? "-fill" : ""}`}></i>
+        </Link>
+        <Link className="text-body" href={`?${replaceSearchParams(searchParams, accessKey, `not:${bare}`, currValue)}`}>
+            <i className={`me-1 bi bi-dash-circle${isNeg ? "-fill" : ""}`}></i>
+        </Link>
+    </>
 }
 
 function OrToggle({accessKey, currValue}: {accessKey: string, currValue: string}){
@@ -134,13 +138,13 @@ function OrToggle({accessKey, currValue}: {accessKey: string, currValue: string}
     const isOr = currValue.startsWith("or:");
     const bare = currValue.replace(/^(not:|or:)/, "");
     const newValue = isOr ? bare : `or:${bare}`;
-    return <Link className="text-decoration-none me-1" style={{display: "inline-flex", alignItems: "center"}} href={`?${replaceSearchParams(searchParams, accessKey, newValue, currValue)}`} title="OU — pelo menos um destes termos">
+    return <Link className="text-body text-decoration-none me-1" style={{display: "inline-flex", alignItems: "center"}} href={`?${replaceSearchParams(searchParams, accessKey, newValue, currValue)}`} title="OU — pelo menos um destes termos">
         <span style={{
             display: "inline-flex", alignItems: "center", justifyContent: "center",
             width: "1em", height: "1em", borderRadius: "50%", fontSize: "inherit", lineHeight: 1,
-            border: isOr ? "none" : "1.5px solid white",
-            background: isOr ? "white" : "none",
-            color: isOr ? "var(--primary-black)" : "white",
+            border: isOr ? "none" : "1.5px solid currentColor",
+            background: isOr ? "var(--primary-black)" : "none",
+            color: isOr ? "white" : "currentColor",
             fontWeight: "bold",
         }}>
             <span style={{fontSize: "0.8em", transform: "translateY(-1px) translateX(-1px)", lineHeight: 0}}>∨</span>
@@ -152,7 +156,7 @@ function EditableFilterTag({accessKey, value}: {accessKey: string, value: string
     const displayValue = value.replace(/^(not:|or:)/, "");
     const id = `checkbox-${encodeURIComponent(value)}`;
 
-    return <div className="p-1 m-0 d-flex align-items-center" style={{background: "var(--primary-black)", borderBottom: "1px solid #333", color: "white"}}>
+    return <div className="p-1 m-0 d-flex align-items-center" style={{background: "var(--secondary-gold)", borderBottom: "1px solid var(--primary-gold)"}}>
         <input type="checkbox" className="form-check-input" name={accessKey} value={value} id={id} hidden defaultChecked={true}/>
         <InvertFilter currValue={value} accessKey={accessKey}/>
         <OrToggle currValue={value} accessKey={accessKey}/>
