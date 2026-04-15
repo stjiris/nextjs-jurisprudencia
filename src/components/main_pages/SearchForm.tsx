@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter as useNavRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef } from "react";
 import { useKeysFromContext } from "@/contexts/keys";
-import { FORM_KEY, SwapableFilterList } from "./SwapableFilterList";
+import { FORM_KEY, SwapableFilterList, TextQueryList } from "./SwapableFilterList";
 
 // Helper field names combined into MinDate/MaxDate on submit
 const DATE_HELPERS = new Set(["_MinDay", "_MinMonth", "_MinYear", "_MaxDay", "_MaxMonth", "_MaxYear"]);
@@ -85,7 +85,7 @@ export default function SearchForm({ count, filtersUsed }: { count: number; filt
     const search = useSearchParams();
     const term    = search.get("term");
     const group   = search.get("group");
-    const q       = search.get("q");
+    const qValues = search.getAll("q").filter(v => v.length > 0);
     const minDate = search.get("MinDate") || "";
     const maxDate = search.get("MaxDate") || "";
     const keys = useKeysFromContext();
@@ -150,7 +150,7 @@ export default function SearchForm({ count, filtersUsed }: { count: number; filt
             <div className="d-block">
                 <div className="d-flex align-items-center justify-content-between">
                     <b><i className="bi-archive" /> {count} Processos</b>
-                    {(Object.keys(filtersUsed).length > 0 || q) && (
+                    {(Object.keys(filtersUsed).length > 0 || qValues.length > 0) && (
                         <Link
                             href={"?" + [term && `term=${encodeURIComponent(term)}`, group && `group=${encodeURIComponent(group)}`].filter(Boolean).join("&")}
                             className="text-danger text-decoration-none"
@@ -161,13 +161,7 @@ export default function SearchForm({ count, filtersUsed }: { count: number; filt
                     )}
                 </div>
 
-                <input
-                    type="search"
-                    name="q"
-                    className="form-control form-control-sm rounded-0 my-1"
-                    placeholder="Texto Livre"
-                    defaultValue={q || ""}
-                />
+                <TextQueryList qValues={qValues} />
 
                 <DateRangeInput
                     label="De:"

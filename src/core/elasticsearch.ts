@@ -306,20 +306,12 @@ export function parseSort(value: string | undefined, array: SortCombinations[]):
 }
 
 export function createQueryDslQueryContainer(string?: string | string[]): QueryDslQueryContainer | QueryDslQueryContainer[] {
-    if (!string) {
-        return {
-            match_all: {}
-        };
-    }
-    // Use query_string to support AND, OR, NOT, and parentheses in free text search
-    return [
-        {
-            query_string: {
-                query: Array.isArray(string) ? string.join(" ") : string,
-                fields: ["*"]
-            }
-        }
-    ];
+    if (!string) return { match_all: {} };
+    const values = (Array.isArray(string) ? string : [string]).filter(s => s.length > 0);
+    if (values.length === 0) return { match_all: {} };
+    // Each value becomes its own query_string clause; placing them all in `must` gives AND semantics.
+    // Supports query_string syntax (AND, OR, NOT, parentheses, quotes) within each term.
+    return values.map(q => ({ query_string: { query: q, fields: ["*"] } }));
 }
 
 export async function getSearchedArray(text: string): Promise<string[]> {
