@@ -136,9 +136,19 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
             let must_not = filtersUsed[aggName].filter((o) => o.startsWith("not:")).map((o) => o.substring(4));
             let must_or_should = !isJurisprudenciaDocumentGenericKey(aggName) || body["_should"]?.includes(aggName) ? "should" : "must";
 
-            // Detect advanced operators in any value
-            const hasAdvanced = (arr: string[]) => arr.some((v) => /[\(\)\"\bAND\b|\bOR\b|\bNOT\b]/i.test(v));
-            const asciiFold = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            // Detect advanced operators in any value (literal parens/quotes, or whole words AND/OR/NOT)
+            const hasAdvanced = (arr: string[]) => arr.some((v) => /[()"]|\bAND\b|\bOR\b|\bNOT\b/i.test(v));
+            const asciiFold = (s: string) => s
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '') // remove combining diacritics (ç→c, ã→a, é→e, etc.)
+                .replace(/\xAA/g, 'a')           // ª → a (feminine ordinal, e.g. "1ª Secção")
+                .replace(/\xBA/g, 'o')           // º → o (masculine ordinal)
+                .replace(/[\xC6\xE6]/g, 'ae')    // Æ/æ → ae
+                .replace(/[\xD0\xF0]/g, 'd')     // Ð/ð → d
+                .replace(/[\xD8\xF8]/g, 'o')     // Ø/ø → o
+                .replace(/[\xDE\xFE]/g, 'th')    // Þ/þ → th
+                .replace(/\xDF/g, 'ss')          // ß → ss
+                .replace(/[\u0152\u0153]/g, 'oe'); // Œ/œ → oe
             const termClause = (fieldName: string, o: string) => {
                 if (o.startsWith('"') && o.endsWith('"')) {
                     // Exact match: use keyword field so the normalizer is applied automatically
@@ -154,7 +164,10 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
                     query_string: { query: must_include.join(" "), fields: [fieldName], default_operator: "OR" }
                 });
             } else if (must_include.length) {
-                filters[when].push({ bool: { [must_or_should]: must_include.map(o => termClause(fieldName, o)) } });
+                // Use should + minimum_should_match:1 (OR within field, AND across fields).
+                // Using `must` would require all values to exist simultaneously in the same field,
+                // which is impossible for single-value fields (Área, Secção, etc.) → always 0 results.
+                filters[when].push({ bool: { should: must_include.map(o => termClause(fieldName, o)), minimum_should_match: 1 } });
             }
 
             if (or_include.length && hasAdvanced(or_include)) {
