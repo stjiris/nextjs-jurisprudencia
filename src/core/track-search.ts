@@ -4,9 +4,10 @@ import crypto from "crypto";
 
 const SAVED_SEARCH_INDEX = "saved-searches.0.1"
 
+let _clientReady = false;
 async function getClient() {
     let client = await getElasticSearchClient();
-    if (!(await client.indices.exists({ index: SAVED_SEARCH_INDEX }))) {
+    if (!_clientReady && !(await client.indices.exists({ index: SAVED_SEARCH_INDEX }))) {
         await client.indices.create({
             index: SAVED_SEARCH_INDEX,
             mappings: {
@@ -31,6 +32,7 @@ async function getClient() {
             console.log(e)
         });
     }
+    _clientReady = true;
     return client;
 }
 
