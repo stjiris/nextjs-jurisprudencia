@@ -139,7 +139,9 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
             const termClause = (fieldName: string, o: string) =>
                 o.startsWith('"') && o.endsWith('"')
                     ? { term: { [fieldName.replace("keyword", "raw")]: { value: o.slice(1, -1) } } }
-                    : { wildcard: { [fieldName]: { value: `*${o}*`, case_insensitive: true } } };
+                    : fieldName.endsWith('.keyword')
+                        ? { match_phrase: { [fieldName.replace(/\.keyword$/, '')]: o } }
+                        : { wildcard: { [fieldName]: { value: `*${o}*`, case_insensitive: true } } };
 
             if (must_include.length && hasAdvanced(must_include)) {
                 filters[when].push({
