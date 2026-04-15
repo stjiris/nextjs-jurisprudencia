@@ -14,9 +14,12 @@ const CURRENT_YEAR = new Date().getFullYear();
 function submit(form: HTMLFormElement, router: ReturnType<typeof useNavRouter>) {
     const fd = new FormData(form);
     const searchParams = new URLSearchParams();
+    const processedKeys = new Set<string>();
 
     for (const key of fd.keys()) {
         if (DATE_HELPERS.has(key)) continue;
+        if (processedKeys.has(key)) continue;
+        processedKeys.add(key);
         const seen = new Set<string>();
         for (const v of fd.getAll(key)) {
             const s = String(v);
