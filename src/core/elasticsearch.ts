@@ -311,7 +311,7 @@ export function createQueryDslQueryContainer(string?: string | string[]): QueryD
     if (values.length === 0) return { match_all: {} };
     return values.map(q => {
         const trimmed = q.trim();
-        // Already quoted or uses query_string operators — pass through as-is
+        // Already quoted or uses explicit query_string operators — pass through as-is
         if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || /[()"]|\bAND\b|\bOR\b|\bNOT\b/i.test(trimmed)) {
             return { query_string: { query: trimmed, fields: ["*"] } };
         }
@@ -320,14 +320,15 @@ export function createQueryDslQueryContainer(string?: string | string[]): QueryD
         if (words.length <= 1) {
             return { query_string: { query: trimmed, fields: ["*"] } };
         }
-        // Multiple words: rank phrase matches higher but also return docs matching any word
+        // Multi-word: require ALL words (AND), boost docs where they appear as a phrase
         return {
             bool: {
-                should: [
-                    { query_string: { query: `"${trimmed}"`, fields: ["*"], boost: 2 } },
-                    { query_string: { query: trimmed, fields: ["*"], default_operator: "OR" as const } }
+                must: [
+                    { query_string: { query: trimmed, fields: ["*"], default_operator: "AND" as const } }
                 ],
-                minimum_should_match: 1
+                should: [
+                    { query_string: { query: `"${trimmed}"`, fields: ["*"] } }
+                ]
             }
         };
     });
