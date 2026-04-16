@@ -309,9 +309,28 @@ export function createQueryDslQueryContainer(string?: string | string[]): QueryD
     if (!string) return { match_all: {} };
     const values = (Array.isArray(string) ? string : [string]).filter(s => s.length > 0);
     if (values.length === 0) return { match_all: {} };
-    // Each value becomes its own query_string clause; placing them all in `must` gives AND semantics.
-    // Supports query_string syntax (AND, OR, NOT, parentheses, quotes) within each term.
-    return values.map(q => ({ query_string: { query: q, fields: ["*"] } }));
+    return values.map(q => {
+        const trimmed = q.trim();
+        // Already quoted or uses query_string operators — pass through as-is
+        if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || /[()"]|\bAND\b|\bOR\b|\bNOT\b/i.test(trimmed)) {
+            return { query_string: { query: trimmed, fields: ["*"] } };
+        }
+        const words = trimmed.split(/\s+/).filter(w => w.length > 0);
+        // Single word — simple query_string
+        if (words.length <= 1) {
+            return { query_string: { query: trimmed, fields: ["*"] } };
+        }
+        // Multiple words: rank phrase matches higher but also return docs matching any word
+        return {
+            bool: {
+                should: [
+                    { query_string: { query: `"${trimmed}"`, fields: ["*"], boost: 2 } },
+                    { query_string: { query: trimmed, fields: ["*"], default_operator: "OR" as const } }
+                ],
+                minimum_should_match: 1
+            }
+        };
+    });
 }
 
 export async function getSearchedArray(text: string): Promise<string[]> {
