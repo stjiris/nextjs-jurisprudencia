@@ -5,6 +5,7 @@ export function useFetch<T>(relativeUrl: string, otherDeps: any[]) {
     const router = useRouter();
     let [resp, setResp] = useState<T>()
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
         const abort = new AbortController();
 

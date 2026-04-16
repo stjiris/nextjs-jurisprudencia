@@ -169,11 +169,11 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
             //   + A, + B, ∨ C → (A AND B) OR C
             if (must_include.length > 0 || or_include.length > 0) {
                 const mustClauses = hasAdvanced(must_include)
-                    ? [{ query_string: { query: must_include.join(" "), fields: [fieldName], default_operator: "OR" } }]
+                    ? [{ query_string: { query: must_include.join(" "), fields: [fieldName], default_operator: "OR" as const } }]
                     : must_include.map(o => termClause(fieldName, o));
 
                 const orClauses = hasAdvanced(or_include)
-                    ? [{ query_string: { query: or_include.join(" OR "), fields: [fieldName], default_operator: "OR" } }]
+                    ? [{ query_string: { query: or_include.join(" OR "), fields: [fieldName], default_operator: "OR" as const } }]
                     : or_include.map(o => termClause(fieldName, o));
 
                 if (orClauses.length === 0) {
@@ -199,7 +199,7 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
                                 query_string: {
                                     query: must_not.join(" "),
                                     fields: [fieldName],
-                                    default_operator: "OR"
+                                    default_operator: "OR" as const
                                 }
                             }
                         ]
