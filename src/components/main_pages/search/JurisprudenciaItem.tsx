@@ -28,12 +28,13 @@ export default function JurisprudenciaItem({ hit, searchId }: { hit: SearchHandl
                 {area ? secao ? ` - ${area} - ${secao}` : ` - ${area}` : ""}
                 {keys?.STATE.active && hit._source.STATE ? <span className="px-1"><BadgeFromState state={hit._source["STATE"]} /></span> : <></>}
             </div>
+        </div>
 
+        <div className="col-12 col-lg-8">
             {meioProcessual && <div><b>{keys?.["Meio Processual"].name}:</b> {meioProcessual}</div>}
             {relator && <div><b>{keys?.["Relator Nome Profissional"].name}:</b> {relator}</div>}
             {decisao && <div><b>{keys?.Decisão.name}:</b> {decisao}</div>}
             {descritores && <div><b>{keys?.Descritores.name}:</b> {descritores}</div>}
-
         </div>
 
         {hit._source?.Sumário && !hit.highlight?.Sumário ? (
