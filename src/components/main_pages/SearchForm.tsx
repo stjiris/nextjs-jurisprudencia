@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter as useNavRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef } from "react";
 import { useKeysFromContext } from "@/contexts/keys";
-import { FORM_KEY, SwapableFilterList, TextQueryList } from "./SwapableFilterList";
+import { FORM_KEY, SwapableFilterList } from "./SwapableFilterList";
 
 // Helper field names combined into MinDate/MaxDate on submit
 const DATE_HELPERS = new Set(["_MinDay", "_MinMonth", "_MinYear", "_MaxDay", "_MaxMonth", "_MaxYear"]);
@@ -85,6 +85,7 @@ export default function SearchForm({ count, filtersUsed }: { count: number; filt
     const search = useSearchParams();
     const term    = search.get("term");
     const group   = search.get("group");
+    const q       = search.get("q") || "";
     const qValues = search.getAll("q").filter(v => v.length > 0);
     const minDate = search.get("MinDate") || "";
     const maxDate = search.get("MaxDate") || "";
@@ -161,7 +162,7 @@ export default function SearchForm({ count, filtersUsed }: { count: number; filt
                     )}
                 </div>
 
-                <TextQueryList qValues={qValues} />
+                <input type="search" name="q" defaultValue={q} className="form-control form-control-sm my-1" placeholder="Texto Livre" />
 
                 <DateRangeInput
                     label="De:"
