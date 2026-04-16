@@ -220,6 +220,13 @@ services:
       RSS_FOLDER: /rss
       RSS_LINK: ${RSS_LINK:-http://localhost:3000/jurisprudencia}
       RSS_MAX_FEED_SIZE: 200
+      ANONIMIZADOR_URL: ${ANONIMIZADOR_URL:-}
+      LOCAL_ROOT: /home/clitools/jurisprudencia-privada-etl/results
+      TENANT_ID: ${TENANT_ID:-}
+      CLIENT_ID: ${CLIENT_ID:-}
+      CLIENT_SECRET: ${CLIENT_SECRET:-}
+      SITE_ID: ${SITE_ID:-}
+      DRIVES: ${DRIVES:-}
     volumes:
       - ../jurisprudencia-privada-etl:/home/clitools/jurisprudencia-privada-etl:rw
       - ../jurisprudencia-etl:/home/clitools/jurisprudencia-etl:rw
