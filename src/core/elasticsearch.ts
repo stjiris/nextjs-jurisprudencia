@@ -316,12 +316,9 @@ export function createQueryDslQueryContainer(string?: string | string[]): QueryD
 
     return values.map(q => {
         const trimmed = q.trim();
-        // Fully quoted → exact phrase, bypass stopwords by using whitespace analyzer
-        // (pre-apply lowercase + asciifolding in JS to match indexed token forms)
+        // Fully quoted → exact phrase query (default analyzer preserves position gaps for stopwords)
         if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
-            const inner = trimmed.slice(1, -1);
-            const processed = asciiFold(inner.toLowerCase());
-            return { query_string: { query: `"${processed}"`, fields: TEXT_FIELDS, analyzer: "whitespace", phrase_slop: 0 } };
+            return { query_string: { query: trimmed, fields: TEXT_FIELDS, phrase_slop: 0 } };
         }
         // Explicit operators (AND/OR/NOT/parens/inner quotes) → pass through
         if (/[()"]|\bAND\b|\bOR\b|\bNOT\b/i.test(trimmed)) {
