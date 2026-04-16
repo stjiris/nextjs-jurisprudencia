@@ -109,6 +109,18 @@ export default async function search(query: QueryDslQueryContainer | QueryDslQue
     });
 }
 
+export const asciiFold = (s: string) => s
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\xAA/g, 'a')
+    .replace(/\xBA/g, 'o')
+    .replace(/[\xC6\xE6]/g, 'ae')
+    .replace(/[\xD0\xF0]/g, 'd')
+    .replace(/[\xD8\xF8]/g, 'o')
+    .replace(/[\xDE\xFE]/g, 'th')
+    .replace(/\xDF/g, 'ss')
+    .replace(/[\u0152\u0153]/g, 'oe');
+
 export function padZero(num: number | string, size: number = 4): string {
     let s = num.toString();
     while (s.length < size) {
@@ -138,17 +150,6 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
 
             // Detect advanced operators in any value (literal parens/quotes, or whole words AND/OR/NOT)
             const hasAdvanced = (arr: string[]) => arr.some((v) => /[()"]|\bAND\b|\bOR\b|\bNOT\b/i.test(v));
-            const asciiFold = (s: string) => s
-                .normalize('NFD')
-                .replace(/[\u0300-\u036f]/g, '') // remove combining diacritics (ç→c, ã→a, é→e, etc.)
-                .replace(/\xAA/g, 'a')           // ª → a (feminine ordinal, e.g. "1ª Secção")
-                .replace(/\xBA/g, 'o')           // º → o (masculine ordinal)
-                .replace(/[\xC6\xE6]/g, 'ae')    // Æ/æ → ae
-                .replace(/[\xD0\xF0]/g, 'd')     // Ð/ð → d
-                .replace(/[\xD8\xF8]/g, 'o')     // Ø/ø → o
-                .replace(/[\xDE\xFE]/g, 'th')    // Þ/þ → th
-                .replace(/\xDF/g, 'ss')          // ß → ss
-                .replace(/[\u0152\u0153]/g, 'oe'); // Œ/œ → oe
             const termClause = (fieldName: string, o: string) => {
                 if (o.startsWith('"') && o.endsWith('"')) {
                     // Exact match: use keyword field so the normalizer is applied automatically
@@ -315,9 +316,12 @@ export function createQueryDslQueryContainer(string?: string | string[]): QueryD
 
     return values.map(q => {
         const trimmed = q.trim();
-        // Fully quoted → exact phrase
+        // Fully quoted → exact phrase, bypass stopwords by using whitespace analyzer
+        // (pre-apply lowercase + asciifolding in JS to match indexed token forms)
         if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
-            return { query_string: { query: trimmed, fields: TEXT_FIELDS, phrase_slop: 0 } };
+            const inner = trimmed.slice(1, -1);
+            const processed = asciiFold(inner.toLowerCase());
+            return { query_string: { query: `"${processed}"`, fields: TEXT_FIELDS, analyzer: "whitespace", phrase_slop: 0 } };
         }
         // Explicit operators (AND/OR/NOT/parens/inner quotes) → pass through
         if (/[()"]|\bAND\b|\bOR\b|\bNOT\b/i.test(trimmed)) {
