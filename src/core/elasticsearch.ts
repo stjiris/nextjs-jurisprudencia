@@ -309,30 +309,33 @@ export function createQueryDslQueryContainer(string?: string | string[]): QueryD
     if (!string) return { match_all: {} };
     const values = (Array.isArray(string) ? string : [string]).filter(s => s.length > 0);
     if (values.length === 0) return { match_all: {} };
+    // Target only the actual text/analyzed fields. Using fields:["*"] hits ENTITIES (flattened type)
+    // and Data (date type) which throw QueryShardException and kill the entire query.
+    const TEXT_FIELDS = ["Texto", "Sumário", "CONTENT", "*.Index"];
+
     return values.map(q => {
         const trimmed = q.trim();
         // Fully quoted → exact phrase
         if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
-            return { query_string: { query: trimmed, fields: ["*"], lenient: true, phrase_slop: 0 } };
+            return { query_string: { query: trimmed, fields: TEXT_FIELDS, phrase_slop: 0 } };
         }
         // Explicit operators (AND/OR/NOT/parens/inner quotes) → pass through
         if (/[()"]|\bAND\b|\bOR\b|\bNOT\b/i.test(trimmed)) {
-            return { query_string: { query: trimmed, fields: ["*"], lenient: true } };
+            return { query_string: { query: trimmed, fields: TEXT_FIELDS } };
         }
         const words = trimmed.split(/\s+/).filter(w => w.length > 0);
         // Single word
         if (words.length <= 1) {
-            return { query_string: { query: trimmed, fields: ["*"], lenient: true } };
+            return { query_string: { query: trimmed, fields: TEXT_FIELDS } };
         }
         // Multi-word: rank by how many words match, phrase match scored highest.
-        // lenient: true so date/numeric fields silently skip instead of throwing.
         // Elasticsearch scores by summing matched should clauses:
         //   phrase + all N words > all N words > N-1 words > … > 1 word
         return {
             bool: {
                 should: [
-                    { query_string: { query: `"${trimmed}"`, fields: ["*"], lenient: true, boost: words.length + 1, phrase_slop: 0 } },
-                    ...words.map(w => ({ query_string: { query: w, fields: ["*"], lenient: true } }))
+                    { query_string: { query: `"${trimmed}"`, fields: TEXT_FIELDS, boost: words.length + 1, phrase_slop: 0 } },
+                    ...words.map(w => ({ query_string: { query: w, fields: TEXT_FIELDS } }))
                 ] as any[],
                 minimum_should_match: 1
             }
