@@ -311,24 +311,29 @@ export function createQueryDslQueryContainer(string?: string | string[]): QueryD
     if (values.length === 0) return { match_all: {} };
     return values.map(q => {
         const trimmed = q.trim();
-        // Already quoted or uses explicit query_string operators — pass through as-is
-        if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || /[()"]|\bAND\b|\bOR\b|\bNOT\b/i.test(trimmed)) {
+        // Fully quoted → exact phrase, pass through as-is
+        if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
+            return { query_string: { query: trimmed, fields: ["*"], phrase_slop: 0 } };
+        }
+        // Explicit operators (AND/OR/NOT/parens/inner quotes) → pass through as-is
+        if (/[()"]|\bAND\b|\bOR\b|\bNOT\b/i.test(trimmed)) {
             return { query_string: { query: trimmed, fields: ["*"] } };
         }
         const words = trimmed.split(/\s+/).filter(w => w.length > 0);
-        // Single word — simple query_string
+        // Single word
         if (words.length <= 1) {
             return { query_string: { query: trimmed, fields: ["*"] } };
         }
-        // Multi-word: require ALL words (AND), boost docs where they appear as a phrase
+        // Multi-word: rank by how many words match, phrase match scored highest.
+        // Elasticsearch scores by summing matched should clauses, so:
+        //   phrase + all N words > all N words > N-1 words > … > 1 word
         return {
             bool: {
-                must: [
-                    { query_string: { query: trimmed, fields: ["*"], default_operator: "AND" as const } }
-                ],
                 should: [
-                    { query_string: { query: `"${trimmed}"`, fields: ["*"] } }
-                ]
+                    { query_string: { query: `"${trimmed}"`, fields: ["*"], boost: words.length + 1, phrase_slop: 0 } },
+                    ...words.map(w => ({ query_string: { query: w, fields: ["*"] } }))
+                ] as any[],
+                minimum_should_match: 1
             }
         };
     });
