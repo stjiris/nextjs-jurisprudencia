@@ -162,7 +162,7 @@ export default function SearchForm({ count, filtersUsed }: { count: number; filt
                     )}
                 </div>
 
-                <input type="search" name="q" defaultValue={q} className="form-control form-control-sm my-1" placeholder="Texto Livre" />
+                <input key={q} type="search" name="q" defaultValue={q} className="form-control form-control-sm my-1" placeholder="Texto Livre" />
 
                 <DateRangeInput
                     label="De:"
