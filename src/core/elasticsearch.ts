@@ -311,27 +311,28 @@ export function createQueryDslQueryContainer(string?: string | string[]): QueryD
     if (values.length === 0) return { match_all: {} };
     return values.map(q => {
         const trimmed = q.trim();
-        // Fully quoted → exact phrase, pass through as-is
+        // Fully quoted → exact phrase
         if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
-            return { query_string: { query: trimmed, fields: ["*"], phrase_slop: 0 } };
+            return { query_string: { query: trimmed, fields: ["*"], lenient: true, phrase_slop: 0 } };
         }
-        // Explicit operators (AND/OR/NOT/parens/inner quotes) → pass through as-is
+        // Explicit operators (AND/OR/NOT/parens/inner quotes) → pass through
         if (/[()"]|\bAND\b|\bOR\b|\bNOT\b/i.test(trimmed)) {
-            return { query_string: { query: trimmed, fields: ["*"] } };
+            return { query_string: { query: trimmed, fields: ["*"], lenient: true } };
         }
         const words = trimmed.split(/\s+/).filter(w => w.length > 0);
         // Single word
         if (words.length <= 1) {
-            return { query_string: { query: trimmed, fields: ["*"] } };
+            return { query_string: { query: trimmed, fields: ["*"], lenient: true } };
         }
         // Multi-word: rank by how many words match, phrase match scored highest.
-        // Elasticsearch scores by summing matched should clauses, so:
+        // lenient: true so date/numeric fields silently skip instead of throwing.
+        // Elasticsearch scores by summing matched should clauses:
         //   phrase + all N words > all N words > N-1 words > … > 1 word
         return {
             bool: {
                 should: [
-                    { query_string: { query: `"${trimmed}"`, fields: ["*"], boost: words.length + 1, phrase_slop: 0 } },
-                    ...words.map(w => ({ query_string: { query: w, fields: ["*"] } }))
+                    { query_string: { query: `"${trimmed}"`, fields: ["*"], lenient: true, boost: words.length + 1, phrase_slop: 0 } },
+                    ...words.map(w => ({ query_string: { query: w, fields: ["*"], lenient: true } }))
                 ] as any[],
                 minimum_should_match: 1
             }
