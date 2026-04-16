@@ -328,7 +328,7 @@ export function createQueryDslQueryContainer(string?: string | string[]): QueryD
         if (words.length <= 1) {
             return { query_string: { query: trimmed, fields: TEXT_FIELDS } };
         }
-        // Multi-word: rank by how many words match, phrase match scored highest.
+        // Multi-word: phrase match scored highest, individual words fill in the ranking.
         // Elasticsearch scores by summing matched should clauses:
         //   phrase + all N words > all N words > N-1 words > … > 1 word
         return {
