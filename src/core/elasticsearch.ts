@@ -308,37 +308,40 @@ export function createQueryDslQueryContainer(string?: string | string[]): QueryD
     const descritoresBase = JurisprudenciaDocumentGenericKeys.find(key => key === "Descritores") || "Descritores";
     const descritoresField = `${descritoresBase}.Index`;
     const numeroProcessoField = JurisprudenciaDocumentKeys.find(key => key === "Número de Processo") || "Número de Processo";
+    const ecliField = JurisprudenciaDocumentExactKeys.find(key => key === "ECLI") || "ECLI";
 
-    const exactKeys = JurisprudenciaDocumentExactKeys.filter(key => key === "Número de Processo" || key === "ECLI");
-    const genericKeys = JurisprudenciaDocumentGenericKeys.filter(key => key !== "Descritores");
-
-    const metadataFields = [
-        ...exactKeys.map(key => `${key}^100`),
-        `${descritoresField}^50`,
-        ...genericKeys.map(key => `${key}.Index^30`)
-    ];
-
-    const textFields = [
-        `${sumarioField}^60`,
-        `${textoField}^1`
+    const multiMatchFields = [
+        `${sumarioField}^10`,
+        `${textoField}^5`,
+        `${descritoresField}^1`
     ];
 
     const caseNumberPattern = /^\d{1,7}\/\d{2}\.[0-9A-Z]{3,8}\.[0-9A-Z]{1,4}$/i;
-    const metadataMultiMatch: QueryDslQueryContainer = {
+    const multiMatchQuery: QueryDslQueryContainer = {
         multi_match: {
             query,
             type: "best_fields",
-            fields: metadataFields,
+            fields: multiMatchFields,
             fuzziness: "AUTO"
         }
     };
 
-    const textMultiMatch: QueryDslQueryContainer = {
-        multi_match: {
-            query,
-            type: "best_fields",
-            fields: textFields,
-            fuzziness: "AUTO"
+    const descritoresWithTextoBoost: QueryDslQueryContainer = {
+        bool: {
+            must: [
+                { match: { [descritoresField]: { query } } },
+                { match: { [textoField]: { query } } }
+            ],
+            boost: 20
+        }
+    };
+
+    const descritoresLowBoost: QueryDslQueryContainer = {
+        match: {
+            [descritoresField]: {
+                query,
+                boost: 0.2
+            }
         }
     };
 
@@ -350,12 +353,19 @@ export function createQueryDslQueryContainer(string?: string | string[]): QueryD
                         match_phrase: {
                             [numeroProcessoField]: {
                                 query,
-                                boost: 10
+                                boost: 100
                             }
                         }
                     },
-                    metadataMultiMatch,
-                    textMultiMatch
+                    {
+                        match_phrase: {
+                            [ecliField]: {
+                                query,
+                                boost: 100
+                            }
+                        }
+                    },
+                    multiMatchQuery
                 ],
                 minimum_should_match: 1
             }
@@ -381,8 +391,9 @@ export function createQueryDslQueryContainer(string?: string | string[]): QueryD
                         }
                     }
                 },
-                metadataMultiMatch,
-                textMultiMatch
+                descritoresWithTextoBoost,
+                descritoresLowBoost,
+                multiMatchQuery
             ],
             minimum_should_match: 1
         }
@@ -400,7 +411,7 @@ export async function getSearchedArray(text: string): Promise<string[]> {
     }
 }
 
-export async function getAutocompleteSuggestions(text: string): Promise<{ text: string, type: string }[]> {
+export async function getAutocompleteSuggestions(text: string): Promise<{ text: string, type: string, docCount: number, totalOccurrences: number }[]> {
     const queryText = text?.trim();
     if (!queryText) return [];
 
@@ -429,12 +440,30 @@ export async function getAutocompleteSuggestions(text: string): Promise<{ text: 
                 }
             },
             aggs: {
-                descritores: { terms: { field: `${fieldDefs[0].field}.keyword`, size: 10, include: includePattern } },
-                relator: { terms: { field: `${fieldDefs[1].field}.keyword`, size: 10, include: includePattern } },
-                area: { terms: { field: `${fieldDefs[2].field}.keyword`, size: 10, include: includePattern } },
-                secao: { terms: { field: `${fieldDefs[3].field}.keyword`, size: 10, include: includePattern } },
-                meioProcessual: { terms: { field: `${fieldDefs[4].field}.keyword`, size: 10, include: includePattern } },
-                votacao: { terms: { field: `${fieldDefs[5].field}.keyword`, size: 10, include: includePattern } }
+                descritores: {
+                    terms: { field: `${fieldDefs[0].field}.keyword`, size: 10, include: includePattern },
+                    aggs: { total_occurrences: { value_count: { field: `${fieldDefs[0].field}.keyword` } } }
+                },
+                relator: {
+                    terms: { field: `${fieldDefs[1].field}.keyword`, size: 10, include: includePattern },
+                    aggs: { total_occurrences: { value_count: { field: `${fieldDefs[1].field}.keyword` } } }
+                },
+                area: {
+                    terms: { field: `${fieldDefs[2].field}.keyword`, size: 10, include: includePattern },
+                    aggs: { total_occurrences: { value_count: { field: `${fieldDefs[2].field}.keyword` } } }
+                },
+                secao: {
+                    terms: { field: `${fieldDefs[3].field}.keyword`, size: 10, include: includePattern },
+                    aggs: { total_occurrences: { value_count: { field: `${fieldDefs[3].field}.keyword` } } }
+                },
+                meioProcessual: {
+                    terms: { field: `${fieldDefs[4].field}.keyword`, size: 10, include: includePattern },
+                    aggs: { total_occurrences: { value_count: { field: `${fieldDefs[4].field}.keyword` } } }
+                },
+                votacao: {
+                    terms: { field: `${fieldDefs[5].field}.keyword`, size: 10, include: includePattern },
+                    aggs: { total_occurrences: { value_count: { field: `${fieldDefs[5].field}.keyword` } } }
+                }
             }
         });
 
@@ -447,14 +476,17 @@ export async function getAutocompleteSuggestions(text: string): Promise<{ text: 
             { key: "votacao", type: "Votação" }
         ];
 
-        const unique = new Map<string, { text: string; type: string }>();
+        const unique = new Map<string, { text: string; type: string; docCount: number; totalOccurrences: number }>();
         for (const { key, type } of aggMap) {
-            const agg = (response.aggregations as Record<string, { buckets?: AggregationsStringTermsBucket[] }> | undefined)?.[key];
+            const agg = (response.aggregations as Record<string, { buckets?: Array<AggregationsStringTermsBucket & { total_occurrences?: { value?: number } }> }> | undefined)?.[key];
             const buckets = Array.isArray(agg?.buckets) ? agg!.buckets : [];
             for (const bucket of buckets) {
                 if (typeof bucket.key === "string") {
                     const id = `${type}:${bucket.key}`;
-                    if (!unique.has(id)) unique.set(id, { text: bucket.key, type });
+                    if (!unique.has(id)) {
+                        const totalOccurrences = typeof bucket.total_occurrences?.value === "number" ? bucket.total_occurrences.value : bucket.doc_count;
+                        unique.set(id, { text: bucket.key, type, docCount: bucket.doc_count, totalOccurrences });
+                    }
                 }
             }
         }

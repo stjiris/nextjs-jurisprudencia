@@ -7,7 +7,7 @@ import logoname from '../../public/images/PT-logoLogo-STJ.png';
 
 export default function Home() {
     const [searchTerm, setSearchTerm] = useState('');
-    const [suggestions, setSuggestions] = useState<Array<{ text: string; type: string }>>([]);
+    const [suggestions, setSuggestions] = useState<Array<{ text: string; type: string; docCount: number; totalOccurrences: number }>>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
     const containerRef = useRef<HTMLDivElement | null>(null);
@@ -28,7 +28,7 @@ export default function Home() {
         }
     };
 
-    const fetchSuggestions = async (query: string): Promise<Array<{ text: string; type: string }>> => {
+    const fetchSuggestions = async (query: string): Promise<Array<{ text: string; type: string; docCount: number; totalOccurrences: number }>> => {
         try {
             const response = await fetch(`/jurisprudencia/api/autocomplete?q=${encodeURIComponent(query)}`);
             
@@ -40,7 +40,7 @@ export default function Home() {
             }
             const data = await response.json();
             return Array.isArray(data)
-                ? data.filter((item) => item && typeof item.text === "string" && typeof item.type === "string")
+                ? data.filter((item) => item && typeof item.text === "string" && typeof item.type === "string" && typeof item.docCount === "number" && typeof item.totalOccurrences === "number")
                 : [];
         } catch (error) {
             console.error("Erro no fetch:", error);
@@ -48,13 +48,13 @@ export default function Home() {
         }
     };
 
-    const applySuggestion = (suggestion: { text: string; type: string }) => {
+    const applySuggestion = (suggestion: { text: string; type: string; docCount: number; totalOccurrences: number }) => {
         setSearchTerm(suggestion.text);
         setShowSuggestions(false);
         setSuggestions([]);
         setActiveSuggestionIndex(-1);
         const filterKey = suggestion.type !== "q" ? suggestion.type : undefined;
-        handleSearch(undefined, suggestion.text, filterKey);
+        handleSearch(undefined, formatSuggestion(suggestion.text), filterKey);
     };
 
     useEffect(() => {
@@ -157,15 +157,15 @@ export default function Home() {
                                 onKeyDown={handleKeyDown}
                             />
                         </div>
-                        {showSuggestions && suggestions.length > 0 && (
+                        {showSuggestions && searchTerm.trim().length >= 3 && suggestions.length > 0 && (
                             <ul
-                                className="list-group position-absolute w-100 mt-1 shadow-sm "
-                                style={{ top: "100%", left: 0, zIndex: 1000 }}
+                                className="list-group position-absolute w-100 mt-1 shadow-sm"
+                                style={{ top: "100%", left: 0, zIndex: 1000, maxHeight: "360px", overflowY: "auto" }}
                             >
                                 {suggestions.map((item, index) => (
                                     <li
                                         key={`${item.type}-${item.text}-${index}`}
-                                        className={`list-group-item list-group-item-action ${index === activeSuggestionIndex ? "active" : ""}`}
+                                        className={`list-group-item list-group-item-action d-flex align-items-center justify-content-between ${index === activeSuggestionIndex ? "active" : ""}`}
                                         style={{
                                             ...suggestionBaseStyle,
                                             ...(index === activeSuggestionIndex ? activeSuggestionStyle : {})
@@ -173,8 +173,11 @@ export default function Home() {
                                         onMouseDown={() => applySuggestion(item)}
                                         onMouseEnter={() => setActiveSuggestionIndex(index)}
                                     >
-                                        <span>{formatSuggestion(item.text)}</span>
-                                        <span className="badge bg-light text-muted border ms-2">{item.type}</span>
+                                        <span className="d-flex align-items-center gap-2">
+                                            <span>{formatSuggestion(item.text)}</span>
+                                            <span className="badge bg-light text-muted border">{item.type}</span>
+                                        </span>
+                                        <span className="text-muted small">{item.docCount} processos | {item.totalOccurrences} ocorrências</span>
                                     </li>
                                 ))}
                             </ul>
@@ -183,12 +186,7 @@ export default function Home() {
 
                     {/* 3. Button Section using Theme Colors */}
                     <div className="d-flex justify-content-center gap-3">
-                        <button 
-                            type="submit" 
-                            className="btn theme-btn-primary px-4 py-2 shadow-sm fw-bold"
-                        >
-                            Pesquisa STJ
-                        </button>
+                        
                         <Link 
                             href="/pesquisa" 
                             className="btn theme-btn-secondary px-4 py-2 shadow-sm fw-bold"
