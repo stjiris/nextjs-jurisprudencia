@@ -1,6 +1,7 @@
 import '@/styles/globals.css'
 import '@/styles/highlight-style.css'
 import "@/styles/pesquisa.css"
+import '@/styles/home.css'
 
 import type { AppProps } from 'next/app'
 

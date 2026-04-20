@@ -24,7 +24,7 @@ export default function Header(props: { keys_to_remove: string[] }) {
 
     return <>
         <header className="mb-1 py-2 align-items-center d-flex flex-wrap border-bottom">
-            <Link href="/" className="align-items-center d-flex flex-wrap text-decoration-none nav-link">
+            <Link href="/home" className="align-items-center d-flex flex-wrap text-decoration-none nav-link">
                 <Image
                     src={logoname}
                     alt="Logótipo STJ"
