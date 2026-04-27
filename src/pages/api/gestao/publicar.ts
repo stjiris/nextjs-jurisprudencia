@@ -38,9 +38,9 @@ export default LoggerApi(async function publicarHandler(
         }
 
         // On interno, send sync email first — if it fails, abort the state change
-        if (process.env.SYNC_ROLE === "interno" && uuid) {
+        if (process.env.SYNC_ROLE === "interno" && uuid && doc._source) {
             try {
-                await sendSyncEmail("publicar", uuid);
+                await sendSyncEmail("publicar", uuid, doc._source as Record<string, any>);
             } catch (emailErr) {
                 console.error("[gestao/publicar] Failed to send sync email:", emailErr);
                 return res.status(500).json({ ok: false, message: "Falhou a propagação por email. Estado não foi alterado." });

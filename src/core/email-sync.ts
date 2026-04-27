@@ -3,7 +3,7 @@ import nodemailer from "nodemailer";
 import { ImapFlow } from "imapflow";
 import { simpleParser } from "mailparser";
 import { getElasticSearchClient } from "./elasticsearch";
-import { JurisprudenciaVersion } from "@stjiris/jurisprudencia-document";
+import { JurisprudenciaDocument, JurisprudenciaVersion } from "@stjiris/jurisprudencia-document";
 import { updateDoc } from "./doc";
 
 const SYNC_SUBJECT_PREFIX = "[JURIS-SYNC]";
@@ -14,7 +14,7 @@ interface SyncPayload {
     action: SyncAction;
     uuid: string;
     ts: number;
-    content?: Record<string, any>; // only for "editar"
+    content?: Record<string, any>; // full doc for "publicar", diff for "editar"
     sig: string;
 }
 
@@ -91,8 +91,10 @@ async function sendSyncEmailInternal(action: SyncAction, uuid: string, content?:
     console.log(`[email-sync] Sent ${action} for UUID ${uuid} to ${to}`);
 }
 
-export async function sendSyncEmail(action: "publicar" | "tornar-privado", uuid: string): Promise<void> {
-    return sendSyncEmailInternal(action, uuid);
+export async function sendSyncEmail(action: "tornar-privado", uuid: string): Promise<void>;
+export async function sendSyncEmail(action: "publicar", uuid: string, content: Record<string, any>): Promise<void>;
+export async function sendSyncEmail(action: "publicar" | "tornar-privado", uuid: string, content?: Record<string, any>): Promise<void> {
+    return sendSyncEmailInternal(action, uuid, content);
 }
 
 export async function sendSyncEditEmail(uuid: string, content: Record<string, any>): Promise<void> {
@@ -116,7 +118,26 @@ async function findDocIdByUUID(uuid: string): Promise<string | null> {
 // --- Apply action on external deployment ---
 
 async function applyAction(action: SyncAction, uuid: string, content?: Record<string, any>): Promise<boolean> {
+    const client = await getElasticSearchClient();
     const docId = await findDocIdByUUID(uuid);
+
+    if (action === "publicar") {
+        if (!docId) {
+            // Document doesn't exist on this deployment — create it from the full content
+            if (!content) {
+                console.warn(`[email-sync] publicar for unknown UUID ${uuid} has no content, cannot create`);
+                return false;
+            }
+            const doc = { ...content, STATE: "público" } as JurisprudenciaDocument;
+            await client.index({ index: JurisprudenciaVersion, document: doc, refresh: "wait_for" });
+            console.log(`[email-sync] Created document for UUID=${uuid} via publicar sync`);
+        } else {
+            await updateDoc(docId, { STATE: "público" });
+            console.log(`[email-sync] Updated STATE=público for UUID=${uuid} (id=${docId})`);
+        }
+        return true;
+    }
+
     if (!docId) {
         console.warn(`[email-sync] Document with UUID ${uuid} not found in this deployment, skipping`);
         return false;
@@ -130,9 +151,8 @@ async function applyAction(action: SyncAction, uuid: string, content?: Record<st
         await updateDoc(docId, content);
         console.log(`[email-sync] Applied editar to UUID=${uuid} (id=${docId})`);
     } else {
-        const newState = action === "publicar" ? "público" : "privado";
-        await updateDoc(docId, { STATE: newState });
-        console.log(`[email-sync] Applied action=${action} (STATE=${newState}) to UUID=${uuid} (id=${docId})`);
+        await updateDoc(docId, { STATE: "privado" });
+        console.log(`[email-sync] Applied tornar-privado to UUID=${uuid} (id=${docId})`);
     }
     return true;
 }
