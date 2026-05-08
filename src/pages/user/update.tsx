@@ -19,10 +19,14 @@ export const getServerSideProps = LoggerServerSideProps(withAuthentication<Updat
         let oldpass = requestPostDataParams.get("oldpass");
         let newpass = requestPostDataParams.get("newpass");
         let r = user && oldpass && await authenticate(user, oldpass);
+        console.log("[update] user:", user, "auth result:", r);
         let success = false;
         if( user && newpass && r === AuthenticateResponse.AUTHORIZED){
             success = await updateUser(user, newpass)
+            console.log("[update] updateUser result:", success);
             await deleteUserSession(user)
+        } else {
+            console.log("[update] skipped update — user:", !!user, "newpass:", !!newpass, "auth:", r);
         }
         return {props: {success: success, user: (await readUser(ctx.req.cookies["user"]!))!}}
     }
