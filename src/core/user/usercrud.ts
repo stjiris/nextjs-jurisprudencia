@@ -89,8 +89,7 @@ export async function readUser(user: string){
 export async function updateUser(user: string, password: string){
     let client = await getClient();
     let r = await client.search<User>({index: USERS_INDEX, query: {term: {username: user}}});
-    console.log("[updateUser] hits:", r.hits.hits.length);
-    if( r.hits.hits.length === 1 ){
+    if( r.hits.hits.length >= 1 ){
         let hit = r.hits.hits[0];
         let salt = saltGen();
         return await client.update({
