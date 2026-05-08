@@ -78,15 +78,28 @@ async function sendSyncEmailInternal(action: SyncAction, uuid: string, content?:
         port,
         secure,
         auth: { user, pass },
+        connectionTimeout: 15000,
+        greetingTimeout: 15000,
+        socketTimeout: 15000,
     });
 
-    await transporter.sendMail({
-        from,
-        to,
-        subject: `${SYNC_SUBJECT_PREFIX} ${action} ${uuid}`,
-        text: JSON.stringify(payload),
-        headers: { "X-Juris-Sync": "1" },
-    });
+    console.log(`[email-sync] Connecting to ${host}:${port} (secure=${secure}) as ${user}`);
+
+    try {
+        await transporter.sendMail({
+            from,
+            to,
+            subject: `${SYNC_SUBJECT_PREFIX} ${action} ${uuid}`,
+            text: JSON.stringify(payload),
+            headers: { "X-Juris-Sync": "1" },
+        });
+    } catch (err: any) {
+        console.error(`[email-sync] Failed to send ${action} for UUID ${uuid}`);
+        console.error(`[email-sync] SMTP: ${host}:${port} secure=${secure} user=${user} from=${from} to=${to}`);
+        console.error(`[email-sync] Error code: ${err.code} | Response: ${err.response} | Command: ${err.command}`);
+        console.error(`[email-sync] Message: ${err.message}`);
+        throw err;
+    }
 
     console.log(`[email-sync] Sent ${action} for UUID ${uuid} to ${to}`);
 }
