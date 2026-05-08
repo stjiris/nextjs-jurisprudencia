@@ -92,11 +92,10 @@ export async function updateUser(user: string, password: string){
     if( r.hits.hits.length === 1 ){
         let hit = r.hits.hits[0];
         let salt = saltGen();
-        return await client.index({
+        return await client.update({
             index: USERS_INDEX,
-            id: hit._id,
-            document: {
-                username: user,
+            id: hit._id!,
+            doc: {
                 salt: salt,
                 hash: hashPassword(salt, password)
             },
