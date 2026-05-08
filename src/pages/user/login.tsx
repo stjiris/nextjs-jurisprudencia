@@ -22,7 +22,7 @@ export const getServerSideProps : GetServerSideProps<LoginProps> = LoggerServerS
         let r = user && pass && await authenticate(user, pass);
         if( r === AuthenticateResponse.AUTHORIZED){
             let session = await createSession(user!);
-            ctx.res.setHeader("Set-cookie", [`user=${user}; HttpOnly; Secure; Path=/`,`session=${session}; HttpOnly; Secure; Path=/`])
+            ctx.res.setHeader("Set-cookie", [`user=${user}; HttpOnly; Path=/`,`session=${session}; HttpOnly; Path=/`])
             return {redirect: {destination: redirect, statusCode: 303}}
         }
         else{

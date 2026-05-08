@@ -13,7 +13,7 @@ export const getServerSideProps : GetServerSideProps<{}> = LoggerServerSideProps
     if( user && session && await validateSession(user, session) ){
         deleteSession(user, session);
     }
-    ctx.res.setHeader("Set-cookie", [`user=; HttpOnly; Secure; Path=/; Expires=Thu, Jan 01 1970 00:00:00 UTC`,`session=; HttpOnly; Secure; Path=/; Expires=Thu, Jan 01 1970 00:00:00 UTC`])
+    ctx.res.setHeader("Set-cookie", [`user=; HttpOnly; Path=/; Expires=Thu, Jan 01 1970 00:00:00 UTC`,`session=; HttpOnly; Path=/; Expires=Thu, Jan 01 1970 00:00:00 UTC`])
     return {redirect: {destination: "/", permanent: false}}
 })
 
