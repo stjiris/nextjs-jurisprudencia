@@ -1,12 +1,32 @@
-import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/router";
+
+const AI_SEARCH_QUERY_STORAGE_KEY = "ai-search-query";
 
 export default function AiSearchForm() {
     const [query, setQuery] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const router = useRouter();
-    const searchParams = useSearchParams();
+
+    useEffect(() => {
+        try {
+            const storedQuery = window.localStorage.getItem(AI_SEARCH_QUERY_STORAGE_KEY);
+            if (storedQuery !== null) {
+                setQuery(storedQuery);
+            }
+        } catch {
+            // Ignore storage access errors and fall back to in-memory state.
+        }
+    }, []);
+
+    useEffect(() => {
+        try {
+            window.localStorage.setItem(AI_SEARCH_QUERY_STORAGE_KEY, query);
+        } catch {
+            // Ignore storage access errors and keep the input functional.
+        }
+    }, [query]);
 
     const handleAiSearch = async (e?: React.SyntheticEvent) => {
         if (e) e.preventDefault();
@@ -16,14 +36,11 @@ export default function AiSearchForm() {
         setError(null);
 
         try {
-            const response = await fetch(
-                (process.env.NEXT_PUBLIC_BASE_PATH || "") + "/api/ai-search", 
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ naturalLanguageQuery: query })
-                }
-            );
+            const response = await fetch(`${router.basePath}/api/ai-search`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ naturalLanguageQuery: query })
+            });
 
             if (!response.ok) {
                 throw new Error("Erro na pesquisa gerada por IA.");
@@ -32,12 +49,13 @@ export default function AiSearchForm() {
             const data = await response.json();
             
             if (data && typeof data === "object") {
-                const newParams = new URLSearchParams(searchParams.toString());
+                const newParams = new URLSearchParams(window.location.search);
                 
                 // Limpa o q atual para não submeter lixo com os novos filtros, se a IA propôs coisas novas
                 if (Object.keys(data).length > 0) {
                      newParams.delete("q");
                 }
+                 newParams.delete("page");
 
                 Object.keys(data).forEach(key => {
                     // Ignora chaves irrelevantes que o LLM possa por acaso devolver a pensar que é o root (ex: recommendedSearchString isolado)
@@ -48,7 +66,7 @@ export default function AiSearchForm() {
                     }
                 });
 
-                router.push(`?${newParams.toString()}`);
+                window.location.assign(`${router.basePath}/pesquisa?${newParams.toString()}`);
             }
 
         } catch (err: any) {

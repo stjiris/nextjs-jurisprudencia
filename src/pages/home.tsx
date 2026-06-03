@@ -114,88 +114,88 @@ export default function Home() {
     };
 
     const activeSuggestionStyle: React.CSSProperties = {
-        backgroundColor: "var(--primary-red)",
-        color: "var(--primary-gold)",
-        borderColor: "var(--primary-red)"
+        backgroundColor: "#f1f3f4",
+        color: "#202124",
+        borderColor: "#f1f3f4"
     };
 
     return (
-        <div className="container-fluid vh-100 d-flex flex-column justify-content-center align-items-center bg-white">
+        <div className="google-homepage">
             <Head>
                 <title>Jurisprudência STJ - Início</title>
             </Head>
 
-            {/* 1. Official Logo & Branding Section */}
-            <div className="mb-5 text-center d-flex flex-column align-items-center">
-                <Image
-                    src={logoname}
-                    alt="Logótipo STJ"
-                    height={110}
-                    width={280}
-                    priority
-                />
-                <h2 className="mt-3 fancy-font home-title">
-                    Jurisprudência
-                </h2>
-            </div>
+            <main className="google-main">
+                <div className="text-center d-flex flex-column align-items-center google-branding">
+                    <Image
+                        src={logoname}
+                        alt="Logótipo STJ"
+                        height={110}
+                        width={280}
+                        priority
+                    />
+                    <h2 className="fancy-font home-title">
+                        Jurisprudência
+                    </h2>
+                </div>
 
-            {/* 2. Search Section */}
-            <div className="w-100 px-3 home-search-wrapper">
-                <form onSubmit={handleSearch}>
-                    <div className="mb-4 search-container" style={{ position: "relative" }} ref={containerRef}>
-                        <div className="input-group input-group-lg shadow-sm border rounded-pill overflow-hidden">
-                            <span className="input-group-text bg-white border-0 ps-4">
-                                <i className="bi bi-search home-search-icon"></i>
-                            </span>
-                            <input
-                                type="text"
-                                className="form-control border-0 py-3 ps-2 home-search-input"
-                                placeholder="Pesquise na jurisprudência..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                onFocus={() => setShowSuggestions(suggestions.length > 0 && searchTerm.trim().length >= 3)}
-                                onKeyDown={handleKeyDown}
-                            />
+                <div className="w-100 px-3 home-search-wrapper">
+                    <form onSubmit={handleSearch}>
+                        <div className="mb-4 search-container" style={{ position: "relative" }} ref={containerRef}>
+                            <div className="input-group input-group-lg overflow-hidden google-search-shell">
+                                <span className="input-group-text bg-white border-0 ps-3">
+                                    <i className="bi bi-search home-search-icon"></i>
+                                </span>
+                                <input
+                                    type="text"
+                                    className="form-control border-0 py-2 ps-2 home-search-input"
+                                    placeholder="Pesquise na jurisprudência..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    onFocus={() => setShowSuggestions(suggestions.length > 0 && searchTerm.trim().length >= 3)}
+                                    onKeyDown={handleKeyDown}
+                                />
+                            </div>
+
+                            {showSuggestions && searchTerm.trim().length >= 3 && suggestions.length > 0 && (
+                                <ul
+                                    className="list-group position-absolute w-100 mt-1 shadow-sm google-suggestions"
+                                    style={{ top: "100%", left: 0, zIndex: 1000, maxHeight: "360px", overflowY: "auto" }}
+                                >
+                                    {suggestions.map((item, index) => (
+                                        <li
+                                            key={`${item.type}-${item.text}-${index}`}
+                                            className={`list-group-item list-group-item-action d-flex align-items-center justify-content-between ${index === activeSuggestionIndex ? "active" : ""}`}
+                                            style={{
+                                                ...suggestionBaseStyle,
+                                                ...(index === activeSuggestionIndex ? activeSuggestionStyle : {})
+                                            }}
+                                            onMouseDown={() => applySuggestion(item)}
+                                            onMouseEnter={() => setActiveSuggestionIndex(index)}
+                                        >
+                                            <span className="d-flex align-items-center gap-2">
+                                                <i className="bi bi-search google-suggestion-icon"></i>
+                                                <span>{formatSuggestion(item.text)}</span>
+                                                <span className="badge bg-light text-muted border">{item.type}</span>
+                                            </span>
+                                            <span className="text-muted small">{item.docCount} processos | {item.totalOccurrences} ocorrências</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
                         </div>
-                        {showSuggestions && searchTerm.trim().length >= 3 && suggestions.length > 0 && (
-                            <ul
-                                className="list-group position-absolute w-100 mt-1 shadow-sm"
-                                style={{ top: "100%", left: 0, zIndex: 1000, maxHeight: "360px", overflowY: "auto" }}
-                            >
-                                {suggestions.map((item, index) => (
-                                    <li
-                                        key={`${item.type}-${item.text}-${index}`}
-                                        className={`list-group-item list-group-item-action d-flex align-items-center justify-content-between ${index === activeSuggestionIndex ? "active" : ""}`}
-                                        style={{
-                                            ...suggestionBaseStyle,
-                                            ...(index === activeSuggestionIndex ? activeSuggestionStyle : {})
-                                        }}
-                                        onMouseDown={() => applySuggestion(item)}
-                                        onMouseEnter={() => setActiveSuggestionIndex(index)}
-                                    >
-                                        <span className="d-flex align-items-center gap-2">
-                                            <span>{formatSuggestion(item.text)}</span>
-                                            <span className="badge bg-light text-muted border">{item.type}</span>
-                                        </span>
-                                        <span className="text-muted small">{item.docCount} processos | {item.totalOccurrences} ocorrências</span>
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                    </div>
 
-                    {/* 3. Button Section using Theme Colors */}
-                    <div className="d-flex justify-content-center gap-3">
-                        
-                        <Link 
-                            href="/pesquisa" 
-                            className="btn theme-btn-secondary px-4 py-2 shadow-sm fw-bold"
-                        >
-                            Pesquisa Avançada
-                        </Link>
-                    </div>
-                </form>
-            </div>
+                        <div className="d-flex justify-content-center gap-3 google-actions">
+                            <Link
+                                href="/pesquisa"
+                                className="btn google-btn"
+                            >
+                                Pesquisa Avançada
+                            </Link>
+                        </div>
+                    </form>
+                </div>
+            </main>
         </div>
     );
 }
