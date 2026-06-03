@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.97.1",
     "@elastic/elasticsearch": "^8.9.0",
     "@stjiris/filesystem-lib": "npm:@mdgf11/filesystem-lib@^2.2.12",
     "@stjiris/jurisprudencia-document": "npm:@mdgf11/jurisprudencia-document@^13.2.5",
