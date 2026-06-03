@@ -6,6 +6,8 @@ import { useCallback, useEffect, useRef } from "react";
 import { useKeysFromContext } from "@/contexts/keys";
 import { FORM_KEY, SwapableFilterList, UsedFilters } from "./SwapableFilterList";
 
+import AiSearchForm from "./search/AiSearchForm";
+
 function submit(form: HTMLFormElement, router: ReturnType<typeof useNavRouter>) {
     const fd = new FormData(form);
     const searchParams = new URLSearchParams();
@@ -166,6 +168,9 @@ export default function SearchForm({ count, filtersUsed }: { count: number; filt
                         Tem de ter {keys?.records?.Texto?.name}
                     </label>
                 </div>
+
+                {/* Aqui entra a Área de Inteligência Artificial! */}
+                <AiSearchForm />
 
                 <SwapableFilterList filtersUsed={filtersUsed} />
             </div>
