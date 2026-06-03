@@ -9,21 +9,59 @@ As propriedades/filtros disponíveis na base de dados são exatamente os seguint
 q (Para texto livre/genérico e queries complexas Lucene)
 Número de Processo
 ECLI
-Tipo
+Meio Processual
 Secção
 Área
 Decisão
-Relator
+Relator Nome Profissional
 Tribunal
 Descritores
 
 - O campo 'q' destina-se a pesquisas por texto contextual ou texto livre sobre tudo.
 - Os restantes campos destinam-se a extrair entidades (Nomes, Tribunais, Áreas) e filtrá-las especificamente.
 - Exemplo: Para "Quero processos de burla relatados por Mário", deves devolver:
-{ "q": "burla", "Relator": "Mário" }
+{ "q": "burla", "Relator Nome Profissional": "Mário" }
+- Exemplo: Para "acórdãos sobre indemnização na área social com votação unânime", deves devolver:
+{ "q": "indemnização", "Área": "Área Social", "Votação": "Unanimidade" }
 
 Devolve APENAS um documento JSON com os pares chave/valor dos campos que identificaste da query. Não envies texto Markdown em volta do JSON.
 `;
+
+const FIELD_ALIASES: Record<string, string> = {
+    "numero processo": "Número de Processo",
+    "numero de processo": "Número de Processo",
+    "n de processo": "Número de Processo",
+    relator: "Relator Nome Profissional",
+    "relator nome": "Relator Nome Profissional",
+    "relator nome profissional": "Relator Nome Profissional",
+    descritor: "Descritores",
+    descritores: "Descritores",
+    area: "Área",
+    decisao: "Decisão",
+    votacao: "Votação",
+    tipo: "Meio Processual",
+    "meio processual": "Meio Processual",
+    meioprocessual: "Meio Processual",
+};
+
+function normalizeFieldKey(key: string) {
+    return key
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+}
+
+function normalizeAiPayload(payload: Record<string, any>) {
+    return Object.entries(payload).reduce<Record<string, any>>((acc, [key, value]) => {
+        const normalizedKey = FIELD_ALIASES[normalizeFieldKey(key)] || key;
+        if (value !== undefined && value !== null && value !== "") {
+            acc[normalizedKey] = value;
+        }
+        return acc;
+    }, {});
+}
 
 export default LoggerApi(async function aiSearchHandler(
   req: NextApiRequest,
@@ -80,7 +118,7 @@ export default LoggerApi(async function aiSearchHandler(
               // Limpar markdown residual que a IA possa ter gerado (ex: ```json ... ```)
               const match = aiText.match(/\{[\s\S]*?\}/);
               if (match) {
-                  parsedData = JSON.parse(match[0]);
+                  parsedData = normalizeAiPayload(JSON.parse(match[0]));
               }
           }
       } catch (e) {

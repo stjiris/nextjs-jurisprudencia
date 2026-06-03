@@ -128,8 +128,8 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
             let must_not = filtersUsed[aggName].filter(o => o.startsWith("not:")).map(o => o.substring(4))
             let must_or_should = !isJurisprudenciaDocumentGenericKey(aggName) || body["_should"]?.includes(aggName) ? "should" : "must"  // AND or OR - if a signle value use alawys OR else default OR but flag for AND
 
-            // Detect advanced operators in any value
-            const hasAdvanced = (arr: string[]) => arr.some(v => /[\(\)\"\bAND\b|\bOR\b|\bNOT\b]/i.test(v));
+            // Only treat explicit Lucene operators as advanced syntax.
+            const hasAdvanced = (arr: string[]) => arr.some(v => /(?:\bAND\b|\bOR\b|\bNOT\b|[()"])/i.test(v));
             const shouldQueryString = should.join(" ");
             if (should.length && hasAdvanced(should) && isSafeForQueryString(shouldQueryString)) {
                 filters[when].push({
