@@ -8,6 +8,8 @@ export const existsDoc = (docId: string) => getElasticSearchClient().then(c => c
 
 export const getDoc = (docId: string) => getElasticSearchClient().then(c => c.get<JurisprudenciaDocument>({ index: JurisprudenciaVersion, id: docId }))
 
+export const getDocByUUID = (uuid: string) => getElasticSearchClient().then(c => c.search<JurisprudenciaDocument>({ index: JurisprudenciaVersion, query: { term: { UUID: uuid } }, size: 1 }))
+
 export async function updateDoc(docId: string, previewDoc: PartialJurisprudenciaDocument): Promise<> {
     const elasticSearchClient: Client = await getElasticSearchClient();
 

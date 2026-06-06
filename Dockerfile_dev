@@ -1,6 +1,6 @@
 FROM node:20.19-bullseye-slim
 
-RUN apt update && apt install -y pandoc texlive-xetex
+RUN apt update && apt install -y pandoc texlive-xetex poppler-utils
 
 WORKDIR /usr/src/app
 

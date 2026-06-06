@@ -7,6 +7,7 @@ volumes:
   mailserver_state: {}
   mailserver_config: {}
   etl_results: {}
+  pdf_data: {}
 networks:
   juris-network:
     name: juris-network
@@ -37,6 +38,7 @@ services:
       - "${SERVER_HOST:-0.0.0.0}:${SERVER_PORT:-3000}:3000"
     volumes:
       - excel_data:/usr/src/app/files:rw
+      - pdf_data:/usr/src/app/files/pdf:rw
       - rss_data:/rss
     depends_on:
       elasticsearch:
@@ -66,6 +68,8 @@ services:
       ANONIMIZADOR_SECRET: ${ANONIMIZADOR_SECRET}
       ANONIMIZADOR_URL: ${ANONIMIZADOR_URL}
       LOCAL_ROOT: /filesystem-results
+      OCR_URL: ${OCR_URL:-}
+      ETL_SECRET: ${ETL_SECRET:-}
       SYNC_ROLE: ${SYNC_ROLE:-}
       SYNC_SECRET: ${SYNC_SECRET:-}
       SYNC_SMTP_HOST: ${SYNC_SMTP_HOST:-}
@@ -79,6 +83,7 @@ services:
       - "${SERVER_HOST:-0.0.0.0}:${SERVER_PORT:-3000}:3000"
     volumes:
       - excel_data:/usr/src/app/files:rw
+      - pdf_data:/usr/src/app/files/pdf:rw
       - rss_data:/rss
       - etl_results:/filesystem-results:ro
     depends_on:
@@ -108,10 +113,13 @@ services:
       ANONIMIZADOR_SECRET: ${ANONIMIZADOR_SECRET}
       ANONIMIZADOR_URL: ${ANONIMIZADOR_URL:-http://anonimizador_dev:7999/anon-service}
       LOCAL_ROOT: /filesystem-results
+      OCR_URL: ${OCR_URL:-}
+      ETL_SECRET: ${ETL_SECRET:-}
     ports:
       - "${SERVER_HOST:-0.0.0.0}:${SERVER_PORT:-3000}:3000"
     volumes:
       - excel_data:/usr/src/app/files
+      - pdf_data:/usr/src/app/files/pdf:rw
       - .:/usr/src/app
       - /usr/src/app/node_modules
       - rss_data:/rss
@@ -201,8 +209,14 @@ services:
       CLIENT_SECRET: ${CLIENT_SECRET:-}
       SITE_ID: ${SITE_ID:-}
       DRIVES: ${DRIVES:-}
+      ETL_SECRET: ${ETL_SECRET:-}
+      PDF_DRIVE: ${PDF_DRIVE:-}
+      PDF_FOLDER: ${PDF_FOLDER:-PDF}
+      JURIS_URL: ${JURIS_INTERNO_URL:-http://server_interno:3000}
+      NEXT_BASE_PATH: ${NEXT_BASE_PATH:-/jurisprudencia}
     volumes:
       - etl_results:/home/clitools/jurisprudencia-privada-etl/results
+      - pdf_data:/home/clitools/jurisprudencia-privada-etl/results/pdf:rw
       - rss_data:/rss
     profiles:
       - interno
@@ -227,8 +241,14 @@ services:
       CLIENT_SECRET: ${CLIENT_SECRET:-}
       SITE_ID: ${SITE_ID:-}
       DRIVES: ${DRIVES:-}
+      ETL_SECRET: ${ETL_SECRET:-}
+      PDF_DRIVE: ${PDF_DRIVE:-}
+      PDF_FOLDER: ${PDF_FOLDER:-PDF}
+      JURIS_URL: ${JURIS_DEV_URL:-http://server_dev:3000}
+      NEXT_BASE_PATH: ${NEXT_BASE_PATH:-/jurisprudencia}
     volumes:
       - ../jurisprudencia-privada-etl:/home/clitools/jurisprudencia-privada-etl:rw
+      - pdf_data:/home/clitools/jurisprudencia-privada-etl/results/pdf:rw
       - ../jurisprudencia-etl:/home/clitools/jurisprudencia-etl:rw
       - ../version-converter:/home/clitools/version-converter:rw
       - ../backup-jurisprudencia:/home/clitools/backup-jurisprudencia:rw

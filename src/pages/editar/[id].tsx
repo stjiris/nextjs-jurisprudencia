@@ -62,6 +62,7 @@ function Update({ doc, id }: UpdateProps) {
             <div className="row">
                 <div className={"card shadow mx-auto " + (hasPairs ? "col-11" : "col-6")}>
                     <UpdateDocument id={id} />
+                    <PdfUpload id={id} uuid={doc.UUID!} hasPdf={!!doc.PDF} />
                     {keys.keys.map((key, i) => {
                         if (!key.editorEnabled) return null;
                         if (activePairLeftKeys.has(key.key)) {
@@ -162,4 +163,44 @@ function UpdateDocument({ id }: { id: string }) {
             </div>
         </div>
     </div>
+}
+
+function PdfUpload({ id, uuid, hasPdf }: { id: string; uuid: string; hasPdf: boolean }) {
+    let [uploading, setUploading] = useState(false);
+    let router = useRouter();
+    let navRouter = useNavRouter();
+
+    let handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        let file = e.target.files?.[0];
+        if (!file) return;
+
+        setUploading(true);
+        let formData = new FormData();
+        formData.append("id", id);
+        formData.append("uuid", uuid);
+        formData.append("pdf", file);
+
+        await fetch(`${router.basePath}/api/pdf/upload`, {
+            method: "POST",
+            body: formData
+        });
+
+        setUploading(false);
+        navRouter.refresh();
+    };
+
+    return <div className="container-fluid alert alert-secondary col-12 mt-2">
+        <div className="row align-items-center">
+            <div className="col-6">
+                <b><i className="bi bi-file-earmark-pdf me-1"></i>PDF</b>
+                {hasPdf && <a href={`${router.basePath}/api/pdf/${uuid}`} target="_blank" rel="noopener noreferrer" className="ms-3">
+                    <i className="bi bi-eye me-1"></i>Ver PDF atual
+                </a>}
+            </div>
+            <div className="col-6 text-end">
+                <input type="file" accept="application/pdf" onChange={handleUpload} disabled={uploading} className="form-control form-control-sm d-inline-block w-auto" />
+                {uploading && <span className="ms-2 text-muted">A enviar...</span>}
+            </div>
+        </div>
+    </div>;
 }

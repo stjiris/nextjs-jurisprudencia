@@ -28,6 +28,9 @@ WORKDIR /home/clitools
 # sharepoint ETL — every 10 minutes
 RUN (crontab -l; echo "*/10 * * * * cd /home/clitools/jurisprudencia-privada-etl && /usr/local/bin/node dist/sharepoint/index.js >> ../jurisprudencia-sharepoint-etl.stdout.log 2>> ../jurisprudencia-sharepoint-etl.stderr.log") | crontab -
 
+# PDF ingest — every 10 minutes
+RUN (crontab -l; echo "*/10 * * * * cd /home/clitools/jurisprudencia-privada-etl && /usr/local/bin/node dist/sharepoint/pdf-ingest.js >> ../jurisprudencia-pdf-ingest.stdout.log 2>> ../jurisprudencia-pdf-ingest.stderr.log") | crontab -
+
 COPY entrypoint.sh .
 
 USER root

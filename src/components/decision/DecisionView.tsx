@@ -5,12 +5,14 @@ import { useFetch } from "../useFetch";
 import ManageDecisionOptions from "./ManageDecisionOptions";
 import Link from "next/link";
 import { CSSProperties, ReactNode, useState } from "react";
+import { useRouter } from "next/router";
 import { BadgeFromState } from "../BadgeFromState";
 
-const MUST_HAVE = ["UUID", "Número de Processo", "Fonte", "ECLI", "URL", "Sumário", "Texto", "STATE"]
+const MUST_HAVE = ["UUID", "Número de Processo", "Fonte", "ECLI", "URL", "Sumário", "Texto", "STATE", "PDF"]
 
 export default function DecisionView(props: { doc: JurisprudenciaDocument, id: string, keys: JurisprudenciaKey[], isExterno?: boolean }) {
     let auth = useAuth();
+    let router = useRouter();
     let proc = props.doc["Número de Processo"]!;
     let uuid = props.doc["UUID"]!;
     let related = useFetch<JurisprudenciaDocument[]>(`/api/related/${encodeURIComponent(proc)}/${uuid}`, []) || []
@@ -18,7 +20,7 @@ export default function DecisionView(props: { doc: JurisprudenciaDocument, id: s
     const hasAnon     = !!(props.doc["Texto"] || props.doc["Sumário"]);
     const hasOriginal = !!(props.doc["Texto Não Anonimizado"] || props.doc["Sumário Não Anonimizado"]);
     const canSwitch   = hasAnon && hasOriginal;
-    const showToggle  = !!auth && (hasAnon || hasOriginal);
+    const showToggle  = !!auth && (hasAnon || hasOriginal) && !props.doc.PDF;
     let [showOriginal, setShowOriginal] = useState(!hasAnon && hasOriginal);
     let sumario = showOriginal ? (props.doc["Sumário Não Anonimizado"] ?? props.doc.Sumário) : (props.doc.Sumário || props.doc["Sumário Não Anonimizado"]);
     let texto = showOriginal ? (props.doc["Texto Não Anonimizado"] ?? props.doc.Texto) : (props.doc.Texto || props.doc["Texto Não Anonimizado"]);
@@ -82,17 +84,51 @@ export default function DecisionView(props: { doc: JurisprudenciaDocument, id: s
                                 >Anonimizado</span>
                             </div>
                         </div>}
-                        {sumario && <>
-                            <h6 className="border-top border-2"><b>{keyName["Sumário"] || "Sumário"}</b></h6>
-                            <div className="p-2" dangerouslySetInnerHTML={{ __html: sumario }}></div>
-                        </>}
-
-                        {texto && <>
-                            <h6 className="border-top border-2"><b>{keyName["Texto"] || "Texto Integral"}</b></h6>
-                            <div className="p-2" dangerouslySetInnerHTML={{ __html: texto }}></div>
+                        {props.doc.PDF && (sumario || texto) ? <details className="mt-2">
+                            <summary style={{ cursor: "pointer" }}>
+                                <b>Texto Extraido</b>
+                                {props.doc.PDF === "ocr" && <span className="ms-2 badge bg-warning text-dark">Texto obtido via OCR</span>}
+                                {props.doc.PDF === "no-text" && <span className="ms-2 badge bg-danger">Sem texto extraido</span>}
+                            </summary>
+                            <div className="mt-2">
+                                {sumario && <>
+                                    <h6 className="border-top border-2"><b>{keyName["Sumário"] || "Sumário"}</b></h6>
+                                    <div className="p-2" dangerouslySetInnerHTML={{ __html: sumario }}></div>
+                                </>}
+                                {texto && <>
+                                    <h6 className="border-top border-2"><b>{keyName["Texto"] || "Texto Integral"}</b></h6>
+                                    <div className="p-2" dangerouslySetInnerHTML={{ __html: texto }}></div>
+                                </>}
+                            </div>
+                        </details> : <>
+                            {sumario && <>
+                                <h6 className="border-top border-2"><b>{keyName["Sumário"] || "Sumário"}</b></h6>
+                                <div className="p-2" dangerouslySetInnerHTML={{ __html: sumario }}></div>
+                            </>}
+                            {texto && <>
+                                <h6 className="border-top border-2"><b>{keyName["Texto"] || "Texto Integral"}</b></h6>
+                                <div className="p-2" dangerouslySetInnerHTML={{ __html: texto }}></div>
+                            </>}
                         </>}
                     </div>
                 </div>
+                {props.doc.PDF && <div className="row justify-content-center mt-3">
+                    <div className="col-12 col-md-11">
+                        <div className="border border-dark p-2">
+                            <div className="d-flex align-items-center mb-2">
+                                <b><i className="bi bi-file-earmark-pdf me-1"></i>Documento PDF</b>
+                                <a href={`${router.basePath}/api/pdf/${uuid}`} target="_blank" rel="noopener noreferrer" className="ms-auto btn btn-sm btn-outline-secondary">
+                                    <i className="bi bi-box-arrow-up-right me-1"></i>Abrir em nova janela
+                                </a>
+                            </div>
+                            <iframe
+                                src={`${router.basePath}/api/pdf/${uuid}`}
+                                style={{ width: "100%", height: "90vh", border: "none" }}
+                                title={`PDF - ${proc}`}
+                            />
+                        </div>
+                    </div>
+                </div>}
             </div>
         </div>
     </>

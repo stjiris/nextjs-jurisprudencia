@@ -30,6 +30,9 @@ RUN git clone https://github.com/stjiris/jurisprudencia-privada-etl && cd jurisp
 # Every 10 minutes on weekdays
 RUN (crontab -l; echo "*/10 9-18 * * 1-5 cd /home/clitools/jurisprudencia-privada-etl && /usr/local/bin/node dist/sharepoint/index.js >> ../jurisprudencia-sharepoint-etl.stdout.log 2>> ../jurisprudencia-sharepoint-etl.stderr.log") | crontab -
 
+# PDF ingest — every 10 minutes on weekdays
+RUN (crontab -l; echo "*/10 9-18 * * 1-5 cd /home/clitools/jurisprudencia-privada-etl && /usr/local/bin/node dist/sharepoint/pdf-ingest.js >> ../jurisprudencia-pdf-ingest.stdout.log 2>> ../jurisprudencia-pdf-ingest.stderr.log") | crontab -
+
 # backup
 RUN git clone https://github.com/stjiris/backup-jurisprudencia && cd backup-jurisprudencia && npm install
 # At 10:00 on Sunday
