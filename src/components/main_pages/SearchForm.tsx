@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter as useNavRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef } from "react";
 import { useKeysFromContext } from "@/contexts/keys";
+import { useAuth } from "@/contexts/auth";
 import { FORM_KEY, SwapableFilterList } from "./SwapableFilterList";
 
 // Helper field names combined into MinDate/MaxDate on submit
@@ -90,6 +91,7 @@ export default function SearchForm({ count, filtersUsed }: { count: number; filt
     const minDate = search.get("MinDate") || "";
     const maxDate = search.get("MaxDate") || "";
     const keys = useKeysFromContext();
+    const auth = useAuth();
 
     const resetDatas = useCallback(() => {
         if (minDayRef.current)   { minDayRef.current.value   = ""; }
@@ -196,6 +198,20 @@ export default function SearchForm({ count, filtersUsed }: { count: number; filt
                         Tem de ter {keys?.records?.Texto?.name} de Acordão
                     </label>
                 </div>
+
+                {auth && <div className="form-check my-1">
+                    <input
+                        id="checkbox-has-pdf"
+                        type="checkbox"
+                        name="hasPDF"
+                        value="true"
+                        defaultChecked={search.has("hasPDF")}
+                        className="form-check-input"
+                    />
+                    <label htmlFor="checkbox-has-pdf" className="form-check-label">
+                        Tem de ter PDF
+                    </label>
+                </div>}
 
                 <SwapableFilterList filtersUsed={filtersUsed} />
             </div>

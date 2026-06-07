@@ -282,6 +282,18 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
             }
         });
     }
+    if (body.hasPDF) {
+        filtersUsed.hasPDF = ["true"];
+        filters.pre.push({
+            bool: {
+                must: {
+                    exists: {
+                        field: "PDF"
+                    }
+                }
+            }
+        });
+    }
     return filtersUsed;
 }
 
