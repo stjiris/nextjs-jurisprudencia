@@ -1,35 +1,31 @@
 # Deployment
 
-Two machines: **externo** (public) and **interno** (internal editing).
+## Architecture Overview
 
-## Requirements (both machines)
+The system has two main repositories that work together:
+
+- **`nextjs-jurisprudencia`** — the Juris platform itself, deployed in two distinct instances:
+  - **Externo** — public-facing, read-only search interface hosted on an external server (OVH). Only documents with `STATE=público` are visible.
+  - **Interno** — internal editing platform running on a VM inside the court's intranet. Editors annotate, edit, and anonymize documents here, and publish them to externo via email sync.
+
+- **`anonimizador_dev`** — standalone anonymization tool, also running on an internal VM. Interno hands documents off to it (with pre-computed NLP entities), the editor anonymizes them in the browser, and the result is pushed back to interno. The anonimizador runs a companion `nlp_server` (Python/spaCy) for named entity recognition.
+
+Externo and interno synchronize through an **email-based push**: interno sends published documents to an SMTP server on externo's machine; externo's `email_sync` service polls and ingests them continuously. Interno also pulls new documents from SharePoint via `clitools_interno`.
+
+---
+
+## Juris (nextjs-jurisprudencia)
+
+### Requirements
 
 - Docker + Docker Compose v2
 - This repo cloned
 
 ---
 
-## Externo
+### Externo
 
-**1. Create `.env`**
-
-```env
-NEXT_BASE_PATH=/jurisprudencia
-SERVER_HOST=0.0.0.0
-SERVER_PORT=80
-PUBLIC_STATES="público"
-ES_JAVA_OPTS="-Xms4g -Xmx4g"
-RSS_LINK="https://<your-domain>/jurisprudencia"
-
-SYNC_ROLE=externo
-SYNC_SECRET=<shared-secret>
-SYNC_IMAP_HOST=mailserver
-SYNC_IMAP_PORT=143
-SYNC_IMAP_SECURE=false
-SYNC_IMAP_USER=sync@mail.juris.internal
-SYNC_IMAP_PASS=<mailserver-password>
-SYNC_IMAP_TRUSTED_FROM=sync@mail.juris.internal
-```
+**1. Create `.env`** (use the provided template)
 
 **2. Start**
 
@@ -45,43 +41,9 @@ docker exec nextjs-jurisprudencia-mailserver-1 setup email add sync@mail.juris.i
 
 ---
 
-## Interno
+### Interno
 
-**1. Create `.env`**
-
-```env
-NEXT_BASE_PATH=/dev-jurisprudencia
-SERVER_HOST=0.0.0.0
-SERVER_PORT=80
-PUBLIC_STATES=público
-ES_JAVA_OPTS="-Xms4g -Xmx4g"
-ANONIMIZADOR_URL=https://<your-domain>/dev-jurisprudencia-anonimizador/
-ANONIMIZADOR_SECRET=<anonimizador-secret>
-
-SYNC_ROLE=interno
-SYNC_SECRET=<shared-secret>
-SYNC_SMTP_HOST=<externo-public-hostname-or-ip>
-SYNC_SMTP_PORT=587
-SYNC_SMTP_SECURE=false
-SYNC_SMTP_USER=sync@mail.juris.internal
-SYNC_SMTP_PASS=<mailserver-password>
-SYNC_SMTP_FROM=sync@mail.juris.internal
-SYNC_SMTP_TO=sync@mail.juris.internal
-```
-
-> `SYNC_SECRET` must be the same on both machines.  
-> `SYNC_SMTP_PASS` must match the password used in externo step 3.  
-> `SYNC_SMTP_HOST` is a plain hostname or IP — no `https://`.
-
-Also add the SharePoint credentials to `.env` (needed by clitools to pull documents):
-
-```env
-TENANT_ID=<azure-tenant-id>
-CLIENT_ID=<azure-client-id>
-CLIENT_SECRET=<azure-client-secret>
-SITE_ID=<sharepoint-site-id>
-DRIVES='["Anonimização"]'
-```
+**1. Create `.env`** (use the provided template)
 
 **2. Start**
 
@@ -91,9 +53,50 @@ docker compose --profile interno up -d --build
 
 ---
 
-## Network: expose port 587 to the internet
+### Starting from backup
 
-The interno machine sends emails to the externo mailserver on port 587. This port needs to be reachable from the internet.
+On a production machine, export a backup first:
+
+```bash
+docker compose exec -it clitools_interno bash
+cd backup-jurisprudencia
+node cli backup jurisprudencia.12.0,users.0.0,keys-info.0.0
+```
+
+Copy the backup file to the target machine, then restore:
+
+```bash
+docker compose cp <backup_file> clitools_interno:/home/clitools/backup-jurisprudencia/
+docker compose exec -it clitools_interno bash
+cd backup-jurisprudencia && npm install
+node cli restore <backup_file>
+```
+
+If a schema version conversion is needed:
+
+```bash
+cd ../version-converter/dist
+node create.js jurisprudencia.13.0
+node convert.js 12to13
+```
+
+---
+
+### From scratch (fresh ETL)
+
+```bash
+docker compose exec -it clitools_interno bash
+cd version-converter/dist
+node create.js jurisprudencia.13.0
+cd ../../jurisprudencia-privada-etl
+npm run run_dgsi
+```
+
+---
+
+### Network: expose port 587 to the internet
+
+Interno sends emails to externo's mailserver on port 587. This port must be reachable from the internet.
 
 **On the nginx proxy machine** — add a TCP stream block to `/etc/nginx/nginx.conf` outside the `http {}` block:
 
@@ -110,7 +113,7 @@ stream {
 nginx -t && nginx -s reload
 ```
 
-**If the public IP belongs to a router/Proxmox host** (not the nginx machine directly), add a NAT rule on that host:
+**If the public IP belongs to a router/Proxmox host** (not the nginx machine directly), add a NAT rule:
 
 ```bash
 iptables -t nat -A PREROUTING -p tcp --dport 587 -j DNAT --to-destination <nginx-internal-ip>:587
@@ -120,17 +123,17 @@ apt install iptables-persistent -y && netfilter-persistent save
 
 ---
 
-## Verify it works
+### Verify sync
 
-**From interno**, check port 587 is reachable:
+Check port 587 is reachable from interno:
+
 ```bash
 nc -zv <externo-public-hostname> 587
 # expected: Connection succeeded
 ```
 
-**Publish a document** on interno. Within ~10 seconds it should appear as public on externo.
+Publish a document on interno — it should appear on externo within ~10 seconds. Check externo sync logs:
 
-Check externo sync logs:
 ```bash
 docker logs nextjs-jurisprudencia-email_sync-1 --tail 20
 docker logs nextjs-jurisprudencia-server_externo-1 2>&1 | grep email-sync | tail 10
@@ -138,21 +141,34 @@ docker logs nextjs-jurisprudencia-server_externo-1 2>&1 | grep email-sync | tail
 
 ---
 
-## Useful commands
+## Anonimizador
+
+The anonimizador runs independently of juris on its own VM. Interno reaches it at `ANONIMIZADOR_URL`; the anonimizador calls back to interno at `NEXT_PUBLIC_JURIS_URL`. Both must share the same `ANONIMIZADOR_SECRET`.
+
+### Requirements
+
+- Docker + Docker Compose v2
+- Git LFS installed on the machine (`apt install git-lfs && git lfs install`)
+- This repo cloned: `anonimizador_dev`
+
+### Setup
+
+**1. Clone the NLP model storage** (required before first build — the `deploy.sh` handles this automatically):
 
 ```bash
-# Mailserver: list accounts
-docker exec nextjs-jurisprudencia-mailserver-1 setup email list
-
-# Mailserver: delete account
-docker exec nextjs-jurisprudencia-mailserver-1 setup email del sync@mail.juris.internal
-
-# Mailserver: check mail log
-docker exec nextjs-jurisprudencia-mailserver-1 tail -50 /var/log/mail/mail.log
-
-# Force recreate a container (picks up volume/env changes)
-docker compose --profile externo up -d --force-recreate <service>
-
-# Check TypeScript errors before building
-npx tsc --noEmit
+git clone https://gitlab.com/diogoalmiro/iris-lfs-storage.git
+cd iris-lfs-storage && git lfs pull && cd ..
 ```
+
+**2. Create `.env`** (use the provided template)
+
+**3. Deploy**
+
+```bash
+bash deploy.sh
+```
+
+This builds the `anonimizador` and `nlp_server` services and starts them with `--force-recreate`. On Windows use `deploy.cmd` instead.
+
+The `nlp_server` container loads the spaCy NLP model from `iris-lfs-storage/model-best`. On first build this may take a few minutes.
+
