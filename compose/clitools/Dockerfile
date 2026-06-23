@@ -12,6 +12,9 @@ USER clitools
 
 WORKDIR /home/clitools
 
+# util to convert between versions
+RUN git clone https://github.com/stjiris/version-converter && cd version-converter && npm install && npm run build
+
 # no build needed here
 RUN git clone https://github.com/stjiris/backup-jurisprudencia && cd backup-jurisprudencia && npm install
 #   At 10:00 on Sunday.
