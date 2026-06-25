@@ -27,8 +27,8 @@ RUN git clone https://github.com/stjiris/version-converter && cd version-convert
 
 # sharepoint ETL — built once at image build time, executed by cron
 RUN git clone https://github.com/stjiris/jurisprudencia-privada-etl && cd jurisprudencia-privada-etl && npm install && npm run build
-# Every 10 minutes on weekdays
-RUN (crontab -l; echo "*/10 9-18 * * 1-5 cd /home/clitools/jurisprudencia-privada-etl && /usr/local/bin/node dist/sharepoint/index.js >> ../jurisprudencia-sharepoint-etl.stdout.log 2>> ../jurisprudencia-sharepoint-etl.stderr.log") | crontab -
+# Every 5 minutes on weekdays, 9-18
+RUN (crontab -l; echo "*/5 9-18 * * 1-5 cd /home/clitools/jurisprudencia-privada-etl && /usr/local/bin/node dist/sharepoint/index.js >> ../jurisprudencia-sharepoint-etl.stdout.log 2>> ../jurisprudencia-sharepoint-etl.stderr.log") | crontab -
 
 # backup
 RUN git clone https://github.com/stjiris/backup-jurisprudencia && cd backup-jurisprudencia && npm install
