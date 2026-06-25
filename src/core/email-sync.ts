@@ -1,12 +1,10 @@
 import crypto from "crypto";
-import nodemailer from "nodemailer";
-import { ImapFlow } from "imapflow";
-import { simpleParser } from "mailparser";
 import { getElasticSearchClient } from "./elasticsearch";
 import { JurisprudenciaDocument, JurisprudenciaVersion } from "@stjiris/jurisprudencia-document";
 import { updateDoc } from "./doc";
 
 const SYNC_SUBJECT_PREFIX = "[JURIS-SYNC]";
+const GRAPH_BASE = "https://graph.microsoft.com/v1.0";
 
 export type SyncAction = "publicar" | "tornar-privado" | "editar";
 
@@ -14,7 +12,7 @@ interface SyncPayload {
     action: SyncAction;
     uuid: string;
     ts: number;
-    content?: Record<string, any>; // full doc for "publicar", diff for "editar"
+    content?: Record<string, any>;
     sig: string;
 }
 
@@ -43,7 +41,6 @@ function verifySyncPayload(payload: SyncPayload): boolean {
         return false;
     }
     const { action, uuid, ts, content, sig } = payload;
-    // Reject emails older than 24 hours (to handle polling delays)
     if (Date.now() - ts > 86_400_000) {
         console.warn("[email-sync] Payload expired (>24h old)");
         return false;
@@ -56,49 +53,74 @@ function verifySyncPayload(payload: SyncPayload): boolean {
     }
 }
 
-// --- SMTP: sending ---
+// --- Microsoft Graph auth ---
+
+let cachedToken: { token: string; expiresAt: number } | null = null;
+
+function getMsConfig() {
+    const envOrFail = (name: string) => {
+        const v = process.env[name];
+        if (!v) throw new Error(`Missing environment variable ${name}`);
+        return v;
+    };
+    return {
+        tenantId: envOrFail("SYNC_MS_TENANT_ID"),
+        clientId: envOrFail("SYNC_MS_CLIENT_ID"),
+        clientSecret: envOrFail("SYNC_MS_CLIENT_SECRET"),
+        mailbox: envOrFail("SYNC_MS_MAILBOX"),
+    };
+}
+
+async function getGraphToken(tenantId: string, clientId: string, clientSecret: string): Promise<string> {
+    if (cachedToken && Date.now() < cachedToken.expiresAt - 60_000) {
+        return cachedToken.token;
+    }
+    const resp = await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+            grant_type: "client_credentials",
+            client_id: clientId,
+            client_secret: clientSecret,
+            scope: "https://graph.microsoft.com/.default",
+        }),
+    });
+    if (!resp.ok) {
+        throw new Error(`Failed to obtain MS Graph token (${resp.status}): ${await resp.text()}`);
+    }
+    const data = await resp.json();
+    cachedToken = { token: data.access_token, expiresAt: Date.now() + data.expires_in * 1000 };
+    return cachedToken.token;
+}
+
+// --- Graph API: sending ---
 
 async function sendSyncEmailInternal(action: SyncAction, uuid: string, content?: Record<string, any>): Promise<void> {
-    const host = process.env.SYNC_SMTP_HOST;
-    const port = parseInt(process.env.SYNC_SMTP_PORT || "587");
-    const secure = process.env.SYNC_SMTP_SECURE === "true";
-    const user = process.env.SYNC_SMTP_USER;
-    const pass = process.env.SYNC_SMTP_PASS;
-    const from = process.env.SYNC_SMTP_FROM;
-    const to = process.env.SYNC_SMTP_TO;
-
-    if (!host || !user || !pass || !from || !to) {
-        throw new Error("Missing SMTP configuration (SYNC_SMTP_HOST, SYNC_SMTP_USER, SYNC_SMTP_PASS, SYNC_SMTP_FROM, SYNC_SMTP_TO)");
-    }
-
+    const config = getMsConfig();
+    const to = process.env.SYNC_MS_RECIPIENT || config.mailbox;
+    const token = await getGraphToken(config.tenantId, config.clientId, config.clientSecret);
     const payload = buildSyncPayload(action, uuid, content);
 
-    const transporter = nodemailer.createTransport({
-        host,
-        port,
-        secure,
-        auth: { user, pass },
-        connectionTimeout: 15000,
-        greetingTimeout: 15000,
-        socketTimeout: 15000,
+    const resp = await fetch(`${GRAPH_BASE}/users/${encodeURIComponent(config.mailbox)}/sendMail`, {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            message: {
+                subject: `${SYNC_SUBJECT_PREFIX} ${action} ${uuid}`,
+                body: { contentType: "Text", content: JSON.stringify(payload) },
+                toRecipients: [{ emailAddress: { address: to } }],
+            },
+            saveToSentItems: false,
+        }),
     });
 
-    console.log(`[email-sync] Connecting to ${host}:${port} (secure=${secure}) as ${user}`);
-
-    try {
-        await transporter.sendMail({
-            from,
-            to,
-            subject: `${SYNC_SUBJECT_PREFIX} ${action} ${uuid}`,
-            text: JSON.stringify(payload),
-            headers: { "X-Juris-Sync": "1" },
-        });
-    } catch (err: any) {
-        console.error(`[email-sync] Failed to send ${action} for UUID ${uuid}`);
-        console.error(`[email-sync] SMTP: ${host}:${port} secure=${secure} user=${user} from=${from} to=${to}`);
-        console.error(`[email-sync] Error code: ${err.code} | Response: ${err.response} | Command: ${err.command}`);
-        console.error(`[email-sync] Message: ${err.message}`);
-        throw err;
+    if (!resp.ok) {
+        const errText = await resp.text();
+        console.error(`[email-sync] sendMail failed — mailbox=${config.mailbox} to=${to} action=${action} uuid=${uuid}`);
+        throw new Error(`MS Graph sendMail failed (${resp.status}): ${errText}`);
     }
 
     console.log(`[email-sync] Sent ${action} for UUID ${uuid} to ${to}`);
@@ -136,7 +158,6 @@ async function applyAction(action: SyncAction, uuid: string, content?: Record<st
 
     if (action === "publicar") {
         if (!docId) {
-            // Document doesn't exist on this deployment — create it from the full content
             if (!content) {
                 console.warn(`[email-sync] publicar for unknown UUID ${uuid} has no content, cannot create`);
                 return false;
@@ -170,112 +191,86 @@ async function applyAction(action: SyncAction, uuid: string, content?: Record<st
     return true;
 }
 
-// --- IMAP: polling ---
+// --- Graph API: polling ---
 
 export async function pollAndProcessSyncEmails(): Promise<{ processed: number; errors: number }> {
-    const host = process.env.SYNC_IMAP_HOST;
-    const port = parseInt(process.env.SYNC_IMAP_PORT || "993");
-    const secure = process.env.SYNC_IMAP_SECURE !== "false"; // default true
-    const user = process.env.SYNC_IMAP_USER;
-    const pass = process.env.SYNC_IMAP_PASS;
-    const trustedFrom = process.env.SYNC_IMAP_TRUSTED_FROM;
+    const config = getMsConfig();
+    const trustedFrom = process.env.SYNC_MS_TRUSTED_FROM || config.mailbox;
+    const token = await getGraphToken(config.tenantId, config.clientId, config.clientSecret);
 
-    if (!host || !user || !pass) {
-        throw new Error("Missing IMAP configuration (SYNC_IMAP_HOST, SYNC_IMAP_USER, SYNC_IMAP_PASS)");
+    const mailboxBase = `${GRAPH_BASE}/users/${encodeURIComponent(config.mailbox)}`;
+
+    const resp = await fetch(
+        `${mailboxBase}/mailFolders/Inbox/messages?$filter=isRead eq false&$select=id,subject,from,body&$top=50`,
+        {
+            headers: {
+                Authorization: `Bearer ${token}`,
+                Prefer: 'outlook.body-content-type="text"',
+            },
+        }
+    );
+    if (!resp.ok) {
+        throw new Error(`Failed to fetch inbox messages (${resp.status}): ${await resp.text()}`);
     }
-
-    const imapClient = new ImapFlow({
-        host,
-        port,
-        secure,
-        auth: { user, pass },
-        logger: false,
-    });
-
-    await imapClient.connect();
+    const { value: messages } = await resp.json();
 
     let processed = 0;
     let errors = 0;
 
-    try {
-        const lock = await imapClient.getMailboxLock("INBOX");
-        try {
-            // Collect all unseen message UIDs first (iterating while modifying flags can cause issues)
-            const messages: { uid: number; envelope: any; source: Buffer }[] = [];
+    const markRead = (msgId: string) =>
+        fetch(`${mailboxBase}/messages/${msgId}`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ isRead: true }),
+        });
 
-            for await (const msg of imapClient.fetch({ seen: false }, { envelope: true, source: true, uid: true })) {
-                if (msg.source) messages.push({ uid: msg.uid, envelope: msg.envelope, source: msg.source });
-            }
+    for (const msg of messages) {
+        const subject: string = msg.subject || "";
+        const fromAddress: string = msg.from?.emailAddress?.address || "";
 
-            for (const msg of messages) {
-                const subject: string = msg.envelope.subject || "";
-
-                // Only process JURIS-SYNC emails
-                if (!subject.startsWith(SYNC_SUBJECT_PREFIX)) {
-                    continue;
-                }
-
-                // Verify trusted sender
-                const fromAddress: string = msg.envelope.from?.[0]?.address || "";
-                if (trustedFrom && fromAddress.toLowerCase() !== trustedFrom.toLowerCase()) {
-                    console.warn(`[email-sync] Ignoring email from untrusted sender: ${fromAddress}`);
-                    await imapClient.messageFlagsAdd({ uid: msg.uid }, ["\\Seen"], { uid: true });
-                    continue;
-                }
-
-                // Parse email body
-                let body: string | undefined;
-                try {
-                    const parsed = await simpleParser(msg.source);
-                    body = parsed.text?.trim();
-                } catch (parseErr) {
-                    console.error("[email-sync] Failed to parse email:", parseErr);
-                    await imapClient.messageFlagsAdd({ uid: msg.uid }, ["\\Seen"], { uid: true });
-                    errors++;
-                    continue;
-                }
-
-                if (!body) {
-                    console.warn("[email-sync] Empty email body, skipping");
-                    await imapClient.messageFlagsAdd({ uid: msg.uid }, ["\\Seen"], { uid: true });
-                    continue;
-                }
-
-                // Parse JSON payload
-                let payload: SyncPayload;
-                try {
-                    payload = JSON.parse(body);
-                } catch {
-                    console.warn("[email-sync] Non-JSON email body, skipping");
-                    await imapClient.messageFlagsAdd({ uid: msg.uid }, ["\\Seen"], { uid: true });
-                    continue;
-                }
-
-                // Verify signature
-                if (!verifySyncPayload(payload)) {
-                    console.warn(`[email-sync] Invalid or expired signature for email with subject: ${subject}`);
-                    await imapClient.messageFlagsAdd({ uid: msg.uid }, ["\\Seen"], { uid: true });
-                    errors++;
-                    continue;
-                }
-
-                // Apply the action
-                try {
-                    const ok = await applyAction(payload.action, payload.uuid, payload.content);
-                    if (ok) processed++;
-                } catch (actionErr) {
-                    console.error(`[email-sync] Failed to apply action ${payload.action} for UUID ${payload.uuid}:`, actionErr);
-                    errors++;
-                }
-
-                // Always mark as read so we don't reprocess
-                await imapClient.messageFlagsAdd({ uid: msg.uid }, ["\\Seen"], { uid: true });
-            }
-        } finally {
-            lock.release();
+        if (!subject.startsWith(SYNC_SUBJECT_PREFIX)) {
+            // Not a sync email — leave unread for the mailbox owner
+            continue;
         }
-    } finally {
-        await imapClient.logout();
+
+        if (trustedFrom && fromAddress.toLowerCase() !== trustedFrom.toLowerCase()) {
+            console.warn(`[email-sync] Ignoring email from untrusted sender: ${fromAddress}`);
+            await markRead(msg.id);
+            continue;
+        }
+
+        const body: string = msg.body?.content?.trim() || "";
+        if (!body) {
+            console.warn("[email-sync] Empty email body, skipping");
+            await markRead(msg.id);
+            continue;
+        }
+
+        let payload: SyncPayload;
+        try {
+            payload = JSON.parse(body);
+        } catch {
+            console.warn("[email-sync] Non-JSON email body, skipping");
+            await markRead(msg.id);
+            continue;
+        }
+
+        if (!verifySyncPayload(payload)) {
+            console.warn(`[email-sync] Invalid or expired signature for subject: ${subject}`);
+            await markRead(msg.id);
+            errors++;
+            continue;
+        }
+
+        try {
+            const ok = await applyAction(payload.action, payload.uuid, payload.content);
+            if (ok) processed++;
+        } catch (actionErr) {
+            console.error(`[email-sync] Failed to apply action ${payload.action} for UUID ${payload.uuid}:`, actionErr);
+            errors++;
+        }
+
+        await markRead(msg.id);
     }
 
     if (processed > 0 || errors > 0) {

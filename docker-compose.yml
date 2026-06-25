@@ -3,9 +3,6 @@ volumes:
   excel_data: {}
   rss_data: {}
   redis_data: {}
-  mailserver_data: {}
-  mailserver_state: {}
-  mailserver_config: {}
   etl_results: {}
 networks:
   juris-network:
@@ -27,12 +24,11 @@ services:
       RSS_FOLDER: /rss
       SYNC_ROLE: ${SYNC_ROLE:-}
       SYNC_SECRET: ${SYNC_SECRET:-}
-      SYNC_IMAP_HOST: ${SYNC_IMAP_HOST:-}
-      SYNC_IMAP_PORT: ${SYNC_IMAP_PORT:-993}
-      SYNC_IMAP_SECURE: ${SYNC_IMAP_SECURE:-true}
-      SYNC_IMAP_USER: ${SYNC_IMAP_USER:-}
-      SYNC_IMAP_PASS: ${SYNC_IMAP_PASS:-}
-      SYNC_IMAP_TRUSTED_FROM: ${SYNC_IMAP_TRUSTED_FROM:-}
+      SYNC_MS_TENANT_ID: ${SYNC_MS_TENANT_ID:-}
+      SYNC_MS_CLIENT_ID: ${SYNC_MS_CLIENT_ID:-}
+      SYNC_MS_CLIENT_SECRET: ${SYNC_MS_CLIENT_SECRET:-}
+      SYNC_MS_MAILBOX: ${SYNC_MS_MAILBOX:-}
+      SYNC_MS_TRUSTED_FROM: ${SYNC_MS_TRUSTED_FROM:-}
     ports:
       - "${SERVER_HOST:-0.0.0.0}:${SERVER_PORT:-3000}:3000"
     volumes:
@@ -68,13 +64,11 @@ services:
       LOCAL_ROOT: /filesystem-results
       SYNC_ROLE: ${SYNC_ROLE:-}
       SYNC_SECRET: ${SYNC_SECRET:-}
-      SYNC_SMTP_HOST: ${SYNC_SMTP_HOST:-}
-      SYNC_SMTP_PORT: ${SYNC_SMTP_PORT:-587}
-      SYNC_SMTP_SECURE: ${SYNC_SMTP_SECURE:-false}
-      SYNC_SMTP_USER: ${SYNC_SMTP_USER:-}
-      SYNC_SMTP_PASS: ${SYNC_SMTP_PASS:-}
-      SYNC_SMTP_FROM: ${SYNC_SMTP_FROM:-}
-      SYNC_SMTP_TO: ${SYNC_SMTP_TO:-}
+      SYNC_MS_TENANT_ID: ${SYNC_MS_TENANT_ID:-}
+      SYNC_MS_CLIENT_ID: ${SYNC_MS_CLIENT_ID:-}
+      SYNC_MS_CLIENT_SECRET: ${SYNC_MS_CLIENT_SECRET:-}
+      SYNC_MS_MAILBOX: ${SYNC_MS_MAILBOX:-}
+      SYNC_MS_RECIPIENT: ${SYNC_MS_RECIPIENT:-}
     ports:
       - "${SERVER_HOST:-0.0.0.0}:${SERVER_PORT:-3000}:3000"
     volumes:
@@ -126,32 +120,6 @@ services:
       - dev
     networks:
       - juris-network
-  mailserver:
-    image: ghcr.io/docker-mailserver/docker-mailserver:latest
-    hostname: mailserver.juris.internal
-    environment:
-      - SSL_TYPE=
-      - POSTFIX_INET_PROTOCOLS=ipv4
-      - ENABLE_FAIL2BAN=0
-      - SMTP_ONLY=0
-      - ENABLE_SUBMISSION=1
-      - POSTFIX_MYDESTINATION=localhost
-    ports:
-      - "143:143"
-      - "587:587"
-    volumes:
-      - mailserver_data:/var/mail
-      - mailserver_state:/var/mail-state
-      - mailserver_config:/tmp/docker-mailserver
-    cap_add:
-      - NET_ADMIN
-    restart: unless-stopped
-    profiles:
-      - externo
-    networks:
-      - juris-network
-
-
   email_sync:
     image: alpine/curl
     command: >
