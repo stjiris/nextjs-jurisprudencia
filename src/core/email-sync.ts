@@ -4,6 +4,11 @@ import { JurisprudenciaDocument, JurisprudenciaVersion } from "@stjiris/jurispru
 import { updateDoc } from "./doc";
 
 const SYNC_SUBJECT_PREFIX = "[JURIS-SYNC]";
+// The payload is base64'd and wrapped in these markers in the email body, so mail
+// transforms (HTML conversion, entity encoding, appended disclaimers, line-wrapping)
+// can't corrupt it — the receiver extracts exactly what's between the markers.
+const SYNC_BODY_MARKER = "JURISSYNCv1:";
+const SYNC_BODY_END = ":ENDJURISSYNC";
 const GRAPH_BASE = "https://graph.microsoft.com/v1.0";
 
 export type SyncAction = "publicar" | "tornar-privado" | "editar";
@@ -101,6 +106,11 @@ async function sendSyncEmailInternal(action: SyncAction, uuid: string, content?:
     const token = await getGraphToken(config.tenantId, config.clientId, config.clientSecret);
     const payload = buildSyncPayload(action, uuid, content);
 
+    const payloadJson = JSON.stringify(payload);
+    const emailBody = `${SYNC_BODY_MARKER}${Buffer.from(payloadJson, "utf-8").toString("base64")}${SYNC_BODY_END}`;
+
+    console.log(`[email-sync] Sending ${action} UUID=${uuid} to=${to} — payload ${payloadJson.length} chars, body ${emailBody.length} chars. Payload preview: ${payloadJson.slice(0, 200)}`);
+
     const resp = await fetch(`${GRAPH_BASE}/users/${encodeURIComponent(config.mailbox)}/sendMail`, {
         method: "POST",
         headers: {
@@ -110,7 +120,7 @@ async function sendSyncEmailInternal(action: SyncAction, uuid: string, content?:
         body: JSON.stringify({
             message: {
                 subject: `${SYNC_SUBJECT_PREFIX} ${action} ${uuid}`,
-                body: { contentType: "Text", content: JSON.stringify(payload) },
+                body: { contentType: "Text", content: emailBody },
                 toRecipients: [{ emailAddress: { address: to } }],
             },
             saveToSentItems: false,
@@ -191,6 +201,58 @@ async function applyAction(action: SyncAction, uuid: string, content?: Record<st
     return true;
 }
 
+// --- Email body decoding ---
+
+// Recovers the sync payload from an email body. The payload is base64 between
+// SYNC_BODY_MARKER/SYNC_BODY_END; we strip any HTML/entities the mail system added,
+// pull out the marked region, drop non-base64 chars (whitespace from line-wrapping),
+// and decode. Falls back to a longest base64 run, then to plain JSON, so a one-sided
+// deploy or an unmangled body still parses.
+function decodeSyncBody(rawBody: string): SyncPayload | null {
+    if (!rawBody) return null;
+    const text = rawBody.replace(/<[^>]+>/g, " ").replace(/&[a-z#0-9]+;/gi, " ");
+
+    const tryParse = (s: string): SyncPayload | null => {
+        try {
+            const p = JSON.parse(s);
+            return p && p.action && p.uuid && p.sig ? (p as SyncPayload) : null;
+        } catch {
+            return null;
+        }
+    };
+    const fromBase64 = (b64: string): SyncPayload | null => {
+        try {
+            return tryParse(Buffer.from(b64.replace(/[^A-Za-z0-9+/=]/g, ""), "base64").toString("utf-8"));
+        } catch {
+            return null;
+        }
+    };
+
+    // 1) Preferred: base64 between the markers.
+    const s = text.indexOf(SYNC_BODY_MARKER);
+    const e = s !== -1 ? text.indexOf(SYNC_BODY_END, s + 1) : -1;
+    if (s !== -1 && e !== -1) {
+        const p = fromBase64(text.slice(s + SYNC_BODY_MARKER.length, e));
+        if (p) return p;
+    }
+    // 2) Marker lost: try the longest base64-looking run.
+    const runs = text.match(/[A-Za-z0-9+/=]{40,}/g);
+    if (runs) {
+        for (const run of runs.sort((a, b) => b.length - a.length)) {
+            const p = fromBase64(run);
+            if (p) return p;
+        }
+    }
+    // 3) Fallback: plain-JSON body (old format / unmangled).
+    const js = text.indexOf("{");
+    const je = text.lastIndexOf("}");
+    if (js !== -1 && je > js) {
+        const p = tryParse(text.slice(js, je + 1));
+        if (p) return p;
+    }
+    return null;
+}
+
 // --- Graph API: polling ---
 
 export async function pollAndProcessSyncEmails(): Promise<{ processed: number; errors: number }> {
@@ -246,11 +308,12 @@ export async function pollAndProcessSyncEmails(): Promise<{ processed: number; e
             continue;
         }
 
-        let payload: SyncPayload;
-        try {
-            payload = JSON.parse(body);
-        } catch {
-            console.warn("[email-sync] Non-JSON email body, skipping");
+        // Log the actual body (truncated) so the email contents are visible for debugging.
+        console.log(`[email-sync] Received "${subject}" from=${fromAddress} bodyLen=${body.length}. Body preview: ${body.slice(0, 300)}`);
+
+        const payload = decodeSyncBody(body);
+        if (!payload) {
+            console.warn(`[email-sync] Could not parse sync payload, skipping. Full body: ${body.slice(0, 1000)}`);
             await markRead(msg.id);
             continue;
         }
