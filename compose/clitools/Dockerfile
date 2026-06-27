@@ -22,6 +22,8 @@ RUN git clone https://github.com/stjiris/jurisprudencia-etl && cd jurisprudencia
 RUN (crontab -l; echo "0 9-18/3 * * 1-5 cd /home/clitools/jurisprudencia-etl && /usr/local/bin/node dist >> ../jurisprudencia-etl.stdout.log 2>> ../jurisprudencia-etl.stderr.log") | crontab -
 #   At 04:30 on Saturday.
 RUN (crontab -l; echo "30 4 * * 6 cd /home/clitools/jurisprudencia-etl && /usr/local/bin/node dist --full  >> ../jurisprudencia-etl.full.stdout.log 2>> ../jurisprudencia-etl.full.stderr.log") | crontab -
+#   At 19:00 every day: run an on-demand full update if one was requested via the app (no-op otherwise).
+RUN (crontab -l; echo "0 19 * * * cd /home/clitools/jurisprudencia-etl && /usr/local/bin/node dist/consume-trigger >> ../jurisprudencia-etl.trigger.stdout.log 2>> ../jurisprudencia-etl.trigger.stderr.log") | crontab -
 
 # no build needed here
 RUN git clone https://github.com/stjiris/backup-jurisprudencia && cd backup-jurisprudencia && npm install

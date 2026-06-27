@@ -28,6 +28,9 @@ export default function IndexPage() {
                         <LinkEntry link="/admin/filters" title="Filtros">
                             <p>Gerir filtros escondidos ou removidos</p>
                         </LinkEntry>
+                        <LinkEntry link="/admin/atualizar" title="Atualizar do DGSI">
+                            <p>Agendar uma atualização completa a partir do DGSI para esta noite</p>
+                        </LinkEntry>
                     </div>
                 </div>
             </div>
