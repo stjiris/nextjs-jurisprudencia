@@ -61,7 +61,7 @@ function Update({ doc, id }: UpdateProps) {
         <div className="container-fluid">
             <div className="row">
                 <div className={"card shadow mx-auto " + (hasPairs ? "col-11" : "col-6")}>
-                    <UpdateDocument id={id} />
+                    <UpdateDocument id={id} doc={doc} />
                     {keys.keys.map((key, i) => {
                         if (!key.editorEnabled) return null;
                         if (activePairLeftKeys.has(key.key)) {
@@ -109,7 +109,7 @@ function EditKey({ accessKey, doc }: { accessKey: JurisprudenciaKey, doc: Partia
     return <>Unreachable</>
 }
 
-function UpdateDocument({ id }: { id: string }) {
+function UpdateDocument({ id, doc }: { id: string, doc: JurisprudenciaDocument }) {
     let keys = useKeysFromContext().records;
     let [updateObject,] = useContext(UpdateContext);
     let router = useRouter();
@@ -120,6 +120,14 @@ function UpdateDocument({ id }: { id: string }) {
             body: JSON.stringify(updateObject)
         });
         navRouter.refresh();
+    }
+
+    // URL of the decision's view page, using the *new* process number if it was
+    // edited — otherwise a save that changes it leaves the return link pointing at
+    // the old (now non-existent) process-number URL.
+    let decisionUrl = () => {
+        const numeroProcesso = (updateObject as PartialJurisprudenciaDocument)["Número de Processo"] ?? doc["Número de Processo"];
+        return `/${encodeURIComponent(numeroProcesso!)}/${doc.UUID}`;
     }
 
     let deleteDoc = async () => {
@@ -148,8 +156,9 @@ function UpdateDocument({ id }: { id: string }) {
                     <button className="btn btn-warning" onClick={() => navRouter.refresh()} disabled={Object.keys(updateObject).length === 0}>Cancelar</button>
                     <button className="btn btn-success" onClick={update} disabled={Object.keys(updateObject).length === 0}>Guardar</button>
                     <button className="btn btn-primary" onClick={async () => {
-                        update();
-                        navRouter.back();
+                        const url = decisionUrl();
+                        await update();
+                        navRouter.push(url);
                     }} disabled={Object.keys(updateObject).length === 0}>Guardar e Voltar</button>
                 </div>
             </div>
