@@ -51,7 +51,11 @@ function Update({ doc, id }: UpdateProps) {
     // Build a map from key name to JurisprudenciaKey for pair lookup
     const keyMap = Object.fromEntries(keys.keys.map(k => [k.key, k]));
 
-    const activePairs = TEXT_PAIRS.filter(([left, right]) => keyMap[left]?.editorEnabled && doc[right as keyof typeof doc]);
+    // Pair up Texto/Sumário with their "Não Anonimizado" counterparts whenever the
+    // field is editor-enabled — regardless of whether content already exists — so an
+    // empty Sumário (Não Anonimizado) still shows the same side-by-side editable layout
+    // and has a clear place to be filled in, instead of rendering scattered/empty.
+    const activePairs = TEXT_PAIRS.filter(([left]) => keyMap[left]?.editorEnabled);
     const activePairRightKeys = new Set(activePairs.map(([, right]) => right));
     const activePairLeftKeys = new Set(activePairs.map(([left]) => left));
 
