@@ -1,263 +1,263 @@
 volumes:
-  elasticsearch_data: {}
-  excel_data: {}
-  rss_data: {}
-  redis_data: {}
-  etl_results: {}
+    elasticsearch_data: {}
+    excel_data: {}
+    rss_data: {}
+    redis_data: {}
+    etl_results: {}
 networks:
-  juris-network:
-    name: juris-network
+    juris-network:
+        name: juris-network
 
 services:
-  server_externo:
-    build:
-      context: .
-      dockerfile: ./Dockerfile
-      args:
-        NEXT_BASE_PATH: ${NEXT_BASE_PATH}
-    environment:
-      ES_URL: http://elasticsearch:9200
-      ES_USER: elastic
-      ES_PASS: elasticsearch
-      NEXT_BASE_PATH: ${NEXT_BASE_PATH}
-      PUBLIC_STATES: ${PUBLIC_STATES}
-      RSS_FOLDER: /rss
-      SYNC_ROLE: ${SYNC_ROLE:-}
-      SYNC_SECRET: ${SYNC_SECRET:-}
-      SYNC_MS_TENANT_ID: ${SYNC_MS_TENANT_ID:-}
-      SYNC_MS_CLIENT_ID: ${SYNC_MS_CLIENT_ID:-}
-      SYNC_MS_CLIENT_SECRET: ${SYNC_MS_CLIENT_SECRET:-}
-      SYNC_MS_MAILBOX: ${SYNC_MS_MAILBOX:-}
-      SYNC_MS_TRUSTED_FROM: ${SYNC_MS_TRUSTED_FROM:-}
-    ports:
-      - "${SERVER_HOST:-0.0.0.0}:${SERVER_PORT:-3000}:3000"
-    volumes:
-      - excel_data:/usr/src/app/files:rw
-      - rss_data:/rss
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    restart: unless-stopped
-    profiles:
-      - externo
-    networks:
-      - juris-network
-  server_interno:
-    build:
-      context: .
-      dockerfile: ./Dockerfile
-      args:
-        NEXT_BASE_PATH: ${NEXT_BASE_PATH}
-        ANONIMIZADOR_URL: ${ANONIMIZADOR_URL}
-        NEXT_PUBLIC_ANONIMIZADOR_URL: ${ANONIMIZADOR_URL}
-    environment:
-      ES_URL: http://elasticsearch:9200
-      ES_USER: elastic
-      ES_PASS: elasticsearch
-      NEXT_BASE_PATH: ${NEXT_BASE_PATH}
-      PUBLIC_STATES: ${PUBLIC_STATES}
-      RSS_FOLDER: /rss
-      ANONIMIZADOR_SECRET: ${ANONIMIZADOR_SECRET}
-      ANONIMIZADOR_URL: ${ANONIMIZADOR_URL}
-      LOCAL_ROOT: /filesystem-results
-      SYNC_ROLE: ${SYNC_ROLE:-}
-      SYNC_SECRET: ${SYNC_SECRET:-}
-      SYNC_MS_TENANT_ID: ${SYNC_MS_TENANT_ID:-}
-      SYNC_MS_CLIENT_ID: ${SYNC_MS_CLIENT_ID:-}
-      SYNC_MS_CLIENT_SECRET: ${SYNC_MS_CLIENT_SECRET:-}
-      SYNC_MS_MAILBOX: ${SYNC_MS_MAILBOX:-}
-      SYNC_MS_RECIPIENT: ${SYNC_MS_RECIPIENT:-}
-    ports:
-      - "${SERVER_HOST:-0.0.0.0}:${SERVER_PORT:-3000}:3000"
-    volumes:
-      - excel_data:/usr/src/app/files:rw
-      - rss_data:/rss
-      - etl_results:/filesystem-results:ro
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    restart: unless-stopped
-    profiles:
-      - interno
-    networks:
-      - juris-network
-  server_dev:
-    build:
-      context: .
-      dockerfile: ./Dockerfile_dev
-      args:
-        NEXT_BASE_PATH: ${NEXT_BASE_PATH}
-        NEXT_PUBLIC_ANONIMIZADOR_URL: ${ANONIMIZADOR_URL:-/http://localhost:7999/anon-service}
-    environment:
-      ES_URL: http://elasticsearch:9200
-      ES_USER: elastic
-      ES_PASS: elasticsearch
-      NEXT_BASE_PATH: ${NEXT_BASE_PATH}
-      PUBLIC_STATES: ${PUBLIC_STATES}
-      RSS_FOLDER: /rss
-      ANONIMIZADOR_SECRET: ${ANONIMIZADOR_SECRET}
-      ANONIMIZADOR_URL: ${ANONIMIZADOR_URL:-http://anonimizador_dev:7999/anon-service}
-      LOCAL_ROOT: /filesystem-results
-    ports:
-      - "${SERVER_HOST:-0.0.0.0}:${SERVER_PORT:-3000}:3000"
-    volumes:
-      - excel_data:/usr/src/app/files
-      - .:/usr/src/app
-      - /usr/src/app/node_modules
-      - rss_data:/rss
-      - etl_results:/filesystem-results:rw
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    restart: unless-stopped
-    profiles:
-      - dev
-    networks:
-      - juris-network
-  email_sync:
-    image: alpine/curl
-    command: >
-      sh -c "while true; do
-        curl -sf -X POST 'http://server_externo:3000${NEXT_BASE_PATH}/api/gestao/email-sync' -o /dev/null;
-        sleep 10;
-      done"
-    restart: unless-stopped
-    depends_on:
-      - server_externo
-    profiles:
-      - externo
-    networks:
-      - juris-network
+    server_externo:
+        build:
+            context: .
+            dockerfile: ./Dockerfile
+            args:
+                NEXT_BASE_PATH: ${NEXT_BASE_PATH}
+        environment:
+            ES_URL: http://elasticsearch:9200
+            ES_USER: elastic
+            ES_PASS: elasticsearch
+            NEXT_BASE_PATH: ${NEXT_BASE_PATH}
+            PUBLIC_STATES: ${PUBLIC_STATES}
+            RSS_FOLDER: /rss
+            SYNC_ROLE: ${SYNC_ROLE:-}
+            SYNC_SECRET: ${SYNC_SECRET:-}
+            SYNC_MS_TENANT_ID: ${SYNC_MS_TENANT_ID:-}
+            SYNC_MS_CLIENT_ID: ${SYNC_MS_CLIENT_ID:-}
+            SYNC_MS_CLIENT_SECRET: ${SYNC_MS_CLIENT_SECRET:-}
+            SYNC_MS_MAILBOX: ${SYNC_MS_MAILBOX:-}
+            SYNC_MS_TRUSTED_FROM: ${SYNC_MS_TRUSTED_FROM:-}
+        ports:
+            - "${SERVER_HOST:-0.0.0.0}:${SERVER_PORT:-3000}:3000"
+        volumes:
+            - excel_data:/usr/src/app/files:rw
+            - rss_data:/rss
+        depends_on:
+            elasticsearch:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+        restart: unless-stopped
+        profiles:
+            - externo
+        networks:
+            - juris-network
+    server_interno:
+        build:
+            context: .
+            dockerfile: ./Dockerfile
+            args:
+                NEXT_BASE_PATH: ${NEXT_BASE_PATH}
+                ANONIMIZADOR_URL: ${ANONIMIZADOR_URL}
+                NEXT_PUBLIC_ANONIMIZADOR_URL: ${ANONIMIZADOR_URL}
+        environment:
+            ES_URL: http://elasticsearch:9200
+            ES_USER: elastic
+            ES_PASS: elasticsearch
+            NEXT_BASE_PATH: ${NEXT_BASE_PATH}
+            PUBLIC_STATES: ${PUBLIC_STATES}
+            RSS_FOLDER: /rss
+            ANONIMIZADOR_SECRET: ${ANONIMIZADOR_SECRET}
+            ANONIMIZADOR_URL: ${ANONIMIZADOR_URL}
+            LOCAL_ROOT: /filesystem-results
+            SYNC_ROLE: ${SYNC_ROLE:-}
+            SYNC_SECRET: ${SYNC_SECRET:-}
+            SYNC_MS_TENANT_ID: ${SYNC_MS_TENANT_ID:-}
+            SYNC_MS_CLIENT_ID: ${SYNC_MS_CLIENT_ID:-}
+            SYNC_MS_CLIENT_SECRET: ${SYNC_MS_CLIENT_SECRET:-}
+            SYNC_MS_MAILBOX: ${SYNC_MS_MAILBOX:-}
+            SYNC_MS_RECIPIENT: ${SYNC_MS_RECIPIENT:-}
+        ports:
+            - "${SERVER_HOST:-0.0.0.0}:${SERVER_PORT:-3000}:3000"
+        volumes:
+            - excel_data:/usr/src/app/files:rw
+            - rss_data:/rss
+            - etl_results:/filesystem-results:rw
+        depends_on:
+            elasticsearch:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+        restart: unless-stopped
+        profiles:
+            - interno
+        networks:
+            - juris-network
+    server_dev:
+        build:
+            context: .
+            dockerfile: ./Dockerfile_dev
+            args:
+                NEXT_BASE_PATH: ${NEXT_BASE_PATH}
+                NEXT_PUBLIC_ANONIMIZADOR_URL: ${ANONIMIZADOR_URL:-/http://localhost:7999/anon-service}
+        environment:
+            ES_URL: http://elasticsearch:9200
+            ES_USER: elastic
+            ES_PASS: elasticsearch
+            NEXT_BASE_PATH: ${NEXT_BASE_PATH}
+            PUBLIC_STATES: ${PUBLIC_STATES}
+            RSS_FOLDER: /rss
+            ANONIMIZADOR_SECRET: ${ANONIMIZADOR_SECRET}
+            ANONIMIZADOR_URL: ${ANONIMIZADOR_URL:-http://anonimizador_dev:7999/anon-service}
+            LOCAL_ROOT: /filesystem-results
+        ports:
+            - "${SERVER_HOST:-0.0.0.0}:${SERVER_PORT:-3000}:3000"
+        volumes:
+            - excel_data:/usr/src/app/files
+            - .:/usr/src/app
+            - /usr/src/app/node_modules
+            - rss_data:/rss
+            - etl_results:/filesystem-results:rw
+        depends_on:
+            elasticsearch:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+        restart: unless-stopped
+        profiles:
+            - dev
+        networks:
+            - juris-network
+    email_sync:
+        image: alpine/curl
+        command: >
+            sh -c "while true; do
+              curl -sf -X POST 'http://server_externo:3000${NEXT_BASE_PATH}/api/gestao/email-sync' -o /dev/null;
+              sleep 10;
+            done"
+        restart: unless-stopped
+        depends_on:
+            - server_externo
+        profiles:
+            - externo
+        networks:
+            - juris-network
 
-  clitools_externo:
-    build:
-      context: ./compose/clitools
-    environment:
-      ES_URL: http://elasticsearch:9200
-      ES_USER: elastic
-      ES_PASS: elasticsearch
-      RSS_FOLDER: /rss
-      RSS_LINK: ${RSS_LINK:-http://localhost:3000/jurisprudencia}
-      RSS_MAX_FEED_SIZE: 200
-    volumes:
-      - rss_data:/rss
-    profiles:
-      - externo
-    networks:
-      - juris-network
-  clitools_interno:
-    build:
-      context: ./compose/clitools
-      dockerfile: ./Dockerfile_interno
-    environment:
-      ES_URL: http://elasticsearch:9200
-      ES_USER: elastic
-      ES_PASS: elasticsearch
-      RSS_FOLDER: /rss
-      RSS_LINK: ${RSS_LINK:-http://localhost:3000/jurisprudencia}
-      RSS_MAX_FEED_SIZE: 200
-      ANONIMIZADOR_URL: ${ANONIMIZADOR_URL:-}
-      LOCAL_ROOT: /home/clitools/jurisprudencia-privada-etl/results
-      TENANT_ID: ${TENANT_ID:-}
-      CLIENT_ID: ${CLIENT_ID:-}
-      CLIENT_SECRET: ${CLIENT_SECRET:-}
-      SITE_ID: ${SITE_ID:-}
-      DRIVES: ${DRIVES:-}
-    volumes:
-      - etl_results:/home/clitools/jurisprudencia-privada-etl/results
-      - rss_data:/rss
-    profiles:
-      - interno
-    networks:
-      - juris-network
-  clitools_dev:
-    # this dev assumes you cloned the clitools components and mounts them into the container for easily making changes
-    build:
-      context: ./compose/clitools
-      dockerfile: ./Dockerfile_dev
-    environment:
-      ES_URL: http://elasticsearch:9200
-      ES_USER: elastic
-      ES_PASS: elasticsearch
-      RSS_FOLDER: /rss
-      RSS_LINK: ${RSS_LINK:-http://localhost:3000/jurisprudencia}
-      RSS_MAX_FEED_SIZE: 200
-      ANONIMIZADOR_URL: ${ANONIMIZADOR_URL:-}
-      LOCAL_ROOT: /home/clitools/jurisprudencia-privada-etl/results
-      TENANT_ID: ${TENANT_ID:-}
-      CLIENT_ID: ${CLIENT_ID:-}
-      CLIENT_SECRET: ${CLIENT_SECRET:-}
-      SITE_ID: ${SITE_ID:-}
-      DRIVES: ${DRIVES:-}
-    volumes:
-      - ../jurisprudencia-privada-etl:/home/clitools/jurisprudencia-privada-etl:rw
-      - ../jurisprudencia-etl:/home/clitools/jurisprudencia-etl:rw
-      - ../version-converter:/home/clitools/version-converter:rw
-      - ../backup-jurisprudencia:/home/clitools/backup-jurisprudencia:rw
-      - rss_data:/rss
-    profiles:
-      - dev
-    networks:
-      - juris-network
-  elasticsearch:
-    build:
-      context: ./compose/elasticsearch
-      dockerfile: Dockerfile
-    ports:
-      - "127.0.0.1:9200:9200"
-    volumes:
-      - elasticsearch_data:/usr/share/elasticsearch/data
-    environment:
-      xpack.security.enabled: true
-      xpack.security.http.ssl.enabled: false
-      discovery.type: single-node
-      ES_JAVA_OPTS: ${ES_JAVA_OPTS}
-      ELASTIC_PASSWORD: elasticsearch
-      # to use kibana set the kibana_system password to elasticsearch with:
-      # $ elasticsearch-reset-password -u kibana_system -i
-    healthcheck:
-      test: curl --write-out 'HTTP %{http_code}' --fail --silent --output /dev/null http://elastic:elasticsearch@localhost:9200
-      interval: 10s
-      timeout: 30s
-      retries: 15
-      start_period: 10s
-    restart: unless-stopped
-    networks:
-      - juris-network
-  redis:
-    image: redis:6.2-bookworm
-    ports:
-      - "${REDIS_HOST:-127.0.0.1}:${REDIS_PORT:-6379}:6379"
-    restart: unless-stopped
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: redis-cli ping
-      interval: 10s
-      timeout: 30s
-      retries: 15
-      start_period: 10s
-    networks:
-      - juris-network
-  kibana:
-    image: docker.elastic.co/kibana/kibana:8.4.0
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
-    ports:
-      - "127.0.0.1:5601:5601"
-    environment:
-      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
-      ELASTICSEARCH_USERNAME: kibana_system
-      ELASTICSEARCH_PASSWORD: elasticsearch
-    restart: always
-    profiles:
-      - kibana
-    networks:
-      - juris-network
+    clitools_externo:
+        build:
+            context: ./compose/clitools
+        environment:
+            ES_URL: http://elasticsearch:9200
+            ES_USER: elastic
+            ES_PASS: elasticsearch
+            RSS_FOLDER: /rss
+            RSS_LINK: ${RSS_LINK:-http://localhost:3000/jurisprudencia}
+            RSS_MAX_FEED_SIZE: 200
+        volumes:
+            - rss_data:/rss
+        profiles:
+            - externo
+        networks:
+            - juris-network
+    clitools_interno:
+        build:
+            context: ./compose/clitools
+            dockerfile: ./Dockerfile_interno
+        environment:
+            ES_URL: http://elasticsearch:9200
+            ES_USER: elastic
+            ES_PASS: elasticsearch
+            RSS_FOLDER: /rss
+            RSS_LINK: ${RSS_LINK:-http://localhost:3000/jurisprudencia}
+            RSS_MAX_FEED_SIZE: 200
+            ANONIMIZADOR_URL: ${ANONIMIZADOR_URL:-}
+            LOCAL_ROOT: /home/clitools/jurisprudencia-privada-etl/results
+            TENANT_ID: ${TENANT_ID:-}
+            CLIENT_ID: ${CLIENT_ID:-}
+            CLIENT_SECRET: ${CLIENT_SECRET:-}
+            SITE_ID: ${SITE_ID:-}
+            DRIVES: ${DRIVES:-}
+        volumes:
+            - etl_results:/home/clitools/jurisprudencia-privada-etl/results
+            - rss_data:/rss
+        profiles:
+            - interno
+        networks:
+            - juris-network
+    clitools_dev:
+        # this dev assumes you cloned the clitools components and mounts them into the container for easily making changes
+        build:
+            context: ./compose/clitools
+            dockerfile: ./Dockerfile_dev
+        environment:
+            ES_URL: http://elasticsearch:9200
+            ES_USER: elastic
+            ES_PASS: elasticsearch
+            RSS_FOLDER: /rss
+            RSS_LINK: ${RSS_LINK:-http://localhost:3000/jurisprudencia}
+            RSS_MAX_FEED_SIZE: 200
+            ANONIMIZADOR_URL: ${ANONIMIZADOR_URL:-}
+            LOCAL_ROOT: /home/clitools/jurisprudencia-privada-etl/results
+            TENANT_ID: ${TENANT_ID:-}
+            CLIENT_ID: ${CLIENT_ID:-}
+            CLIENT_SECRET: ${CLIENT_SECRET:-}
+            SITE_ID: ${SITE_ID:-}
+            DRIVES: ${DRIVES:-}
+        volumes:
+            - ../jurisprudencia-privada-etl:/home/clitools/jurisprudencia-privada-etl:rw
+            - ../jurisprudencia-etl:/home/clitools/jurisprudencia-etl:rw
+            - ../version-converter:/home/clitools/version-converter:rw
+            - ../backup-jurisprudencia:/home/clitools/backup-jurisprudencia:rw
+            - rss_data:/rss
+        profiles:
+            - dev
+        networks:
+            - juris-network
+    elasticsearch:
+        build:
+            context: ./compose/elasticsearch
+            dockerfile: Dockerfile
+        ports:
+            - "127.0.0.1:9200:9200"
+        volumes:
+            - elasticsearch_data:/usr/share/elasticsearch/data
+        environment:
+            xpack.security.enabled: true
+            xpack.security.http.ssl.enabled: false
+            discovery.type: single-node
+            ES_JAVA_OPTS: ${ES_JAVA_OPTS}
+            ELASTIC_PASSWORD: elasticsearch
+            # to use kibana set the kibana_system password to elasticsearch with:
+            # $ elasticsearch-reset-password -u kibana_system -i
+        healthcheck:
+            test: curl --write-out 'HTTP %{http_code}' --fail --silent --output /dev/null http://elastic:elasticsearch@localhost:9200
+            interval: 10s
+            timeout: 30s
+            retries: 15
+            start_period: 10s
+        restart: unless-stopped
+        networks:
+            - juris-network
+    redis:
+        image: redis:6.2-bookworm
+        ports:
+            - "${REDIS_HOST:-127.0.0.1}:${REDIS_PORT:-6379}:6379"
+        restart: unless-stopped
+        volumes:
+            - redis_data:/data
+        healthcheck:
+            test: redis-cli ping
+            interval: 10s
+            timeout: 30s
+            retries: 15
+            start_period: 10s
+        networks:
+            - juris-network
+    kibana:
+        image: docker.elastic.co/kibana/kibana:8.4.0
+        depends_on:
+            elasticsearch:
+                condition: service_healthy
+        ports:
+            - "127.0.0.1:5601:5601"
+        environment:
+            ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+            ELASTICSEARCH_USERNAME: kibana_system
+            ELASTICSEARCH_PASSWORD: elasticsearch
+        restart: always
+        profiles:
+            - kibana
+        networks:
+            - juris-network
