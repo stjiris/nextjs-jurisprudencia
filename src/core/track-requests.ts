@@ -4,9 +4,10 @@ import { IncomingMessage, ServerResponse } from "http";
 
 const REQUEST_INDEX = "requests.0.2"
 
+let _clientReady = false;
 async function getClient(){
     let client = await getElasticSearchClient();
-    if( !(await client.indices.exists({index: REQUEST_INDEX})) ){
+    if( !_clientReady && !(await client.indices.exists({index: REQUEST_INDEX})) ){
         await client.indices.create({
             index: REQUEST_INDEX,
             mappings: {
@@ -49,6 +50,7 @@ async function getClient(){
             console.log(e)
         });
     }
+    _clientReady = true;
     return client;
 }
 
