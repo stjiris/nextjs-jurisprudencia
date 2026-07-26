@@ -1,12 +1,15 @@
 import { useRouter } from "next/router";
 import { useCallback, useEffect, useState } from "react";
 
-export function useFetch<T>(relativeUrl: string, otherDeps: any[]) {
+// A null url skips the request, for callers whose options come from elsewhere.
+export function useFetch<T>(relativeUrl: string | null, otherDeps: any[]) {
     const router = useRouter();
     let [resp, setResp] = useState<T>()
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
+        if (relativeUrl === null) return;
+
         const abort = new AbortController();
 
         fetch(router.basePath + relativeUrl, { signal: abort.signal })

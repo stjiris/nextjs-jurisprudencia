@@ -1,4 +1,5 @@
-import { JurisprudenciaDocument, JurisprudenciaDocumentDateKey, JurisprudenciaDocumentExactKey, JurisprudenciaDocumentGenericKey, JurisprudenciaDocumentKey, JurisprudenciaDocumentStateKey, JurisprudenciaDocumentTextKey, PartialJurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
+import { CanonicalValues, JurisprudenciaDocument, JurisprudenciaDocumentDateKey, JurisprudenciaDocumentExactKey, JurisprudenciaDocumentGenericKey, JurisprudenciaDocumentKey, JurisprudenciaDocumentStateKey, JurisprudenciaDocumentTextKey, PartialJurisprudenciaDocument, VotacaoCategories, VotacaoCategory, formatVotacaoShow, isControlledField, parseVotacao } from "@stjiris/jurisprudencia-document";
+import { useCanAccess } from "@/contexts/auth";
 import { Dispatch, SetStateAction, createContext, useContext, useEffect, useMemo, useState } from "react";
 
 import { JurisprudenciaKey } from "@/types/keys";
@@ -264,8 +265,21 @@ async function loadDatalist(router: NextRouter, accessKey: string, setDatalist: 
         .then(setDatalist)
 }
 
-export function TokenSelection({ accessKey, doc, editorSuggestions, editorRestricted }: InputProps<JurisprudenciaDocumentGenericKey> & { editorSuggestions?: boolean, editorRestricted?: boolean }) {
+type TokenSelectionProps = InputProps<JurisprudenciaDocumentGenericKey> & { editorSuggestions?: boolean, editorRestricted?: boolean };
+
+// Votação is parametrized (category + vote counts) so it needs its own control
+// instead of a token list. Dispatch happens before any hook runs, so each branch
+// keeps a stable hook order.
+export function TokenSelection(props: TokenSelectionProps) {
+    if (props.accessKey.key === "Votação") {
+        return <VotacaoSelection {...props} />;
+    }
+    return <GenericTokenSelection {...props} />;
+}
+
+function GenericTokenSelection({ accessKey, doc, editorSuggestions, editorRestricted }: TokenSelectionProps) {
     const [, setUpdateObject] = useContext(UpdateContext);
+    const canBypassCanonical = useCanAccess("bypassCanonical");
 
     const fieldValue = doc[accessKey.key];
     const initialValue = fieldValue == null ? "" : fieldValue['Show'].join("\n");
@@ -273,21 +287,30 @@ export function TokenSelection({ accessKey, doc, editorSuggestions, editorRestri
     const [toSave, setToSave] = useState<boolean>(false);
     const defaultValue = initialValue ? initialValue.split("\n").map(v => ({ value: v, label: v })) : [];
 
+    // Controlled fields are limited to the canonical vocabulary shipped with the
+    // document package; every other field keeps using the index aggregation.
+    const controlledKey = isControlledField(accessKey.key) ? accessKey.key : null;
+
     const update = (newValue: string) => {
 
         if (newValue === initialValue) {
             setUpdateObject(({ [accessKey.key]: _key_to_remove, ...old }) => ({ ...old }));
             setToSave(false);
         } else {
-            let toBeNewValue = { Original: initialValue.split("\n"), Show: newValue.split("\n"), Index: newValue.split("\n") };
+            // Original holds the raw value as ingested and must survive edits: it is
+            // the provenance of the document and feeds HASH/UUID for Meio Processual.
+            let Original = fieldValue?.Original ?? newValue.split("\n");
+            let toBeNewValue = { Original, Show: newValue.split("\n"), Index: newValue.split("\n") };
             setUpdateObject((old) => ({ ...old, [accessKey.key]: toBeNewValue }));
             setToSave(true);
         }
     };
 
-    let options: DatalistObj[] | null | undefined = useFetch<DatalistObj[]>(`/api/datalist?agg=${encodeURIComponent(accessKey.key)}`, []);
+    let fetched: DatalistObj[] | null | undefined = useFetch<DatalistObj[]>(controlledKey ? null : `/api/datalist?agg=${encodeURIComponent(accessKey.key)}`, []);
 
-    options = editorSuggestions ? options : null;
+    let options: DatalistObj[] | null | undefined = controlledKey
+        ? CanonicalValues[controlledKey].map(v => ({ key: v }))
+        : editorSuggestions ? fetched : null;
 
     let optionsList: readonly { value: string, label: string }[] = useMemo(() => {
         if (!options)
@@ -295,10 +318,12 @@ export function TokenSelection({ accessKey, doc, editorSuggestions, editorRestri
         if (!initialValue || options.find(v => v.key === initialValue)) {
             return options.map((v) => ({ value: v.key, label: v.key }));
         }
+        // Keep a not-yet-normalized stored value selectable so it still renders.
         return options.map((v) => ({ value: v.key, label: v.key })).concat({ value: initialValue, label: initialValue });
     }, [options, initialValue]);
 
-    const finalOptionsList = editorSuggestions ? optionsList : undefined;
+    const finalOptionsList = controlledKey || editorSuggestions ? optionsList : undefined;
+    const blockNewValues = controlledKey ? !canBypassCanonical : editorRestricted;
 
     return (
         <InputRow accessKey={accessKey} toSave={toSave}>
@@ -312,13 +337,68 @@ export function TokenSelection({ accessKey, doc, editorSuggestions, editorRestri
                 options={finalOptionsList}
                 onChange={(evt) => update(evt.map(v => v.value).join("\n"))}
                 createOptionPosition="first"
-                isValidNewOption={() => !editorRestricted}
+                isValidNewOption={() => !blockNewValues}
                 filterOption={createFilter({
                     matchFrom: "start",
                     ignoreCase: true,
                     ignoreAccents: true,
                 })}
             />
+        </InputRow>
+    );
+}
+
+// Index carries the count-free category (so the facet groups correctly) while Show
+// carries the counts, rebuilt by formatVotacaoShow.
+function VotacaoSelection({ accessKey, doc }: TokenSelectionProps) {
+    const [, setUpdateObject] = useContext(UpdateContext);
+
+    const fieldValue = doc[accessKey.key];
+    const initialShow = fieldValue == null ? "" : fieldValue['Show'].join("\n");
+    const initialParse = useMemo(() => parseVotacao(initialShow), [initialShow]);
+
+    const [category, setCategory] = useState<string>(initialParse.matched ? initialParse.category : "");
+    const [vencidos, setVencidos] = useState<number>(initialParse.vencidos);
+    const [declaracoes, setDeclaracoes] = useState<number>(initialParse.declaracoes);
+    const [toSave, setToSave] = useState<boolean>(false);
+
+    const showsVencidos = category === "Maioria com votos vencidos" || category === "Maioria com votos vencidos e declarações de voto";
+    const showsDeclaracoes = category === "Maioria com declarações de voto" || category === "Maioria com votos vencidos e declarações de voto";
+
+    const update = (nextCategory: string, nextVencidos: number, nextDeclaracoes: number) => {
+        setCategory(nextCategory);
+        setVencidos(nextVencidos);
+        setDeclaracoes(nextDeclaracoes);
+
+        if (!nextCategory) {
+            setUpdateObject(({ [accessKey.key]: _key_to_remove, ...old }) => ({ ...old }));
+            setToSave(false);
+            return;
+        }
+
+        const show = formatVotacaoShow(nextCategory as VotacaoCategory, nextVencidos, nextDeclaracoes);
+        if (show === initialShow) {
+            setUpdateObject(({ [accessKey.key]: _key_to_remove, ...old }) => ({ ...old }));
+            setToSave(false);
+            return;
+        }
+
+        const Original = fieldValue?.Original ?? [show];
+        setUpdateObject((old) => ({ ...old, [accessKey.key]: { Original, Show: [show], Index: [nextCategory] } }));
+        setToSave(true);
+    };
+
+    return (
+        <InputRow accessKey={accessKey} toSave={toSave}>
+            <select className="form-select w-50" value={category} onChange={(evt) => update(evt.target.value, vencidos, declaracoes)}>
+                <option value="">Selecione...</option>
+                {VotacaoCategories.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            {showsVencidos && <input className="form-control" type="number" min={0} value={vencidos} title="Votos vencidos"
+                onChange={(evt) => update(category, parseInt(evt.target.value) || 0, declaracoes)} />}
+            {showsDeclaracoes && <input className="form-control" type="number" min={0} value={declaracoes} title="Declarações de voto"
+                onChange={(evt) => update(category, vencidos, parseInt(evt.target.value) || 0)} />}
+            {category && <small className="input-group-text">{formatVotacaoShow(category as VotacaoCategory, vencidos, declaracoes)}</small>}
         </InputRow>
     );
 }

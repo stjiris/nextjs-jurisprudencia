@@ -10,6 +10,7 @@ export const FEATURE_MIN_ROLE = {
     filters: 'admin',
     importExport: 'admin',
     manageUsers: 'admin',
+    bypassCanonical: 'admin',
 } as const satisfies Record<string, Role>;
 
 export type Feature = keyof typeof FEATURE_MIN_ROLE;
