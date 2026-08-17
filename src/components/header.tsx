@@ -7,7 +7,7 @@ import { useAuth } from "@/contexts/auth";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 
-const NAVEGACAO = ["Pesquisa", "Índices", /* "Dashboard"*/]
+const NAVEGACAO = ["Pesquisa", "Índices", "Boletim", /* "Dashboard"*/]
 
 export function AdminHeader() {
     const router = useRouter();

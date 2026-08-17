@@ -10,10 +10,17 @@ export default LoggerApi(async function datalistHandler(
   res: NextApiResponse
 ) {
     let date = new Date();
-    let currentMonth = `${date.getMonth()}`;
+    let currentMonth = `${date.getMonth() + 1}`;
     let currentYear = `${date.getFullYear()}`;
     let [area="Área Social", year=currentYear, month=currentMonth, format="pdf"] = Array.isArray(req.query.filters) ? req.query.filters : req.query.filters ? [req.query.filters] : [];
     let title = `Sumários de Acórdãos - ${area} - ${month}/${year}`
+
+    if( format === "pdf" ){
+        res.writeHead(200, {
+            "Content-Type": "application/pdf",
+            "Content-Disposition": `inline; filename="boletim-${area}-${year}-${month}.pdf"`
+        })
+    }
 
     let [pandoc, wls] = convert(title, format);
     pandoc.stderr.pipe(process.stderr)
@@ -62,12 +69,6 @@ export default LoggerApi(async function datalistHandler(
         console.error(e);
     })
 
-    if( format === "pdf" ){
-        res.writeHead(200, {
-            "Content-Type": "application/pdf"
-        })
-    }
-    
     return await new Promise(resolve => pandoc.stdout.on("end", resolve))
 })
 
