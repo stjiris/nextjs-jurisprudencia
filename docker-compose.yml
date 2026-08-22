@@ -135,6 +135,38 @@ services:
         networks:
             - juris-network
 
+    # Nightly export of changed documents to interno ([JURIS-SYNC-BACK] emails)
+    sync_back_export:
+        image: alpine/curl
+        command: >
+            sh -c "while true; do
+              sleep 86400;
+              curl -sf -X POST 'http://server_externo:3000${NEXT_BASE_PATH}/api/gestao/sync-export' -o /dev/null;
+            done"
+        restart: unless-stopped
+        depends_on:
+            - server_externo
+        profiles:
+            - externo
+        networks:
+            - juris-network
+
+    # Poll the mailbox for [JURIS-SYNC-BACK] emails from externo and apply them
+    sync_back_import:
+        image: alpine/curl
+        command: >
+            sh -c "while true; do
+              curl -sf -X POST 'http://server_interno:3000${NEXT_BASE_PATH}/api/gestao/sync-import' -o /dev/null;
+              sleep 60;
+            done"
+        restart: unless-stopped
+        depends_on:
+            - server_interno
+        profiles:
+            - interno
+        networks:
+            - juris-network
+
     clitools_externo:
         build:
             context: ./compose/clitools
