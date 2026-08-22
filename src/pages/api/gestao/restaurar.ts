@@ -1,6 +1,7 @@
 import LoggerApi from "@/core/logger-api";
 import { authenticatedHandler } from "@/core/user/authenticate";
 import { existsDoc, getDoc, updateDoc } from "@/core/doc";
+import { logAuditEvent, getUsernameFromReq, getIpFromReq } from "@/core/audit-log";
 import type { NextApiRequest, NextApiResponse } from "next";
 
 type Response = { ok: boolean; message?: string };
@@ -36,6 +37,13 @@ export default LoggerApi(async function restaurarHandler(
         }
 
         await updateDoc(id, { STATE: "preparação" });
+
+        logAuditEvent("restaurar", getUsernameFromReq(req), {
+            documentId: id,
+            documentProcesso: doc._source?.["Número de Processo"],
+            ip: getIpFromReq(req),
+        });
+
         return res.status(200).json({ ok: true });
     } catch (err) {
         console.error("Error in /api/gestao/restaurar:", err);

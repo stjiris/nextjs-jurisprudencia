@@ -1,7 +1,6 @@
-import GenericPage from "@/components/main_pages/genericPageStructure";
 import { LoggerServerSideProps } from "@/core/logger-api";
-import { authenticate, AuthenticateResponse } from "@/core/user/authenticate";
-import { createSession, deleteSession, validateSession } from "@/core/user/session";
+import { deleteSession, validateSession } from "@/core/user/session";
+import { logAuditEvent } from "@/core/audit-log";
 import { GetServerSideProps } from "next";
 import Link from "next/link";
 
@@ -12,6 +11,8 @@ export const getServerSideProps : GetServerSideProps<{}> = LoggerServerSideProps
 
     if( user && session && await validateSession(user, session) ){
         deleteSession(user, session);
+        const ip = (ctx.req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || ctx.req.socket?.remoteAddress || "unknown";
+        logAuditEvent("logout", user, { ip });
     }
     ctx.res.setHeader("Set-cookie", [`user=; HttpOnly; Path=/; Expires=Thu, Jan 01 1970 00:00:00 UTC`,`session=; HttpOnly; Path=/; Expires=Thu, Jan 01 1970 00:00:00 UTC`])
     return {redirect: {destination: "/", permanent: false}}

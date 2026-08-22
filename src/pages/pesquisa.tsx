@@ -10,6 +10,8 @@ import Link from "next/link"
 import { ReadonlyURLSearchParams, useSearchParams } from "next/navigation"
 import { modifySearchParams, SelectNavigate } from "@/components/main_pages/SelectNavigate"
 import JurisprudenciaItem from "@/components/main_pages/search/JurisprudenciaItem"
+import JurisprudenciaTable from "@/components/main_pages/search/JurisprudenciaTable"
+import { useAuth } from "@/contexts/auth"
 
 interface PesquisaProps extends FormProps{
     searchedArray: string[]
@@ -46,11 +48,12 @@ export default function Pesquisa(props: PesquisaProps){
 }
 
 function ShowResults({results, searchParams, searchInfo}: {results: SearchHandlerResponse, searchParams: ReadonlyURLSearchParams, searchInfo: PesquisaProps}){
+    const auth = useAuth();
 
     const sort = searchParams.get("sort") || "des"
     let page = parseInt(searchParams.get("page") || "0")
     const rpp = parseInt(searchParams.get("rpp") || "10")
-    
+
     return <>
         <div className="mb-2 d-flex align-items-center gap-2">
             <SelectNavigate name="rpp-select" className="me-1" defaultValue={rpp} valueToHref={(v, params) => {
@@ -69,7 +72,11 @@ function ShowResults({results, searchParams, searchInfo}: {results: SearchHandle
                 <option value="des">Data Descendente</option>
             </SelectNavigate>
         </div>
-        {...results.map((h, i) => <JurisprudenciaItem key={i} hit={h} searchId={searchInfo.searchId}/>)}
+        {auth ? (
+            <JurisprudenciaTable results={results} searchId={searchInfo.searchId} />
+        ) : (
+            results.map((h, i) => <JurisprudenciaItem key={i} hit={h} searchId={searchInfo.searchId}/>)
+        )}
         <article className="row d-print-none">
             <nav>
                 <ul className="pagination justify-content-center text-center">

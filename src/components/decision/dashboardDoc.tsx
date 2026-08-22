@@ -1,12 +1,13 @@
 import { CanonicalValues, JurisprudenciaDocument, JurisprudenciaDocumentDateKey, JurisprudenciaDocumentExactKey, JurisprudenciaDocumentGenericKey, JurisprudenciaDocumentKey, JurisprudenciaDocumentStateKey, JurisprudenciaDocumentTextKey, PartialJurisprudenciaDocument, VotacaoCategories, VotacaoCategory, formatVotacaoShow, isControlledField, parseVotacao } from "@stjiris/jurisprudencia-document";
 import { useCanAccess } from "@/contexts/auth";
-import { Dispatch, SetStateAction, createContext, useContext, useEffect, useMemo, useState } from "react";
+import { Dispatch, SetStateAction, ClipboardEvent, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 import { JurisprudenciaKey } from "@/types/keys";
 import { DatalistObj } from "@/types/search";
 import dynamic from 'next/dynamic';
 import { NextRouter, useRouter } from "next/router";
 import Createable from "react-select/creatable";
+import AsyncCreatable from "react-select/async-creatable";
 import { useFetch } from "../useFetch";
 import { createFilter } from "react-select";
 
@@ -280,70 +281,124 @@ export function TokenSelection(props: TokenSelectionProps) {
 function GenericTokenSelection({ accessKey, doc, editorSuggestions, editorRestricted }: TokenSelectionProps) {
     const [, setUpdateObject] = useContext(UpdateContext);
     const canBypassCanonical = useCanAccess("bypassCanonical");
+    const router = useRouter();
 
     const fieldValue = doc[accessKey.key];
     const initialValue = fieldValue == null ? "" : fieldValue['Show'].join("\n");
 
     const [toSave, setToSave] = useState<boolean>(false);
-    const defaultValue = initialValue ? initialValue.split("\n").map(v => ({ value: v, label: v })) : [];
+    const defaultValue = useMemo(
+        () => initialValue ? initialValue.split("\n").map(v => ({ value: v, label: v })) : [],
+        [initialValue]
+    );
 
-    // Controlled fields are limited to the canonical vocabulary shipped with the
-    // document package; every other field keeps using the index aggregation.
     const controlledKey = isControlledField(accessKey.key) ? accessKey.key : null;
+    const [selectedValues, setSelectedValues] = useState(defaultValue);
 
-    const update = (newValue: string) => {
-
+    const update = useCallback((newValue: string) => {
         if (newValue === initialValue) {
             setUpdateObject(({ [accessKey.key]: _key_to_remove, ...old }) => ({ ...old }));
             setToSave(false);
         } else {
-            // Original holds the raw value as ingested and must survive edits: it is
-            // the provenance of the document and feeds HASH/UUID for Meio Processual.
             let Original = fieldValue?.Original ?? newValue.split("\n");
             let toBeNewValue = { Original, Show: newValue.split("\n"), Index: newValue.split("\n") };
             setUpdateObject((old) => ({ ...old, [accessKey.key]: toBeNewValue }));
             setToSave(true);
         }
-    };
+    }, [initialValue, accessKey.key, fieldValue, setUpdateObject]);
 
-    let fetched: DatalistObj[] | null | undefined = useFetch<DatalistObj[]>(controlledKey ? null : `/api/datalist?agg=${encodeURIComponent(accessKey.key)}`, []);
-
-    let options: DatalistObj[] | null | undefined = controlledKey
-        ? CanonicalValues[controlledKey].map(v => ({ key: v }))
-        : editorSuggestions ? fetched : null;
-
-    let optionsList: readonly { value: string, label: string }[] = useMemo(() => {
-        if (!options)
-            return [{ value: initialValue, label: initialValue }];
-        if (!initialValue || options.find(v => v.key === initialValue)) {
-            return options.map((v) => ({ value: v.key, label: v.key }));
-        }
-        // Keep a not-yet-normalized stored value selectable so it still renders.
-        return options.map((v) => ({ value: v.key, label: v.key })).concat({ value: initialValue, label: initialValue });
-    }, [options, initialValue]);
-
-    const finalOptionsList = controlledKey || editorSuggestions ? optionsList : undefined;
     const blockNewValues = controlledKey ? !canBypassCanonical : editorRestricted;
+
+    const loadOptions = useCallback(async (inputValue: string) => {
+        const params = new URLSearchParams({ agg: accessKey.key });
+        if (inputValue) params.set("prefix", inputValue);
+        const res = await fetch(`${router.basePath}/api/datalist?${params}`);
+        if (!res.ok) return [];
+        const data: DatalistObj[] = await res.json();
+        return data.map(d => ({ value: d.key, label: d.key }));
+    }, [accessKey.key, router.basePath]);
+
+    const handleChange = useCallback((evt: readonly { value: string; label: string }[]) => {
+        const arr = [...evt];
+        setSelectedValues(arr);
+        update(arr.map(v => v.value).join("\n"));
+    }, [update]);
+
+    const handlePaste = useCallback(async (e: ClipboardEvent<HTMLDivElement>) => {
+        const text = e.clipboardData?.getData("text/plain") || "";
+        const cleaned = text.replace(/^descritores\s*:\s*/i, "");
+        const tokens = cleaned.split(/[,;]/).map(t => t.trim()).filter(Boolean);
+        if (tokens.length < 2) return;
+
+        e.preventDefault();
+
+        const results = await Promise.all(tokens.map(token => loadOptions(token)));
+        const matched: { value: string; label: string }[] = [];
+        const unmatched: string[] = [];
+
+        for (let i = 0; i < tokens.length; i++) {
+            const normalizedToken = tokens[i].toLowerCase();
+            const match = results[i].find(o => o.value.toLowerCase() === normalizedToken);
+            if (match) {
+                matched.push(match);
+            } else {
+                unmatched.push(tokens[i]);
+            }
+        }
+
+        if (matched.length > 0) {
+            setSelectedValues(prev => {
+                const existing = new Set(prev.map(v => v.value));
+                const newValues = matched.filter(m => !existing.has(m.value));
+                const merged = [...prev, ...newValues];
+                update(merged.map(v => v.value).join("\n"));
+                return merged;
+            });
+        }
+
+        if (unmatched.length > 0) {
+            alert(`${unmatched.length} descritor(es) não encontrado(s):\n${unmatched.join(", ")}`);
+        }
+    }, [loadOptions, update]);
+
+    if (controlledKey) {
+        const options = CanonicalValues[controlledKey].map(v => ({ value: v, label: v }));
+        return (
+            <InputRow accessKey={accessKey} toSave={toSave}>
+                <Createable
+                    placeholder="Selecione..."
+                    defaultValue={defaultValue}
+                    loadingMessage={() => "A carregar..."}
+                    formatCreateLabel={(lbl) => `Novo ${accessKey.name}: "${lbl}"`}
+                    className="w-75"
+                    isMulti
+                    options={options}
+                    onChange={(evt) => update(evt.map(v => v.value).join("\n"))}
+                    createOptionPosition="first"
+                    isValidNewOption={() => !blockNewValues}
+                    filterOption={createFilter({ matchFrom: "start", ignoreCase: true, ignoreAccents: true })}
+                />
+            </InputRow>
+        );
+    }
 
     return (
         <InputRow accessKey={accessKey} toSave={toSave}>
-            <Createable
-                placeholder="Selecione..."
-                defaultValue={defaultValue}
-                loadingMessage={() => "A carregar..."}
-                formatCreateLabel={(lbl) => `Novo ${accessKey.name}: "${lbl}"`}
-                className="w-75"
-                isMulti
-                options={finalOptionsList}
-                onChange={(evt) => update(evt.map(v => v.value).join("\n"))}
-                createOptionPosition="first"
-                isValidNewOption={() => !blockNewValues}
-                filterOption={createFilter({
-                    matchFrom: "start",
-                    ignoreCase: true,
-                    ignoreAccents: true,
-                })}
-            />
+            <div className="w-75" onPaste={handlePaste}>
+                <AsyncCreatable
+                    placeholder="Escreva para pesquisar..."
+                    value={selectedValues}
+                    loadOptions={loadOptions}
+                    loadingMessage={() => "A carregar..."}
+                    noOptionsMessage={({ inputValue }) => inputValue ? "Sem resultados" : "Escreva para pesquisar..."}
+                    formatCreateLabel={(lbl) => `Novo ${accessKey.name}: "${lbl}"`}
+                    isMulti
+                    onChange={handleChange}
+                    createOptionPosition="first"
+                    isValidNewOption={() => !blockNewValues}
+                    cacheOptions
+                />
+            </div>
         </InputRow>
     );
 }

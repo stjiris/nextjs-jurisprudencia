@@ -53,3 +53,21 @@ article.result::after {
 article:focus-within::after, article:hover::after{
     box-shadow: inset white 0 0px 0px;
 }
+
+.jurisprudencia-table {
+    font-size: 0.875rem;
+}
+.jurisprudencia-table th {
+    white-space: nowrap;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    color: var(--bs-secondary);
+}
+.jurisprudencia-table td {
+    vertical-align: middle;
+    max-width: 250px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

@@ -38,6 +38,9 @@ export default function IndexPage({ role }: IndexPageProps) {
                         {can('manageUsers') && <LinkEntry link="/admin/users" title="Utilizadores">
                             <p>Criar e gerir utilizadores</p>
                         </LinkEntry>}
+                        {can('manageUsers') && <LinkEntry link="/admin/logs" title="Registo de Atividade">
+                            <p>Consultar o registo de ações realizadas no sistema</p>
+                        </LinkEntry>}
                     </div>
                 </div>
             </div>

@@ -2,6 +2,7 @@ import LoggerApi from "@/core/logger-api";
 import { authenticatedHandler } from "@/core/user/authenticate";
 import { existsDoc, getDoc, updateDoc } from "@/core/doc";
 import { sendSyncEmail } from "@/core/email-sync";
+import { logAuditEvent, getUsernameFromReq, getIpFromReq } from "@/core/audit-log";
 import type { NextApiRequest, NextApiResponse } from "next";
 
 type Response = { ok: boolean; message?: string };
@@ -48,6 +49,12 @@ export default LoggerApi(async function publicarHandler(
         }
 
         await updateDoc(id, { STATE: "público" });
+
+        logAuditEvent("publicar", getUsernameFromReq(req), {
+            documentId: id,
+            documentProcesso: doc._source?.["Número de Processo"],
+            ip: getIpFromReq(req),
+        });
 
         return res.status(200).json({ ok: true });
     } catch (err) {

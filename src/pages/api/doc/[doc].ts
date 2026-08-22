@@ -3,6 +3,7 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { createDoc, deleteDoc, existsDoc, getDoc, updateDoc } from "@/core/doc";
 import LoggerApi from "@/core/logger-api";
 import { sendSyncEditEmail } from "@/core/email-sync";
+import { logAuditEvent, getUsernameFromReq, getIpFromReq } from "@/core/audit-log";
 
 export default LoggerApi(async function docApiHandler(
     req: NextApiRequest,
@@ -49,6 +50,12 @@ export default LoggerApi(async function docApiHandler(
                 }
             }
 
+            logAuditEvent("editar", getUsernameFromReq(req), {
+                documentId: id,
+                documentProcesso: current._source?.["Número de Processo"],
+                ip: getIpFromReq(req),
+            });
+
             return res.json(result);
         }
         catch(e){
@@ -65,9 +72,21 @@ export default LoggerApi(async function docApiHandler(
             } catch (fsErr) {
                 console.error("doc DELETE: markForReintroduction failed:", fsErr);
             }
+            logAuditEvent("eliminar", getUsernameFromReq(req), {
+                documentId: id,
+                documentProcesso: document._source?.["Número de Processo"],
+                details: "permanent delete",
+                ip: getIpFromReq(req),
+            });
             return res.json(await deleteDoc(id))
         }
         else if( document._source ){
+            logAuditEvent("eliminar", getUsernameFromReq(req), {
+                documentId: id,
+                documentProcesso: document._source?.["Número de Processo"],
+                details: "soft delete (STATE → eliminado)",
+                ip: getIpFromReq(req),
+            });
             return res.json(await updateDoc(id, {STATE: "eliminado"}))
         }
     }

@@ -2,6 +2,7 @@ import GenericPage from "@/components/main_pages/genericPageStructure";
 import { LoggerServerSideProps } from "@/core/logger-api";
 import { authenticate, AuthenticateResponse } from "@/core/user/authenticate";
 import { createSession, validateSession } from "@/core/user/session";
+import { logAuditEvent } from "@/core/audit-log";
 import { GetServerSideProps } from "next";
 
 interface LoginProps {
@@ -23,6 +24,8 @@ export const getServerSideProps : GetServerSideProps<LoginProps> = LoggerServerS
         if( r === AuthenticateResponse.AUTHORIZED){
             let session = await createSession(user!);
             ctx.res.setHeader("Set-cookie", [`user=${user}; HttpOnly; Path=/`,`session=${session}; HttpOnly; Path=/`])
+            const ip = (ctx.req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || ctx.req.socket?.remoteAddress || "unknown";
+            logAuditEvent("login", user!, { ip });
             return {redirect: {destination: redirect, statusCode: 303}}
         }
         else{
