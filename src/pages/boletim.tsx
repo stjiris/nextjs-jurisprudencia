@@ -71,10 +71,7 @@ export default function Boletim({ areas, minYear, maxYear }: BoletimProps) {
         <GenericPage title="Jurisprudência STJ - Boletim">
             <div className="row justify-content-center mt-4">
                 <div className="col-12 col-md-8 col-lg-6">
-                    <h3 className="mb-3">Boletim de Sumários</h3>
-                    <p className="text-muted">
-                        Gere um documento PDF com os sumários dos acórdãos publicados, agrupados por área e período.
-                    </p>
+                    <h3 className="mb-3">Boletim Mensal</h3>
                     <div className="card">
                         <div className="card-body">
                             <div className="mb-3">
@@ -124,7 +121,6 @@ export default function Boletim({ areas, minYear, maxYear }: BoletimProps) {
                                 target="_blank"
                                 rel="noopener noreferrer"
                             >
-                                <i className="bi bi-file-earmark-pdf me-2"></i>
                                 Gerar Boletim PDF
                             </a>
                         </div>
