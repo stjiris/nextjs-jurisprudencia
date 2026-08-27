@@ -101,11 +101,25 @@ export default function Boletim({ areas, minYear, maxYear }: BoletimProps) {
     const previewStale = previewUrl !== htmlUrl
     const pdfStale = lastPdfUrl !== pdfUrl
 
-    const generatePreview = () => setPreviewUrl(htmlUrl)
+    const previewRef = useRef<HTMLDivElement>(null)
+    const shouldScroll = useRef(false)
+
+    const generatePreview = () => {
+        shouldScroll.current = true
+        setPreviewUrl(htmlUrl)
+    }
     const generatePdf = () => {
         window.open(pdfUrl, "_blank", "noopener,noreferrer")
         setLastPdfUrl(pdfUrl)
     }
+
+    // Scroll the preview into view when the user generates it, so only the iframe is visible.
+    useEffect(() => {
+        if (previewUrl && shouldScroll.current) {
+            shouldScroll.current = false
+            previewRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+        }
+    }, [previewUrl])
 
     return (
         <GenericPage title="Jurisprudência STJ - Boletim">
@@ -191,13 +205,13 @@ export default function Boletim({ areas, minYear, maxYear }: BoletimProps) {
                         </div>
                     </div>
                     {previewUrl && (
-                        <div className="card mt-3">
+                        <div className="card mt-3" ref={previewRef} style={{ scrollMarginTop: "0.5rem" }}>
                             <div className="card-body p-0">
                                 <iframe
                                     src={previewUrl}
                                     title="Pré-visualização do boletim"
                                     className="w-100 border-0"
-                                    style={{ height: "70vh" }}
+                                    style={{ height: "95vh" }}
                                 />
                             </div>
                         </div>
