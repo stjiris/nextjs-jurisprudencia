@@ -21,6 +21,9 @@ export default LoggerApi(async function datalistHandler(
             "Content-Disposition": `inline; filename="boletim-${area}-${year}-${month}.pdf"`
         })
     }
+    else{
+        res.setHeader("Content-Type", "text/html; charset=utf-8")
+    }
 
     let [pandoc, wls] = convert(title, format);
     pandoc.stderr.pipe(process.stderr)

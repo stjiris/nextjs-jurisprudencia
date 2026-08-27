@@ -1,10 +1,11 @@
 import GenericPage from "@/components/genericPageStructure"
+import { SmallSpinner } from "@/components/loading"
 import { getElasticSearchClient } from "@/core/elasticsearch"
 import { LoggerServerSideProps } from "@/core/logger-api"
 import { JurisprudenciaVersion } from "@stjiris/jurisprudencia-document"
 import { GetServerSideProps } from "next"
 import { useRouter } from "next/router"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 
 interface BoletimProps {
     areas: string[]
@@ -55,6 +56,11 @@ export default function Boletim({ areas, minYear, maxYear }: BoletimProps) {
     const [year, setYear] = useState(now.getFullYear().toString())
     const [month, setMonth] = useState((now.getMonth() + 1).toString())
 
+    const [count, setCount] = useState<number | null>(null)
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+    const [lastPdfUrl, setLastPdfUrl] = useState<string | null>(null)
+    const didInit = useRef(false)
+
     const years = useMemo(() => {
         const result = []
         for (let y = maxYear; y >= minYear; y--) {
@@ -63,9 +69,43 @@ export default function Boletim({ areas, minYear, maxYear }: BoletimProps) {
         return result
     }, [minYear, maxYear])
 
-    const downloadUrl = useMemo(() => {
+    const htmlUrl = useMemo(() => {
+        return `${router.basePath}/api/boletim/${encodeURIComponent(area)}/${year}/${month}/html`
+    }, [router.basePath, area, year, month])
+
+    const pdfUrl = useMemo(() => {
         return `${router.basePath}/api/boletim/${encodeURIComponent(area)}/${year}/${month}/pdf`
     }, [router.basePath, area, year, month])
+
+    // Count acórdãos for the current combination to guard both buttons.
+    useEffect(() => {
+        let cancelled = false
+        setCount(null)
+        const params = new URLSearchParams({ area, year, month })
+        fetch(`${router.basePath}/api/boletim/count?${params.toString()}`)
+            .then(r => r.json())
+            .then(({ count }) => {
+                if (cancelled) return
+                setCount(count)
+                // Auto-generate the HTML preview once, on first page entry.
+                if (!didInit.current && count > 0) {
+                    didInit.current = true
+                    setPreviewUrl(`${router.basePath}/api/boletim/${encodeURIComponent(area)}/${year}/${month}/html`)
+                }
+            })
+            .catch(() => { if (!cancelled) setCount(0) })
+        return () => { cancelled = true }
+    }, [router.basePath, area, year, month])
+
+    const hasAcordaos = count !== null && count > 0
+    const previewStale = previewUrl !== htmlUrl
+    const pdfStale = lastPdfUrl !== pdfUrl
+
+    const generatePreview = () => setPreviewUrl(htmlUrl)
+    const generatePdf = () => {
+        window.open(pdfUrl, "_blank", "noopener,noreferrer")
+        setLastPdfUrl(pdfUrl)
+    }
 
     return (
         <GenericPage title="Jurisprudência STJ - Boletim">
@@ -115,16 +155,53 @@ export default function Boletim({ areas, minYear, maxYear }: BoletimProps) {
                                     </select>
                                 </div>
                             </div>
-                            <a
-                                href={downloadUrl}
-                                className="btn btn-primary w-100"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                            >
-                                Gerar Boletim PDF
-                            </a>
+                            {count === null ? (
+                                <div className="d-flex align-items-center text-muted">
+                                    <SmallSpinner className="me-2" />
+                                    A verificar acórdãos...
+                                </div>
+                            ) : count === 0 ? (
+                                <div className="alert alert-warning mb-0" role="alert">
+                                    Não existem acórdãos para esta combinação.
+                                </div>
+                            ) : (
+                                <div className="row g-2">
+                                    <div className="col-6">
+                                        <button
+                                            type="button"
+                                            className="btn btn-primary w-100"
+                                            disabled={!hasAcordaos || !previewStale}
+                                            onClick={generatePreview}
+                                        >
+                                            Gerar Boletim
+                                        </button>
+                                    </div>
+                                    <div className="col-6">
+                                        <button
+                                            type="button"
+                                            className="btn btn-outline-primary w-100"
+                                            disabled={!hasAcordaos || !pdfStale}
+                                            onClick={generatePdf}
+                                        >
+                                            Gerar PDF
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
+                    {previewUrl && (
+                        <div className="card mt-3">
+                            <div className="card-body p-0">
+                                <iframe
+                                    src={previewUrl}
+                                    title="Pré-visualização do boletim"
+                                    className="w-100 border-0"
+                                    style={{ height: "70vh" }}
+                                />
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </GenericPage>
