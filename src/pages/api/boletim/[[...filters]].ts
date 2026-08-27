@@ -54,7 +54,7 @@ export default LoggerApi(async function datalistHandler(
                 wls(`<div style="page-break-after: always;">\n`)
                 if( hit._source?.Descritores?.Show || hit._source?.Descritores?.Original ){
                     wls(`---\n`)
-                    wls(...(hit._source?.Descritores.Show || hit._source?.Descritores.Original).map(d => `**${d}**\n`))
+                    wls(...(hit._source?.Descritores.Show || hit._source?.Descritores.Original).map(d => `**${`${d}`.replace(/`/g, "")}**\n`))
                     wls(`---\n`)
                     wls(`<div>`);
                     wls(hit._source.Sumário || "Sumário não disponível")
