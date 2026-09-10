@@ -4,8 +4,10 @@ import { isJurisprudenciaDocumentStateKey, JurisprudenciaDocument, Jurisprudenci
 import { useFetch } from "../useFetch";
 import ManageDecisionOptions from "./ManageDecisionOptions";
 import Link from "next/link";
-import { CSSProperties, ReactNode, useState } from "react";
+import { CSSProperties, ReactNode, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { BadgeFromState } from "../BadgeFromState";
+import { highlightTextInElement, searchQueryToTerm } from "./highlightText";
 
 const MUST_HAVE = ["UUID", "Número de Processo", "Fonte", "ECLI", "URL", "Sumário", "Texto", "STATE"]
 
@@ -24,6 +26,22 @@ export default function DecisionView(props: { doc: JurisprudenciaDocument, id: s
     let texto = showOriginal ? (props.doc["Texto Não Anonimizado"] ?? props.doc.Texto) : (props.doc.Texto || props.doc["Texto Não Anonimizado"]);
     const sumarioIsOriginal = showOriginal || !props.doc.Sumário;
     const textoIsOriginal = showOriginal || !props.doc.Texto;
+
+    const searchParams = useSearchParams();
+    const searchTerm = searchQueryToTerm(searchParams.get("q"));
+    const contentRef = useRef<HTMLDivElement>(null);
+    const scrolledRef = useRef(false);
+    useEffect(() => {
+        const el = contentRef.current;
+        if (!el || !searchTerm) return;
+        highlightTextInElement(el, searchTerm);
+        if (scrolledRef.current) return;
+        const firstMark = el.querySelector("mark");
+        if (firstMark) {
+            scrolledRef.current = true;
+            firstMark.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+    }, [searchTerm, sumario, texto]);
 
     return <>
         <div className="container">
@@ -65,7 +83,7 @@ export default function DecisionView(props: { doc: JurisprudenciaDocument, id: s
                     {props.keys.filter(k => k.documentShow && !MUST_HAVE.includes(k.key)).map(k => <DefaultRow key={k.key} doc={props.doc} showkey={k.name} accessKey={k.key} noLink={!k.indicesList} />)}
                 </div>
                 <div className="row justify-content-center">
-                    <div className="col-12 col-md-10 mt-3">
+                    <div className="col-12 col-md-10 mt-3" id="decision-content" ref={contentRef}>
                         {showToggle && <div className="mb-2">
                             <div
                                 style={{ display: "inline-flex", border: "1px solid var(--primary-red)", borderRadius: "4px", fontSize: "0.8rem", userSelect: "none", overflow: "hidden" }}

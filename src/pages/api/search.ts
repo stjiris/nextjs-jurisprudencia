@@ -6,6 +6,7 @@ import { SearchHighlight, SortCombinations } from '@elastic/elasticsearch/lib/ap
 import { JurisprudenciaDocumentKey } from '@stjiris/jurisprudencia-document';
 import type { NextApiRequest, NextApiResponse } from 'next'
 
+const TEXTO_PREVIEW_SIZE = 350
 const useSource: JurisprudenciaDocumentKey[] = ["ECLI", "Número de Processo", "UUID", "Data", "Área", "Meio Processual", "Relator Nome Profissional", "Secção", "Votação", "Decisão", "Descritores", "Sumário", "Texto", "STATE"]
 
 export default LoggerApi(async function searchHandler(
@@ -59,9 +60,12 @@ export default LoggerApi(async function searchHandler(
     }
     const authed = await authenticatedHandler(req);
     const result = await search(queryObj, sfilters, page, {}, rpp, { sort, highlight, track_scores: true, _source: useSource }, authed)
+    const hasQuery = (Array.isArray(req.query.q) ? req.query.q.join(" ") : req.query.q || "").trim().length > 0;
     const r: SearchHandlerResponse = [];
     for (let hit of result.hits.hits) {
         const { Texto, "Relator Nome Completo": _completo, HASH: _HASH, ...rest } = hit._source!
+        // Only sent when searching, so the Texto row (with its highlight bar) can appear even if the term is not in Texto
+        const textoPreview = hasQuery && Texto ? Texto.replace(/<[^>]*>/g, "").trim().substring(0, TEXTO_PREVIEW_SIZE + 1) : undefined;
         if (hit.highlight) {
             let highlight: Record<string, (string | HighlightFragment)[]> = {
                 Descritores: hit.highlight["Descritores.Show"],
@@ -101,6 +105,7 @@ export default LoggerApi(async function searchHandler(
 
             r.push({
                 highlight,
+                textoPreview,
                 _source: rest,
                 score: hit._score || 1,
                 max_score: result.hits.max_score || 1
@@ -108,6 +113,7 @@ export default LoggerApi(async function searchHandler(
         }
         else {
             r.push({
+                textoPreview,
                 _source: rest,
                 score: hit._score || 1,
                 max_score: result.hits.max_score || 1

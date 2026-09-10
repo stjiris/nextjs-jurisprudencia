@@ -53,6 +53,7 @@ function ShowResults({results, searchParams, searchInfo}: {results: SearchHandle
     const sort = searchParams.get("sort") || "des"
     let page = parseInt(searchParams.get("page") || "0")
     const rpp = parseInt(searchParams.get("rpp") || "10")
+    const searchQuery = searchParams.get("q") || ""
 
     return <>
         <div className="mb-2 d-flex align-items-center gap-2">
@@ -75,7 +76,7 @@ function ShowResults({results, searchParams, searchInfo}: {results: SearchHandle
         {auth ? (
             <JurisprudenciaTable results={results} searchId={searchInfo.searchId} />
         ) : (
-            results.map((h, i) => <JurisprudenciaItem key={i} hit={h} searchId={searchInfo.searchId}/>)
+            results.map((h, i) => <JurisprudenciaItem key={i} hit={h} searchId={searchInfo.searchId} hasQuery={!!searchQuery} searchQuery={searchQuery}/>)
         )}
         <article className="row d-print-none">
             <nav>

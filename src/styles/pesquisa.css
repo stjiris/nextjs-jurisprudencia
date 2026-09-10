@@ -23,6 +23,71 @@ article {
     padding-bottom: 2.5px;
 }
 
+article.result {
+    margin-left: 0;
+    margin-right: 0;
+    margin-bottom: 1rem;
+    padding: 1rem 1.25rem 1rem 1.5rem;
+    border: 1px solid #d9d5cc;
+    border-radius: 6px;
+    background: white;
+}
+
+article.result:hover, article.result:focus-within {
+    border-color: #aaa59c;
+}
+
+.result-title {
+    font-size: 16.5px;
+    font-weight: 700;
+    line-height: 1.3;
+}
+.result-title a {
+    font-weight: 700;
+}
+.result-title .result-title-meta {
+    font-weight: 400;
+    font-size: 13px;
+    color: var(--secondary-gray);
+}
+
+.result-meta {
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--secondary-gray);
+    margin: 0.25rem 0 0.5rem;
+}
+.result-meta b {
+    font-weight: 600;
+}
+
+.result-sumario {
+    font-size: 15.5px;
+    line-height: 1.55;
+    white-space: pre-line;
+    background: #FBF7E6;
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+    margin-top: 0.25rem;
+}
+.result-sumario-text {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    overflow: hidden;
+}
+.result-sumario-text.expanded {
+    display: block;
+    -webkit-line-clamp: unset;
+    line-clamp: unset;
+    overflow: visible;
+}
+.result-sumario-toggle {
+    font-size: 12px;
+    color: var(--secondary-gray);
+}
+
 .relevancia{
     font-size: 0.65rem;
     align-self: center;
@@ -33,11 +98,12 @@ article {
 article.result::before {
     content: '';
     background: var(--primary-red);
-    top: 10px;
-    width: 3px;
+    top: 12px;
+    left: 0.6rem;
+    width: 2px;
     position: absolute;
     border-radius: 10px;
-    bottom: 10px;
+    bottom: 12px;
 }
 article.result::after {
     /*content: "";*/

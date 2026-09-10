@@ -251,6 +251,7 @@ function DateRangeInput({ label, name, isMin, defaultValue, yearRef, monthRef, d
                     placeholder="dia"
                     defaultValue={dayDefault}
                     className={inputCls}
+                    style={{ flex: "0 1 3.5rem", minWidth: "3rem" }}
                 />
 
                 {/* Month */}
@@ -278,6 +279,7 @@ function DateRangeInput({ label, name, isMin, defaultValue, yearRef, monthRef, d
                     placeholder={String(CURRENT_YEAR)}
                     defaultValue={yearDefault}
                     className={inputCls}
+                    style={{ flex: "1 1 4.5rem", minWidth: "4.5rem" }}
                     onInput={(e) => onYearInput(e, prevEmpty)}
                 />
 

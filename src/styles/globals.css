@@ -6,7 +6,7 @@
 
 
 body {
-    font: 13px/1.5 'Noto Sans Serif', sans-serif;
+    font: 15px/1.5 'Noto Sans', sans-serif;
     color: var(--primary-black);
     background: white;
 }
