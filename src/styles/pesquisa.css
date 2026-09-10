@@ -28,13 +28,13 @@ article.result {
     margin-right: 0;
     margin-bottom: 1rem;
     padding: 1rem 1.25rem 1rem 1.5rem;
-    border: 1px solid #d9d5cc;
-    border-radius: 6px;
-    background: white;
+    border: 1px solid var(--card-border);
+    border-radius: var(--card-radius);
+    background: var(--card-bg);
 }
 
 article.result:hover, article.result:focus-within {
-    border-color: #aaa59c;
+    border-color: var(--card-border-hover);
 }
 
 .result-title {
@@ -52,7 +52,7 @@ article.result:hover, article.result:focus-within {
 }
 
 .result-meta {
-    font-size: 12px;
+    font-size: 14px;
     line-height: 1.6;
     color: var(--secondary-gray);
     margin: 0.25rem 0 0.5rem;
@@ -65,8 +65,8 @@ article.result:hover, article.result:focus-within {
     font-size: 15.5px;
     line-height: 1.55;
     white-space: pre-line;
-    background: #FBF7E6;
-    border-radius: 6px;
+    background: var(--sumario-tint);
+    border-radius: var(--card-radius);
     padding: 0.5rem 0.75rem;
     margin-top: 0.25rem;
 }
@@ -136,4 +136,30 @@ article:focus-within::after, article:hover::after{
     max-width: 250px;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+/* Match result-card rounding on the search filter controls */
+.infofilters .input-group {
+    border-radius: 6px;
+}
+.infofilters .input-group > .form-control,
+.infofilters .input-group > .form-select,
+.infofilters .input-group > .input-group-text,
+.infofilters .input-group > .btn {
+    border-radius: 0;
+}
+.infofilters .input-group > :first-child {
+    border-top-left-radius: 6px;
+    border-bottom-left-radius: 6px;
+}
+.infofilters .input-group > .btn:last-child,
+.infofilters .input-group > .form-control:last-child,
+.infofilters .input-group > .form-select:last-child {
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+}
+
+/* Match card rounding on each filter item box (Número de Processo, Descritores, ...) */
+.infofilters .filter-box {
+    border-radius: 6px;
+    overflow: hidden;
 }

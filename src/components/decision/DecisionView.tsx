@@ -46,13 +46,13 @@ export default function DecisionView(props: { doc: JurisprudenciaDocument, id: s
     return <>
         <div className="container">
             <div className="row justify-content-center">
-                <div className="col-12 col-md-11 container border border-dark">
-                    {auth && <div className="row border-bottom border-2 border-dark pb-1">
+                <div className="col-12 col-md-11 ui-card doc-meta">
+                    {auth && <div className="row doc-meta-row pb-1">
                         <div className="col-md-10">
                             <ManageDecisionOptions {...props} />
                         </div>
                     </div>}
-                    <div className="row border-bottom">
+                    <div className="row doc-meta-row">
                         <div className="col-6 d-flex align-items-baseline">
                             <b style={{ minWidth: 175, flexShrink: 0 }}>N.º de Processo:</b>
                             <span>{props.doc["Número de Processo"]}</span>
@@ -62,13 +62,13 @@ export default function DecisionView(props: { doc: JurisprudenciaDocument, id: s
                             <small><b>Fonte:&nbsp;</b><span>{props.doc.Fonte}</span></small>
                         </div>
                     </div>
-                    <div className="row border-bottom">
+                    <div className="row doc-meta-row">
                         <div className="col-12">
                             {props.doc.ECLI && props.doc.ECLI.length > 0 && props.doc.ECLI !== "«sem valor»" && <><b>ECLI: </b><small><Link href={`https://jurisprudencia.csm.org.pt/ecli/${props.doc.ECLI!}`} target="_blank" >{props.doc.ECLI}<i className="bi bi-box-arrow-up-right ms-1 align-top"></i></Link></small>&nbsp;</>}
                         </div>
                     </div>
 
-                    <div className="row border-bottom">
+                    <div className="row doc-meta-row">
                         {related.length > 0 ?
                             <>
                                 <div className="col-6"><i className="bi bi-link"></i>Relacionados:</div>
@@ -83,7 +83,7 @@ export default function DecisionView(props: { doc: JurisprudenciaDocument, id: s
                     {props.keys.filter(k => k.documentShow && !MUST_HAVE.includes(k.key)).map(k => <DefaultRow key={k.key} doc={props.doc} showkey={k.name} accessKey={k.key} noLink={!k.indicesList} />)}
                 </div>
                 <div className="row justify-content-center">
-                    <div className="col-12 col-md-10 mt-3" id="decision-content" ref={contentRef}>
+                    <div className="col-12 col-md-10 mt-3 doc-content" id="decision-content" ref={contentRef}>
                         {showToggle && <div className="mb-2">
                             <div
                                 style={{ display: "inline-flex", border: "1px solid var(--primary-red)", borderRadius: "4px", fontSize: "0.8rem", userSelect: "none", overflow: "hidden" }}
@@ -100,15 +100,15 @@ export default function DecisionView(props: { doc: JurisprudenciaDocument, id: s
                                 >Anonimizado</span>
                             </div>
                         </div>}
-                        {sumario && <>
-                            <h6 className="border-top border-2"><b>{keyName["Sumário"] || "Sumário"}</b></h6>
-                            <div className="p-2" dangerouslySetInnerHTML={{ __html: sumario }}></div>
-                        </>}
+                        {sumario && <section className="doc-section">
+                            <h6 className="doc-section-title">{keyName["Sumário"] || "Sumário"}</h6>
+                            <div className="doc-body" dangerouslySetInnerHTML={{ __html: sumario }}></div>
+                        </section>}
 
-                        {texto && <>
-                            <h6 className="border-top border-2"><b>{keyName["Texto"] || "Texto Integral"}</b></h6>
-                            <div className="p-2" dangerouslySetInnerHTML={{ __html: texto }}></div>
-                        </>}
+                        {texto && <section className="doc-section">
+                            <h6 className="doc-section-title">{keyName["Texto"] || "Texto Integral"}</h6>
+                            <div className="doc-body" dangerouslySetInnerHTML={{ __html: texto }}></div>
+                        </section>}
                     </div>
                 </div>
             </div>
@@ -131,7 +131,7 @@ function DefaultRow(props: { accessKey: JurisprudenciaDocumentKey, showkey?: str
 }
 
 function Row(props: { children: ReactNode, style?: CSSProperties }) {
-    return <div className="row border-bottom" style={props.style}>{props.children}</div>
+    return <div className="row doc-meta-row" style={props.style}>{props.children}</div>
 }
 
 function Properties({ accessKey, accessValue, noLink }: { accessKey: string, accessValue: JurisprudenciaDocument[JurisprudenciaDocumentKey], noLink?: boolean }) {

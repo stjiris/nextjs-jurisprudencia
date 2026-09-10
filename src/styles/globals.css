@@ -52,6 +52,73 @@ form label {
     font-size: 0.75rem;
 }
 
+/* ---- Shared UI surface styling (whole site) ---- */
+.ui-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: var(--card-radius);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+}
+.ui-card:hover {
+    border-color: var(--card-border-hover);
+}
+
+/* Round Bootstrap surfaces consistently */
+.card,
+.alert,
+.list-group {
+    border-radius: var(--card-radius) !important;
+}
+.card {
+    border-color: var(--card-border);
+}
+
+/* Soften Bootstrap's default border colour used across pages */
+:root {
+    --bs-border-color: var(--card-border);
+}
+
+/* ---- Acórdão (document) view ---- */
+.doc-meta {
+    padding: 0.25rem 0;
+}
+.doc-meta-row {
+    padding: 0.4rem 0.25rem;
+    margin: 0;
+    border-bottom: 1px solid var(--divider);
+}
+.doc-meta-row:last-child {
+    border-bottom: none;
+}
+.doc-meta-row b {
+    font-weight: 600;
+}
+.doc-section {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: var(--card-radius);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.25rem;
+}
+.doc-section.doc-section-sumario {
+    background: var(--sumario-tint);
+    border-color: #e6dcae;
+}
+.doc-section-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--primary-black);
+    margin: 0 0 0.75rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 2px solid var(--primary-red);
+    display: inline-block;
+}
+.doc-body {
+    font-size: 15.5px;
+    line-height: 1.6;
+}
+
 @media print {
     header {
         background: none;

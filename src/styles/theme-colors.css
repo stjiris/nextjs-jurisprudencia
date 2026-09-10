@@ -6,4 +6,12 @@
     --secondary-gold: #F4ECCE;
     --secondary-gray: #796c53;
     --hidden-gray: #bbb7af;
+
+    /* UI surface tokens (shared across the site) */
+    --card-border: #d9d5cc;
+    --card-border-hover: #aaa59c;
+    --card-radius: 6px;
+    --card-bg: #ffffff;
+    --sumario-tint: #F8F0D2;
+    --divider: #ececec;
 }

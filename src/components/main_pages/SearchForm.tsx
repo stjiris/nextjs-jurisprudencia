@@ -223,7 +223,7 @@ function DateRangeInput({ label, name, isMin, defaultValue, yearRef, monthRef, d
     const datePickerRef = useRef<HTMLInputElement>(null);
 
     const prefix   = name === "MinDate" ? "Min" : "Max";
-    const inputCls = "form-control form-control-sm rounded-0";
+    const inputCls = "form-control form-control-sm";
     const grey     = "var(--bs-secondary-color, #6c757d)";
 
     function handlePickerChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -259,7 +259,7 @@ function DateRangeInput({ label, name, isMin, defaultValue, yearRef, monthRef, d
                     name={`_${prefix}Month`}
                     ref={monthRef}
                     defaultValue={monthDefault}
-                    className="form-select form-select-sm rounded-0"
+                    className="form-select form-select-sm"
                     style={{ color: monthDefault ? undefined : grey }}
                     onChange={(e) => {
                         e.currentTarget.style.color = e.currentTarget.value ? "" : grey;

@@ -230,7 +230,7 @@ function FilterList({filtersUsed, accessKey, dontSuggest, showKey}: {filtersUsed
         loadDatalist(router, accessKey, searchParams, "", setDatalist);
     };
 
-    return <div className="d-flex flex-column my-1 border pb-1 flex-grow-1">
+    return <div className="d-flex flex-column my-1 border pb-1 flex-grow-1 filter-box">
         <datalist id={datalistId}>
             {datalist.map(({key, count}, i) => <option key={i} value={key} label={count ? `Quantidade: ${count}` : ""}/>)}
         </datalist>
