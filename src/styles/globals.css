@@ -65,3 +65,7 @@ form label{
         width: 100%;
     }
 }
+.decisao-html img {
+    max-width: 100%;
+    height: auto;
+}

@@ -16,6 +16,34 @@ import { useAuth } from "@/contexts/auth";
 import { LoggerServerSideProps } from "@/core/logger-api";
 
 const MUST_HAVE = ["UUID", "Número de Processo", "Fonte", "ECLI", "URL", "Sumário", "Texto"]
+// Raw DGSI HTML, only used on the server to restore the <img> src attributes stripped by the ETL
+const ORIGINAL_IMAGE_SOURCES = ["Original.Decisão Texto Integral", "Original.Sumário"]
+
+const DGSI = "https://www.dgsi.pt";
+function restoreImages(stripped: string | undefined, original?: string) {
+    if (!stripped?.includes("<img") || !original) return stripped;
+    const srcs = [...original.replace(/<!--[\s\S]*?-->/g, "").matchAll(/<img\b[^>]*>/gi)]
+        .map(m => m[0].match(/\bsrc="([^"]+)"/i)?.[1]);
+    let i = 0;
+    return stripped.replace(/<img>/gi, () => {
+        const src = srcs[i++];
+        if (!src || !src.startsWith("/")) return "<img>"; // only accept DGSI-relative paths
+        return `<img src="${DGSI}${src}" loading="lazy" alt="">`; // src stays HTML-escaped as in the original
+    });
+}
+
+function withRestoredImages(doc: JurisprudenciaDocument, keepOriginal: boolean): Partial<JurisprudenciaDocument> {
+    const { Original, ...rest } = doc;
+    const original = typeof Original === "object" && Original !== null ? Original : {};
+    const textoOriginal = typeof original["Decisão Texto Integral"] === "string" ? original["Decisão Texto Integral"] : undefined;
+    const sumarioOriginal = typeof original["Sumário"] === "string" ? original["Sumário"] : undefined;
+    // Only assign when present: Next.js props can't contain undefined values
+    const result: Partial<JurisprudenciaDocument> = rest;
+    if (typeof doc.Texto === "string") result.Texto = restoreImages(doc.Texto, textoOriginal);
+    if (typeof doc.Sumário === "string") result.Sumário = restoreImages(doc.Sumário, sumarioOriginal);
+    if (keepOriginal && Original !== undefined) result.Original = Original;
+    return result;
+}
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
     LoggerServerSideProps(ctx);
@@ -60,15 +88,19 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
     let keys = await getAllKeys(authed);
     let includes = keys.filter(k => k.documentShow || MUST_HAVE.includes(k.key)).map(k => k.key);
     let excludes = keys.filter(k => !k.documentShow && !MUST_HAVE.includes(k.key)).map(k => k.key);
-    let r = await search({ bool: { must } }, { pre: [], after: [] }, 0, {}, 100, { _source: { includes, excludes } }, authed);
+    // Only send Original to the browser if keys-info already asked for it
+    const showOriginal = includes.includes("Original");
+    const sourceIncludes = [...includes, ...ORIGINAL_IMAGE_SOURCES];
+    const sourceExcludes = excludes.filter(k => k !== "Original");
+    let r = await search({ bool: { must } }, { pre: [], after: [] }, 0, {}, 100, { _source: { includes: sourceIncludes, excludes: sourceExcludes } }, authed);
     if (r.hits.hits.length <= 0) {
         ctx.res.statusCode = 404;
         return { props: {} }
     }
     if (r.hits.hits.length == 1) {
-        return { props: { doc: r.hits.hits[0]._source, keys, id: r.hits.hits[0]._id } }
+        return { props: { doc: withRestoredImages(r.hits.hits[0]._source!, showOriginal), keys, id: r.hits.hits[0]._id } }
     }
-    return { props: { doc: r.hits.hits.map(o => o._source), ids: r.hits.hits.map(o => o._id), keys } }
+    return { props: { doc: r.hits.hits.map(o => withRestoredImages(o._source!, showOriginal)), ids: r.hits.hits.map(o => o._id), keys } }
 }
 
 export default function MaybeDocumentPage(props: { doc?: JurisprudenciaDocument | JurisprudenciaDocument[], keys: JurisprudenciaKey[], id?: string, ids?: string[] }) {
@@ -158,9 +190,9 @@ function DocumentPage(props: { doc: JurisprudenciaDocument, id: string, keys: Ju
             {props.keys.filter(k => k.documentShow && !MUST_HAVE.includes(k.key)).map(k => <DefaultRow key={k.key} doc={props.doc} showkey={k.name} accessKey={k.key} noLink={!k.indicesList} />)}
         </div>
         <h6 className="border-top border-2 mt-2"><b>Sumário</b></h6>
-        <div className="p-2" dangerouslySetInnerHTML={{ __html: props.doc.Sumário! }}></div>
+        <div className="p-2 decisao-html" dangerouslySetInnerHTML={{ __html: props.doc.Sumário! }}></div>
         <h6 className="border-top border-2 mt-2"><b>Decisão Texto Integral</b></h6>
-        <div className="p-2" dangerouslySetInnerHTML={{ __html: props.doc.Texto! }}></div>
+        <div className="p-2 decisao-html" dangerouslySetInnerHTML={{ __html: props.doc.Texto! }}></div>
     </>
 }
 
