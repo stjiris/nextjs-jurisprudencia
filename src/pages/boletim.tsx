@@ -14,33 +14,45 @@ interface BoletimProps {
 }
 
 export const getServerSideProps: GetServerSideProps<BoletimProps> = LoggerServerSideProps(async (ctx) => {
-    const client = await getElasticSearchClient()
-    const result = await client.search({
-        index: JurisprudenciaVersion,
-        size: 0,
-        aggs: {
-            areas: {
-                terms: {
-                    field: "Área.Index.keyword",
-                    size: 100,
-                    order: { _key: "asc" }
+    try {
+        const client = await getElasticSearchClient()
+        const result = await client.search({
+            index: JurisprudenciaVersion,
+            size: 0,
+            aggs: {
+                areas: {
+                    terms: {
+                        field: "Área.Index.keyword",
+                        size: 100,
+                        order: { _key: "asc" }
+                    }
+                },
+                minYear: {
+                    min: { field: "Data", format: "yyyy" }
+                },
+                maxYear: {
+                    max: { field: "Data", format: "yyyy" }
                 }
-            },
-            minYear: {
-                min: { field: "Data", format: "yyyy" }
-            },
-            maxYear: {
-                max: { field: "Data", format: "yyyy" }
             }
-        }
-    })
+        })
 
-    const areasBuckets = (result.aggregations?.areas as any)?.buckets || []
-    const areas = areasBuckets.map((b: any) => b.key as string)
-    const minYear = parseInt((result.aggregations?.minYear as any)?.value_as_string || "2000") || 2000
-    const maxYear = parseInt((result.aggregations?.maxYear as any)?.value_as_string || new Date().getFullYear().toString()) || new Date().getFullYear()
+        const areasBuckets = (result.aggregations?.areas as any)?.buckets || []
+        const areas = areasBuckets.map((b: any) => b.key as string)
+        const minYear = parseInt((result.aggregations?.minYear as any)?.value_as_string || "2000") || 2000
+        const maxYear = parseInt((result.aggregations?.maxYear as any)?.value_as_string || new Date().getFullYear().toString()) || new Date().getFullYear()
 
-    return { props: { areas, minYear, maxYear } }
+        return { props: { areas: areas.length > 0 ? areas : ["Área Social", "Área Cível", "Área Criminal", "Contencioso"], minYear, maxYear } }
+    } catch (e) {
+        console.warn("[Boletim] Elasticsearch indisponível ou offline. A utilizar dados e secções por omissão.");
+        const currentYear = new Date().getFullYear();
+        return {
+            props: {
+                areas: ["Área Social", "Área Cível", "Área Criminal", "Contencioso"],
+                minYear: 2020,
+                maxYear: currentYear
+            }
+        };
+    }
 })
 
 const MONTHS = [
