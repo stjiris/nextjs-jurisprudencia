@@ -13,28 +13,67 @@ export default LoggerApi(async function boletimCountHandler(
     let area = (Array.isArray(req.query.area) ? req.query.area[0] : req.query.area) || "Área Social";
     let year = (Array.isArray(req.query.year) ? req.query.year[0] : req.query.year) || currentYear;
     let month = (Array.isArray(req.query.month) ? req.query.month[0] : req.query.month) || currentMonth;
+    let descritor = (Array.isArray(req.query.descritor) ? req.query.descritor[0] : req.query.descritor);
+    let q = (Array.isArray(req.query.q) ? req.query.q[0] : req.query.q);
 
     const client = await getElasticSearchClient();
-    const r = await client.count({
-        index: JurisprudenciaVersion,
-        query: {
-            bool: {
-                must: [{
-                    term: {
-                        "Área.Index.keyword": area
-                    }
-                }, {
-                    range: {
-                        "Data": {
-                            gte: `01/${padZero(parseInt(month), 2)}/${padZero(parseInt(year))}`,
-                            lt: `01/${padZero(parseInt(month), 2)}/${padZero(parseInt(year))}\|\|+1M`,
-                            format: "dd/MM/yyyy"
-                        }
-                    }
-                }]
+
+    const isAnnual = month === "all" || month === "ano" || month === "0";
+    const dateRange = isAnnual
+        ? {
+            gte: `01/01/${padZero(parseInt(year))}`,
+            lte: `31/12/${padZero(parseInt(year))}`,
+            format: "dd/MM/yyyy"
+        }
+        : {
+            gte: `01/${padZero(parseInt(month), 2)}/${padZero(parseInt(year))}`,
+            lt: `01/${padZero(parseInt(month), 2)}/${padZero(parseInt(year))}||+1M`,
+            format: "dd/MM/yyyy"
+        };
+
+    const must: any[] = [
+        {
+            term: {
+                "Área.Index.keyword": area
+            }
+        },
+        {
+            range: {
+                "Data": dateRange
             }
         }
-    });
+    ];
 
-    res.status(200).json({ count: r.count });
+    if (descritor) {
+        must.push({
+            term: {
+                "Descritores.Index.keyword": descritor
+            }
+        });
+    }
+
+    if (q) {
+        must.push({
+            multi_match: {
+                query: q,
+                fields: ["Sumário", "Descritores.Show", "Texto"]
+            }
+        });
+    }
+
+    try {
+        const r = await client.count({
+            index: JurisprudenciaVersion,
+            query: {
+                bool: {
+                    must
+                }
+            }
+        });
+
+        res.status(200).json({ count: r.count });
+    } catch (e) {
+        console.error("Error counting acórdãos for boletim:", e);
+        res.status(500).json({ count: 0, error: "Failed to count" });
+    }
 });

@@ -48,12 +48,21 @@ const MONTHS = [
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
 ]
 
+function getAreaLabel(area: string): string {
+    if (area.includes("Social")) return "Secção Social (4.ª Secção)";
+    if (area.includes("Cível") || area.includes("Civel")) return "Secções Cíveis (1.ª, 2.ª e 7.ª Secções)";
+    if (area.includes("Criminal")) return "Secções Criminais (3.ª e 5.ª Secções)";
+    if (area.includes("Contencioso")) return "Secção de Contencioso";
+    return area;
+}
+
 export default function Boletim({ areas, minYear, maxYear }: BoletimProps) {
     const router = useRouter()
     const now = new Date()
     const [area, setArea] = useState(areas[0] || "")
     const [year, setYear] = useState(now.getFullYear().toString())
     const [month, setMonth] = useState((now.getMonth() + 1).toString())
+    const [descritor, setDescritor] = useState("")
 
     const [count, setCount] = useState<number | null>(null)
     const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -68,19 +77,28 @@ export default function Boletim({ areas, minYear, maxYear }: BoletimProps) {
         return result
     }, [minYear, maxYear])
 
+    const buildQueryString = useMemo(() => {
+        const params = new URLSearchParams()
+        if (descritor.trim()) params.set("descritor", descritor.trim())
+        const qs = params.toString()
+        return qs ? `?${qs}` : ""
+    }, [descritor])
+
     const htmlUrl = useMemo(() => {
-        return `${router.basePath}/api/boletim/${encodeURIComponent(area)}/${year}/${month}/html`
-    }, [router.basePath, area, year, month])
+        return `${router.basePath}/api/boletim/${encodeURIComponent(area)}/${year}/${month}/html${buildQueryString}`
+    }, [router.basePath, area, year, month, buildQueryString])
 
     const pdfUrl = useMemo(() => {
-        return `${router.basePath}/api/boletim/${encodeURIComponent(area)}/${year}/${month}/pdf`
-    }, [router.basePath, area, year, month])
+        return `${router.basePath}/api/boletim/${encodeURIComponent(area)}/${year}/${month}/pdf${buildQueryString}`
+    }, [router.basePath, area, year, month, buildQueryString])
 
     // Count acórdãos for the current combination to guard both buttons.
     useEffect(() => {
         let cancelled = false
         setCount(null)
         const params = new URLSearchParams({ area, year, month })
+        if (descritor.trim()) params.set("descritor", descritor.trim())
+
         fetch(`${router.basePath}/api/boletim/count?${params.toString()}`)
             .then(r => r.json())
             .then(({ count }) => {
@@ -89,12 +107,12 @@ export default function Boletim({ areas, minYear, maxYear }: BoletimProps) {
                 // Auto-generate the HTML preview once, on first page entry.
                 if (!didInit.current && count > 0) {
                     didInit.current = true
-                    setPreviewUrl(`${router.basePath}/api/boletim/${encodeURIComponent(area)}/${year}/${month}/html`)
+                    setPreviewUrl(`${router.basePath}/api/boletim/${encodeURIComponent(area)}/${year}/${month}/html${buildQueryString}`)
                 }
             })
             .catch(() => { if (!cancelled) setCount(0) })
         return () => { cancelled = true }
-    }, [router.basePath, area, year, month])
+    }, [router.basePath, area, year, month, descritor, buildQueryString])
 
     const hasAcordaos = count !== null && count > 0
     const previewStale = previewUrl !== htmlUrl
@@ -112,6 +130,13 @@ export default function Boletim({ areas, minYear, maxYear }: BoletimProps) {
         setLastPdfUrl(pdfUrl)
     }
 
+    const printIframe = () => {
+        const iframe = previewRef.current?.querySelector("iframe")
+        if (iframe?.contentWindow) {
+            iframe.contentWindow.print()
+        }
+    }
+
     // Scroll the preview into view when the user generates it, so only the iframe is visible.
     useEffect(() => {
         if (previewUrl && shouldScroll.current) {
@@ -123,12 +148,12 @@ export default function Boletim({ areas, minYear, maxYear }: BoletimProps) {
     return (
         <GenericPage title="Jurisprudência STJ - Boletim">
             <div className="row justify-content-center mt-4">
-                <div className="col-12 col-md-8 col-lg-6">
-                    <h3 className="mb-3">Boletim Mensal</h3>
+                <div className="col-12 col-md-8 col-lg-7">
+                    <h3 className="mb-3">Boletim de Jurisprudência</h3>
                     <div className="card">
                         <div className="card-body">
                             <div className="mb-3">
-                                <label htmlFor="area-select" className="form-label fw-bold">Área</label>
+                                <label htmlFor="area-select" className="form-label fw-bold">Secção / Área</label>
                                 <select
                                     id="area-select"
                                     className="form-select"
@@ -136,7 +161,7 @@ export default function Boletim({ areas, minYear, maxYear }: BoletimProps) {
                                     onChange={e => setArea(e.target.value)}
                                 >
                                     {areas.map(a => (
-                                        <option key={a} value={a}>{a}</option>
+                                        <option key={a} value={a}>{getAreaLabel(a)}</option>
                                     ))}
                                 </select>
                             </div>
@@ -155,18 +180,32 @@ export default function Boletim({ areas, minYear, maxYear }: BoletimProps) {
                                     </select>
                                 </div>
                                 <div className="col-6">
-                                    <label htmlFor="month-select" className="form-label fw-bold">Mês</label>
+                                    <label htmlFor="month-select" className="form-label fw-bold">Período / Mês</label>
                                     <select
                                         id="month-select"
                                         className="form-select"
                                         value={month}
                                         onChange={e => setMonth(e.target.value)}
                                     >
+                                        <option value="all">Ano Inteiro (Boletim Anual)</option>
                                         {MONTHS.map((m, i) => (
                                             <option key={i + 1} value={i + 1}>{m}</option>
                                         ))}
                                     </select>
                                 </div>
+                            </div>
+                            <div className="mb-3">
+                                <label htmlFor="descritor-input" className="form-label fw-bold">
+                                    Descritor / Tema <span className="text-muted fw-normal">(opcional - Caderno Temático)</span>
+                                </label>
+                                <input
+                                    id="descritor-input"
+                                    type="text"
+                                    className="form-control"
+                                    placeholder="Ex: Acordo de empresa, Herança indivisa, Tráfico de menor gravidade..."
+                                    value={descritor}
+                                    onChange={e => setDescritor(e.target.value)}
+                                />
                             </div>
                             {count === null ? (
                                 <div className="d-flex align-items-center text-muted">
@@ -204,7 +243,29 @@ export default function Boletim({ areas, minYear, maxYear }: BoletimProps) {
                         </div>
                     </div>
                     {previewUrl && (
-                        <div className="card mt-3" ref={previewRef} style={{ scrollMarginTop: "0.5rem" }}>
+                        <div className="card mt-3 shadow-sm" ref={previewRef} style={{ scrollMarginTop: "0.5rem" }}>
+                            <div className="card-header bg-light d-flex justify-content-between align-items-center py-2">
+                                <span className="small text-muted">
+                                    <strong>{count}</strong> {count === 1 ? "acórdão encontrado" : "acórdãos encontrados"}
+                                </span>
+                                <div className="d-flex gap-2">
+                                    <a
+                                        href={previewUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="btn btn-sm btn-outline-secondary"
+                                    >
+                                        Abrir noutro separador
+                                    </a>
+                                    <button
+                                        type="button"
+                                        className="btn btn-sm btn-outline-primary"
+                                        onClick={printIframe}
+                                    >
+                                        Imprimir / Guardar PDF
+                                    </button>
+                                </div>
+                            </div>
                             <div className="card-body p-0">
                                 <iframe
                                     src={previewUrl}

@@ -140,7 +140,7 @@ export async function updateKey(key: JurisprudenciaDocumentKey, update: Partial<
 
     return await client.update<JurisprudenciaKey>({
         index: KEYS_INFO_INDEX_VERSION,
-        id: hit._id,
+        id: hit._id!,
         doc: update,
         refresh: "true"
     })

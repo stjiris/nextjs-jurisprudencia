@@ -90,7 +90,7 @@ export async function trackClickedDocument(searchHash: string, documentId: strin
 
     await client.update({
         index: SAVED_SEARCH_INDEX,
-        id: r.hits.hits[0]._id,
+        id: r.hits.hits[0]._id!,
         doc: {
             searchClicks: r.hits.hits[0]._source?.searchClicks.concat([documentId])
         }
