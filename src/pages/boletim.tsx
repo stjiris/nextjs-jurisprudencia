@@ -75,6 +75,8 @@ export default function Boletim({ areas, minYear, maxYear }: BoletimProps) {
     const [year, setYear] = useState(now.getFullYear().toString())
     const [month, setMonth] = useState((now.getMonth() + 1).toString())
     const [descritor, setDescritor] = useState("")
+    const [fontSize, setFontSize] = useState("11pt")
+    const [indexPosition, setIndexPosition] = useState<"start" | "end">("end")
 
     const [count, setCount] = useState<number | null>(null)
     const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -92,9 +94,11 @@ export default function Boletim({ areas, minYear, maxYear }: BoletimProps) {
     const buildQueryString = useMemo(() => {
         const params = new URLSearchParams()
         if (descritor.trim()) params.set("descritor", descritor.trim())
+        if (fontSize && fontSize !== "11pt") params.set("fontSize", fontSize)
+        if (indexPosition && indexPosition !== "end") params.set("indexPosition", indexPosition)
         const qs = params.toString()
         return qs ? `?${qs}` : ""
-    }, [descritor])
+    }, [descritor, fontSize, indexPosition])
 
     const htmlUrl = useMemo(() => {
         return `${router.basePath}/api/boletim/${encodeURIComponent(area)}/${year}/${month}/html${buildQueryString}`
@@ -103,6 +107,30 @@ export default function Boletim({ areas, minYear, maxYear }: BoletimProps) {
     const pdfUrl = useMemo(() => {
         return `${router.basePath}/api/boletim/${encodeURIComponent(area)}/${year}/${month}/pdf${buildQueryString}`
     }, [router.basePath, area, year, month, buildQueryString])
+
+    const handleFontSizeChange = (newSize: string) => {
+        setFontSize(newSize)
+        if (previewUrl) {
+            const params = new URLSearchParams()
+            if (descritor.trim()) params.set("descritor", descritor.trim())
+            if (newSize !== "11pt") params.set("fontSize", newSize)
+            if (indexPosition !== "end") params.set("indexPosition", indexPosition)
+            const qs = params.toString() ? `?${params.toString()}` : ""
+            setPreviewUrl(`${router.basePath}/api/boletim/${encodeURIComponent(area)}/${year}/${month}/html${qs}`)
+        }
+    }
+
+    const handleIndexPositionChange = (newPos: "start" | "end") => {
+        setIndexPosition(newPos)
+        if (previewUrl) {
+            const params = new URLSearchParams()
+            if (descritor.trim()) params.set("descritor", descritor.trim())
+            if (fontSize !== "11pt") params.set("fontSize", fontSize)
+            if (newPos !== "end") params.set("indexPosition", newPos)
+            const qs = params.toString() ? `?${params.toString()}` : ""
+            setPreviewUrl(`${router.basePath}/api/boletim/${encodeURIComponent(area)}/${year}/${month}/html${qs}`)
+        }
+    }
 
     // Count acórdãos for the current combination to guard both buttons.
     useEffect(() => {
@@ -203,6 +231,34 @@ export default function Boletim({ areas, minYear, maxYear }: BoletimProps) {
                                         {MONTHS.map((m, i) => (
                                             <option key={i + 1} value={i + 1}>{m}</option>
                                         ))}
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="row mb-3">
+                                <div className="col-6">
+                                    <label htmlFor="font-size-select" className="form-label fw-bold">Tamanho da Letra</label>
+                                    <select
+                                        id="font-size-select"
+                                        className="form-select"
+                                        value={fontSize}
+                                        onChange={e => handleFontSizeChange(e.target.value)}
+                                    >
+                                        <option value="10pt">10pt (Pequeno)</option>
+                                        <option value="11pt">11pt (Normal - Padrão)</option>
+                                        <option value="12pt">12pt (Médio)</option>
+                                        <option value="13pt">13pt (Grande)</option>
+                                    </select>
+                                </div>
+                                <div className="col-6">
+                                    <label htmlFor="index-position-select" className="form-label fw-bold">Posição do Índice</label>
+                                    <select
+                                        id="index-position-select"
+                                        className="form-select"
+                                        value={indexPosition}
+                                        onChange={e => handleIndexPositionChange(e.target.value as "start" | "end")}
+                                    >
+                                        <option value="end">No Fim do Boletim (Padrão)</option>
+                                        <option value="start">No Início do Boletim</option>
                                     </select>
                                 </div>
                             </div>

@@ -56,6 +56,8 @@ export default LoggerApi(async function boletimHandler(
 
     const descritorFilter = (Array.isArray(req.query.descritor) ? req.query.descritor[0] : req.query.descritor);
     const searchQuery = (Array.isArray(req.query.q) ? req.query.q[0] : req.query.q);
+    const fontSize = (Array.isArray(req.query.fontSize) ? req.query.fontSize[0] : req.query.fontSize) || "11pt";
+    const indexPosition = ((Array.isArray(req.query.indexPosition) ? req.query.indexPosition[0] : req.query.indexPosition) || "end") as "start" | "end";
 
     const isAnnual = month === "all" || month === "ano" || month === "0";
     const periodStr = formatPeriodHeader(month, year);
@@ -184,7 +186,9 @@ export default LoggerApi(async function boletimHandler(
             month,
             entries,
             descritorFilter,
-            searchQuery
+            searchQuery,
+            fontSize,
+            indexPosition
         };
 
         if (format === "html") {
@@ -207,7 +211,9 @@ export default LoggerApi(async function boletimHandler(
             month,
             entries,
             descritorFilter,
-            searchQuery
+            searchQuery,
+            fontSize,
+            indexPosition
         };
 
         if (format === "html") {

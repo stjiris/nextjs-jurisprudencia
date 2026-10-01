@@ -43,6 +43,8 @@ export interface BoletimRenderOptions {
     entries: BoletimEntry[];
     descritorFilter?: string;
     searchQuery?: string;
+    fontSize?: string; // e.g. "10pt" | "11pt" | "12pt" | "13pt" (default: "11pt")
+    indexPosition?: "start" | "end"; // default: "end"
 }
 
 // Cached Base64 of STJ Institutional Logo
@@ -273,11 +275,56 @@ export function formatPeriodHeader(month: string, year: string): string {
  * Generates institutional, responsive, print-ready HTML matching the official STJ Docx standards.
  */
 export function generateBoletimHTML(options: BoletimRenderOptions): string {
-    const { title, subtitle, area, year, month, entries, descritorFilter, searchQuery } = options;
+    const { title, subtitle, area, year, month, entries, descritorFilter, searchQuery, fontSize = "11pt", indexPosition = "end" } = options;
     const logoBase64 = getStjLogoBase64();
     const logoSrc = logoBase64 ? `data:image/png;base64,${logoBase64}` : "/stj-logo.png";
     const periodStr = formatPeriodHeader(month, year);
     const indexGroups = buildDescriptorIndex(entries);
+
+    // Font size scaling
+    let baseFontSize = "11pt";
+    let descFontSize = "1.05rem";
+    let summaryFontSize = "1rem";
+    let metaFontSize = "0.95rem";
+    let summaryLineHeight = "1.6";
+
+    switch ((fontSize || "").toLowerCase()) {
+        case "10pt":
+        case "sm":
+        case "small":
+            baseFontSize = "10pt";
+            descFontSize = "0.98rem";
+            summaryFontSize = "0.92rem";
+            metaFontSize = "0.85rem";
+            summaryLineHeight = "1.5";
+            break;
+        case "12pt":
+        case "md":
+        case "medium":
+            baseFontSize = "12pt";
+            descFontSize = "1.12rem";
+            summaryFontSize = "1.06rem";
+            metaFontSize = "1rem";
+            summaryLineHeight = "1.65";
+            break;
+        case "13pt":
+        case "lg":
+        case "large":
+            baseFontSize = "13pt";
+            descFontSize = "1.18rem";
+            summaryFontSize = "1.12rem";
+            metaFontSize = "1.05rem";
+            summaryLineHeight = "1.7";
+            break;
+        case "11pt":
+        default:
+            baseFontSize = "11pt";
+            descFontSize = "1.05rem";
+            summaryFontSize = "1rem";
+            metaFontSize = "0.95rem";
+            summaryLineHeight = "1.6";
+            break;
+    }
 
     return `<!DOCTYPE html>
 <html lang="pt-PT">
@@ -296,6 +343,11 @@ export function generateBoletimHTML(options: BoletimRenderOptions): string {
             --stj-link: #1d4ed8;
             --font-serif: "Times New Roman", Times, Georgia, serif;
             --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --base-font-size: ${baseFontSize};
+            --desc-font-size: ${descFontSize};
+            --summary-font-size: ${summaryFontSize};
+            --meta-font-size: ${metaFontSize};
+            --summary-line-height: ${summaryLineHeight};
         }
 
         * {
@@ -306,9 +358,10 @@ export function generateBoletimHTML(options: BoletimRenderOptions): string {
 
         body {
             font-family: var(--font-serif);
+            font-size: var(--base-font-size);
             color: var(--stj-dark);
             background-color: #f3f4f6;
-            line-height: 1.6;
+            line-height: var(--summary-line-height);
             padding: 2rem 1rem;
         }
 
@@ -319,48 +372,6 @@ export function generateBoletimHTML(options: BoletimRenderOptions): string {
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
             border-radius: 8px;
             padding: 3rem 3.5rem;
-        }
-
-        /* Top Actions Bar */
-        .actions-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid var(--stj-border);
-            font-family: var(--font-sans);
-        }
-
-        .actions-btn {
-            background-color: var(--stj-primary);
-            color: #ffffff;
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 4px;
-            font-size: 0.875rem;
-            cursor: pointer;
-            font-weight: 500;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            transition: background-color 0.15s ease;
-        }
-
-        .actions-btn:hover {
-            background-color: #6b1215;
-            color: #ffffff;
-        }
-
-        .actions-btn.secondary {
-            background-color: #ffffff;
-            color: var(--stj-dark);
-            border: 1px solid var(--stj-border);
-        }
-
-        .actions-btn.secondary:hover {
-            background-color: #f9fafb;
         }
 
         /* Institutional Header */
@@ -444,17 +455,17 @@ export function generateBoletimHTML(options: BoletimRenderOptions): string {
 
         .descriptor-item {
             font-weight: bold;
-            font-size: 1.05rem;
+            font-size: var(--desc-font-size, 1.05rem);
             color: #000000;
             line-height: 1.35;
             margin-bottom: 0.15rem;
         }
 
         .entry-summary {
-            font-size: 1rem;
+            font-size: var(--summary-font-size, 1rem);
             text-align: justify;
             text-justify: inter-word;
-            line-height: 1.6;
+            line-height: var(--summary-line-height, 1.6);
             margin-bottom: 1.25rem;
             color: #111827;
         }
@@ -465,7 +476,7 @@ export function generateBoletimHTML(options: BoletimRenderOptions): string {
 
         .entry-metadata {
             margin-top: 1rem;
-            font-size: 0.95rem;
+            font-size: var(--meta-font-size, 0.95rem);
             color: #1f2937;
             line-height: 1.5;
         }
@@ -512,11 +523,22 @@ export function generateBoletimHTML(options: BoletimRenderOptions): string {
 
         /* Alphabetical Descriptor Index Section */
         .index-section {
-            margin-top: 4rem;
             padding-top: 2rem;
+            page-break-inside: auto;
+        }
+
+        .index-section.index-at-end {
+            margin-top: 4rem;
             border-top: 2px solid var(--stj-gold);
             page-break-before: always;
             break-before: page;
+        }
+
+        .index-section.index-at-start {
+            margin-top: 1rem;
+            margin-bottom: 3.5rem;
+            padding-bottom: 2rem;
+            border-bottom: 2px solid var(--stj-gold);
         }
 
         .index-heading {
@@ -583,6 +605,7 @@ export function generateBoletimHTML(options: BoletimRenderOptions): string {
             body {
                 background: none;
                 padding: 0;
+                font-size: var(--base-font-size, 11pt);
             }
 
             .document-container {
@@ -590,10 +613,6 @@ export function generateBoletimHTML(options: BoletimRenderOptions): string {
                 border-radius: 0;
                 padding: 0;
                 max-width: 100%;
-            }
-
-            .actions-bar {
-                display: none !important;
             }
 
             @page {
@@ -617,9 +636,14 @@ export function generateBoletimHTML(options: BoletimRenderOptions): string {
                 break-inside: avoid;
             }
 
-            .index-section {
+            .index-section.index-at-end {
                 page-break-before: always;
                 break-before: page;
+            }
+
+            .index-section.index-at-start {
+                page-break-after: always;
+                break-after: page;
             }
 
             .entry-permalink a {
@@ -631,21 +655,6 @@ export function generateBoletimHTML(options: BoletimRenderOptions): string {
 </head>
 <body>
     <div class="document-container">
-        <!-- Top Toolbar for Browser Preview -->
-        <div class="actions-bar">
-            <div>
-                <strong>${entries.length}</strong> acórdãos coligidos
-            </div>
-            <div style="display: flex; gap: 0.5rem;">
-                <a href="#indice-remissivo" class="actions-btn secondary">
-                    Ver Índice Alfabético
-                </a>
-                <button type="button" class="actions-btn" onclick="window.print()">
-                    Imprimir / Guardar PDF
-                </button>
-            </div>
-        </div>
-
         <!-- STJ Institutional Header -->
         <header class="boletim-header">
             <div class="header-logo-container">
@@ -668,6 +677,27 @@ export function generateBoletimHTML(options: BoletimRenderOptions): string {
         <div class="filter-badge-box">
             <strong>Pesquisa Textual:</strong> "<em>${escapeHTML(searchQuery)}</em>"
         </div>` : ""}
+
+        ${indexPosition === "start" ? `
+        <!-- Alphabetical Descriptor Index (Início) -->
+        <section id="indice-remissivo" class="index-section index-at-start">
+            <h3 class="index-heading">Índice Alfabético por Tema / Descritor</h3>
+            <div class="index-content">
+                ${indexGroups.map(group => `
+                <div class="index-letter-group">
+                    <div class="index-letter-header">${group.letter}</div>
+                    ${group.items.map(item => `
+                    <div class="index-item">
+                        <span class="index-descriptor-name">${escapeHTML(item.descriptor)}</span>
+                        <span class="index-entry-links">
+                            ${item.entries.map(e => `<a href="#entry-${e.index}" title="Proc. n.º ${escapeHTML(e.processo)} (${escapeHTML(e.data)})">${e.index}</a>`).join("")}
+                        </span>
+                    </div>
+                    `).join("")}
+                </div>
+                `).join("")}
+            </div>
+        </section>` : ""}
 
         <!-- Decision Summaries -->
         <main class="boletim-body">
@@ -696,8 +726,9 @@ export function generateBoletimHTML(options: BoletimRenderOptions): string {
             `).join("")}
         </main>
 
-        <!-- Alphabetical Descriptor Index -->
-        <footer id="indice-remissivo" class="index-section">
+        ${indexPosition === "end" ? `
+        <!-- Alphabetical Descriptor Index (Fim) -->
+        <footer id="indice-remissivo" class="index-section index-at-end">
             <h3 class="index-heading">Índice Alfabético por Tema / Descritor</h3>
             <div class="index-content">
                 ${indexGroups.map(group => `
@@ -714,7 +745,7 @@ export function generateBoletimHTML(options: BoletimRenderOptions): string {
                 </div>
                 `).join("")}
             </div>
-        </footer>
+        </footer>` : ""}
     </div>
 </body>
 </html>`;
@@ -724,7 +755,7 @@ export function generateBoletimHTML(options: BoletimRenderOptions): string {
  * Generates formatted Markdown for Pandoc + XeLaTeX compilation.
  */
 export function generateBoletimMarkdown(options: BoletimRenderOptions): string {
-    const { title, subtitle, area, year, month, entries, descritorFilter } = options;
+    const { title, subtitle, area, year, month, entries, descritorFilter, fontSize = "11pt", indexPosition = "end" } = options;
     const periodStr = formatPeriodHeader(month, year);
     const indexGroups = buildDescriptorIndex(entries);
 
@@ -734,6 +765,7 @@ export function generateBoletimMarkdown(options: BoletimRenderOptions): string {
     lines.push(`title: "${title.replace(/"/g, '\\"')}"`);
     lines.push(`subtitle: "${subtitle.replace(/"/g, '\\"')}"`);
     lines.push(`date: "${periodStr}"`);
+    lines.push(`fontsize: ${fontSize}`);
     lines.push("geometry:");
     lines.push("  - a4paper");
     lines.push("  - top=2.5cm");
@@ -760,6 +792,26 @@ export function generateBoletimMarkdown(options: BoletimRenderOptions): string {
         lines.push(`> **Caderno Temático:** *${descritorFilter}*\n`);
     }
 
+    const appendIndexMarkdown = () => {
+        lines.push("\\newpage");
+        lines.push("# Índice Alfabético por Tema / Descritor {.unnumbered}");
+        lines.push("");
+
+        for (const group of indexGroups) {
+            lines.push(`## ${group.letter} {.unnumbered}`);
+            for (const item of group.items) {
+                const entryRefs = item.entries.map(e => `[${e.index}](#entry-${e.index})`).join(", ");
+                lines.push(`* **${item.descriptor}**: ${entryRefs}`);
+            }
+            lines.push("");
+        }
+    };
+
+    if (indexPosition === "start") {
+        appendIndexMarkdown();
+        lines.push("\\newpage");
+    }
+
     for (const entry of entries) {
         lines.push("\\noindent");
         for (const desc of entry.descritores) {
@@ -783,18 +835,8 @@ export function generateBoletimMarkdown(options: BoletimRenderOptions): string {
         lines.push("");
     }
 
-    // Alphabetical Descriptor Index
-    lines.push("\\newpage");
-    lines.push("# Índice Alfabético por Tema / Descritor {.unnumbered}");
-    lines.push("");
-
-    for (const group of indexGroups) {
-        lines.push(`## ${group.letter} {.unnumbered}`);
-        for (const item of group.items) {
-            const entryRefs = item.entries.map(e => `[${e.index}](#entry-${e.index})`).join(", ");
-            lines.push(`* **${item.descriptor}**: ${entryRefs}`);
-        }
-        lines.push("");
+    if (indexPosition === "end") {
+        appendIndexMarkdown();
     }
 
     return lines.join("\n");
