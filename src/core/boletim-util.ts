@@ -907,5 +907,8 @@ function cleanSummaryForMarkdown(sumario: string): string {
         .replace(/<[^>]+>/g, " ")
         .replace(/&nbsp;/gi, " ")
         .replace(/&amp;/gi, "&")
+        // Collapse the spaces left by nested tags and trim each line: 4+ leading spaces would make pandoc render a code block.
+        .replace(/[ \t ]+/g, " ")
+        .split("\n").map(l => l.trim()).join("\n")
         .trim();
 }
