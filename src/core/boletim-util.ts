@@ -192,14 +192,14 @@ export function extractColectivo(
 /**
  * Builds the canonical public permalink for a decision.
  */
-export function generatePermalink(proc?: string | null, uuid?: string | null): string {
+export function generatePermalink(proc?: string | null, uuid?: string | null, baseUrl: string = "https://juris.stj.pt"): string {
     if (proc && uuid) {
-        return `https://juris.stj.pt/${encodeURIComponent(proc)}/${uuid}`;
+        return `${baseUrl}/${encodeURIComponent(proc)}/${uuid}`;
     }
     if (proc) {
-        return `https://juris.stj.pt/pesquisa?N%C3%BAmero+de+Processo=${encodeURIComponent(proc)}`;
+        return `${baseUrl}/pesquisa?N%C3%BAmero+de+Processo=${encodeURIComponent(proc)}`;
     }
-    return "https://juris.stj.pt";
+    return baseUrl;
 }
 
 /**

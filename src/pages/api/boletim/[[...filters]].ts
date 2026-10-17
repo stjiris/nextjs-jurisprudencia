@@ -36,6 +36,15 @@ function parseDateForSort(dateStr: string): number {
     return isNaN(t) ? 0 : t;
 }
 
+// Public URL of this deployment (behind a proxy, uses the forwarded host/proto), including NEXT_BASE_PATH.
+function getSiteBaseUrl(req: NextApiRequest): string {
+    const first = (h: string | string[] | undefined) => (Array.isArray(h) ? h[0] : h)?.split(",")[0].trim();
+    const host = first(req.headers["x-forwarded-host"]) || first(req.headers.host);
+    if (!host) return "https://juris.stj.pt";
+    const proto = first(req.headers["x-forwarded-proto"]) || "http";
+    return `${proto}://${host}${process.env.NEXT_BASE_PATH || ""}`;
+}
+
 export default LoggerApi(async function boletimHandler(
     req: NextApiRequest,
     res: NextApiResponse
@@ -159,7 +168,7 @@ export default LoggerApi(async function boletimHandler(
             const descritores = Array.isArray(rawDesc) ? rawDesc.map(d => `${d}`) : [];
             const proc = src["Número de Processo"] || "Sem número";
             const uuid = src.UUID || hit._id;
-            const permalink = generatePermalink(proc, uuid);
+            const permalink = generatePermalink(proc, uuid, getSiteBaseUrl(req));
             const seccao = src.Secção?.Show?.[0] || undefined;
             const dataFormatted = src.Data ? src.Data.replace(/\//g, "-") : "";
 
