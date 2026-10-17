@@ -827,7 +827,8 @@ export function generateBoletimMarkdown(options: BoletimRenderOptions): string {
         for (const adj of entry.colectivo.adjuntos) {
             lines.push(`${adj}\\`);
         }
-        lines.push(`\\href{${entry.permalink}}{${entry.permalink}}`);
+        // Markdown autolink: pandoc escapes the "%" in percent-encoded URLs, which breaks a raw \href.
+        lines.push(`<${entry.permalink}>`);
         lines.push("");
         lines.push("\\bigskip");
         lines.push("\\hrule");
