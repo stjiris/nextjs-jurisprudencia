@@ -310,6 +310,11 @@ assert(itemAcordo !== undefined, "Descritor 'Acordo de empresa' indexado");
 assert(itemAcordo.entries.length === 2, "Descritor 'Acordo de empresa' aponta para 2 acórdãos (1 e 3)");
 assert(itemAcordo.entries[0].index === 1 && itemAcordo.entries[1].index === 3, "Referências cruzadas de acórdãos corretas");
 
+const boletimUtilCode = fs.readFileSync(path.join(__dirname, "src", "core", "boletim-util.ts"), "utf-8");
+assert(boletimUtilCode.includes(".index-entry-links {") && boletimUtilCode.includes("flex-wrap: wrap;"), "Índice remissivo tem flex-wrap: wrap para permitir quebra de linha de dezenas de acórdãos");
+assert(!boletimUtilCode.match(/\.index-entry-links\s*\{[^}]*white-space:\s*nowrap;/), "Contentor de links do índice não força white-space: nowrap (previne transbordo horizontal)");
+assert(boletimUtilCode.includes(".index-descriptor-name {") && boletimUtilCode.includes("flex-shrink: 0;"), "Nome do descritor no índice protegido contra esmagamento vertical (flex-shrink: 0)");
+
 // TEST 5: Logo and Asset verification
 console.log("\n--- 5. Testes de Ativos Institucionais (Logótipo e Capa do STJ) ---");
 const logoPath = path.join(__dirname, "public", "stj-logo.png");

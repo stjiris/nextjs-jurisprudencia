@@ -567,37 +567,68 @@ export function generateBoletimHTML(options: BoletimRenderOptions): string {
 
         .index-item {
             display: flex;
-            align-items: baseline;
+            align-items: flex-start;
             justify-content: space-between;
             font-size: 0.9rem;
-            padding: 0.25rem 0;
-            gap: 1rem;
+            padding: 0.35rem 0;
+            gap: 1.25rem;
+            border-bottom: 1px dotted #e5e7eb;
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
 
         .index-descriptor-name {
             font-weight: 500;
             color: #111827;
+            flex-shrink: 0;
+            max-width: 45%;
+            line-height: 1.4;
+            word-break: normal;
         }
 
         .index-entry-links {
-            text-align: right;
-            white-space: nowrap;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 0.35rem;
             font-family: var(--font-sans);
             font-size: 0.8rem;
+            flex: 1 1 auto;
+            text-align: right;
         }
 
         .index-entry-links a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             color: var(--stj-link);
             text-decoration: none;
-            padding: 0.15rem 0.35rem;
+            padding: 0.15rem 0.4rem;
             background-color: #eff6ff;
             border-radius: 3px;
-            margin-left: 0.35rem;
             border: 1px solid #bfdbfe;
+            white-space: nowrap;
+            line-height: 1.25;
+            transition: background-color 0.15s ease, border-color 0.15s ease;
         }
 
         .index-entry-links a:hover {
             background-color: #dbeafe;
+            border-color: #93c5fd;
+        }
+
+        @media (max-width: 600px) {
+            .index-item {
+                flex-direction: column;
+                gap: 0.4rem;
+            }
+            .index-descriptor-name {
+                max-width: 100%;
+            }
+            .index-entry-links {
+                justify-content: flex-start;
+            }
         }
 
         /* Print Specific Styling */
