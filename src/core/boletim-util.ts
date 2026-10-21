@@ -937,6 +937,12 @@ export function generateBoletimMarkdown(options: BoletimRenderOptions): string {
     lines.push(`title: "${title.replace(/"/g, '\\"')}"`);
     lines.push(`subtitle: "${subtitle.replace(/"/g, '\\"')}"`);
     lines.push(`date: "${periodStr}"`);
+    const logoFile = fs.existsSync(path.join(process.cwd(), "public", "stj-logo.png"))
+        ? path.join(process.cwd(), "public", "stj-logo.png").replace(/\\/g, "/")
+        : fs.existsSync(path.join(process.cwd(), "stj-logo.png"))
+        ? path.join(process.cwd(), "stj-logo.png").replace(/\\/g, "/")
+        : "stj-logo.png";
+
     lines.push(`fontsize: ${fontSize}`);
     lines.push("geometry:");
     lines.push("  - a4paper");
@@ -946,18 +952,16 @@ export function generateBoletimMarkdown(options: BoletimRenderOptions): string {
     lines.push("  - right=2.5cm");
     lines.push("header-includes:");
     lines.push("  - \\usepackage{fancyhdr}");
-    lines.push("  - \\usepackage{lastpage}");
     lines.push("  - \\usepackage{graphicx}");
-    lines.push("  - \\usepackage{framed}");
     lines.push("  - \\setlength{\\fboxrule}{1.2pt}");
     lines.push("  - \\setlength{\\fboxsep}{8pt}");
     lines.push("  - \\pagestyle{fancy}");
     lines.push("  - \\fancyhead{}");
     lines.push(`  - \\fancyhead[L]{\\small\\textbf{${subtitle.replace(/[\\&%$#_{}~^]/g, "\\$&")}}}`);
-    lines.push("  - \\fancyhead[R]{\\includegraphics[height=0.9cm]{stj-logo.png}}");
+    lines.push(`  - \\fancyhead[R]{\\includegraphics[height=0.9cm]{${logoFile}}}`);
     lines.push("  - \\fancyfoot{}");
     lines.push(`  - \\fancyfoot[L]{\\small ${periodStr.replace(/[\\&%$#_{}~^]/g, "\\$&")}}`);
-    lines.push("  - \\fancyfoot[R]{\\small Pág. \\thepage\\ de \\pageref{LastPage}}");
+    lines.push("  - \\fancyfoot[R]{\\small Pág. \\thepage}");
     lines.push("  - \\renewcommand{\\headrulewidth}{0.4pt}");
     lines.push("  - \\renewcommand{\\footrulewidth}{0.4pt}");
     lines.push("---");

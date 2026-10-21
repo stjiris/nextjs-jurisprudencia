@@ -340,7 +340,8 @@ assert(!boletimPageCode.includes("Imprimir / Guardar PDF"), "Botão 'Imprimir / 
 
 const headerCode = fs.readFileSync(path.join(__dirname, "src", "components", "Header.tsx"), "utf-8");
 assert(headerCode.includes("Boletim de Jurisprudência"), "Barra de navegação inclui 'Boletim de Jurisprudência'");
-assert(headerCode.includes("Ver como Boletim"), "Barra de navegação inclui opção 'Ver como Boletim'");
+const pesquisaPageCode = fs.readFileSync(path.join(__dirname, "src", "pages", "pesquisa.tsx"), "utf-8");
+assert(pesquisaPageCode.includes("Ver como Boletim"), "Página de pesquisa inclui botão 'Ver como Boletim'");
 assert(fs.existsSync(path.join(__dirname, "src", "pages", "api", "boletim", "pesquisa", "html.ts")), "Endpoint /api/boletim/pesquisa/html existe e está operacional");
 
 console.log("\n=======================================================");

@@ -24,12 +24,6 @@ const NAVEGACAO: NavItem[] = [
         isActive: (p) => p.startsWith("/indices"),
     },
     {
-        label: "Ver como Boletim",
-        getHref: (qs) => `/api/boletim/pesquisa/html?${qs}`,
-        isActive: () => false,
-        openInNewTab: true,
-    },
-    {
         label: "Boletim de Jurisprudência",
         getHref: (qs) => `/boletim?${qs}`,
         isActive: (p) => p.startsWith("/boletim"),

@@ -76,7 +76,7 @@ function ShowResults({results, searchParams, searchInfo}: {results: SearchHandle
                 href={`/api/boletim/pesquisa/html?${searchParams.toString()}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-outline-primary ms-auto d-flex align-items-center gap-1"
+                className="btn btn-sm btn-outline-secondary ms-auto d-flex align-items-center gap-1"
                 title="Visualizar os acórdãos desta página no formato Boletim de Jurisprudência"
             >
                 <i className="bi bi-file-earmark-text"></i>

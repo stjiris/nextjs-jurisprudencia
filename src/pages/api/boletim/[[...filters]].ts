@@ -240,7 +240,6 @@ async function renderPDF(renderOptions: BoletimRenderOptions, area: string, year
     const markdown = generateBoletimMarkdown(renderOptions);
 
     return await new Promise<void>((resolve) => {
-        let procSpawned = false;
         let pandocProc: any;
 
         try {
@@ -251,13 +250,8 @@ async function renderPDF(renderOptions: BoletimRenderOptions, area: string, year
                 "--pdf-engine", "xelatex",
                 "--template", "pdf-template.tex"
             ]);
-            procSpawned = true;
-        } catch {
-            procSpawned = false;
-        }
-
-        if (!procSpawned || !pandocProc) {
-            // Fallback to HTML print layout if Pandoc is not installed on this host
+        } catch (e: any) {
+            console.warn("[Boletim PDF] Não foi possível iniciar o Pandoc:", e?.message);
             const html = generateBoletimHTML(renderOptions);
             res.setHeader("Content-Type", "text/html; charset=utf-8");
             res.status(200).send(html);
@@ -265,41 +259,56 @@ async function renderPDF(renderOptions: BoletimRenderOptions, area: string, year
             return;
         }
 
+        const stdoutChunks: Buffer[] = [];
+        const stderrChunks: Buffer[] = [];
         let hasError = false;
+
+        pandocProc.stdout.on("data", (chunk: Buffer) => {
+            stdoutChunks.push(chunk);
+        });
+
+        pandocProc.stderr.on("data", (chunk: Buffer) => {
+            stderrChunks.push(chunk);
+        });
 
         pandocProc.on("error", (err: any) => {
             hasError = true;
-            console.warn("[Boletim PDF] Pandoc indisponível no host local, a servir visualização para impressão:", err.message);
-            if (!res.headersSent) {
+            console.warn("[Boletim PDF] Erro no processo Pandoc:", err.message);
+            if (!res.headersSent && !res.writableEnded) {
                 const html = generateBoletimHTML(renderOptions);
                 res.setHeader("Content-Type", "text/html; charset=utf-8");
                 res.status(200).send(html);
             }
             resolve();
         });
-
-        pandocProc.stdout.on("data", () => {
-            if (!res.headersSent) {
-                res.writeHead(200, {
-                    "Content-Type": "application/pdf",
-                    "Content-Disposition": `inline; filename="boletim-${encodeURIComponent(area)}-${year}-${month}.pdf"`
-                });
-            }
-        });
-
-        pandocProc.stdout.pipe(res);
 
         pandocProc.on("close", (code: number) => {
-            if (code !== 0 && !res.headersSent && !hasError) {
-                const html = generateBoletimHTML(renderOptions);
-                res.setHeader("Content-Type", "text/html; charset=utf-8");
-                res.status(200).send(html);
+            if (code === 0 && stdoutChunks.length > 0 && !hasError) {
+                const pdfBuffer = Buffer.concat(stdoutChunks);
+                res.writeHead(200, {
+                    "Content-Type": "application/pdf",
+                    "Content-Disposition": `inline; filename="boletim-${encodeURIComponent(area)}-${year}-${month}.pdf"`,
+                    "Content-Length": pdfBuffer.length
+                });
+                res.end(pdfBuffer);
+            } else {
+                const stderrMsg = Buffer.concat(stderrChunks).toString("utf-8");
+                console.warn(`[Boletim PDF] Pandoc falhou (código ${code}). Stderr:`, stderrMsg || "sem detalhes");
+                if (!res.headersSent && !res.writableEnded) {
+                    const html = generateBoletimHTML(renderOptions);
+                    res.setHeader("Content-Type", "text/html; charset=utf-8");
+                    res.status(200).send(html);
+                }
             }
             resolve();
         });
 
-        pandocProc.stdin.write(markdown);
-        pandocProc.stdin.end();
+        try {
+            pandocProc.stdin.write(markdown);
+            pandocProc.stdin.end();
+        } catch (writeErr: any) {
+            console.warn("[Boletim PDF] Erro ao escrever no stdin do Pandoc:", writeErr.message);
+        }
     });
 }
 
