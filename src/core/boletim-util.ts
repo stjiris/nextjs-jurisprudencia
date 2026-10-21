@@ -479,8 +479,8 @@ export function generateBoletimHTML(options: BoletimRenderOptions): string {
             margin-bottom: 2.5rem;
             padding-bottom: 2rem;
             border-bottom: 1px solid var(--stj-border);
-            page-break-inside: avoid;
-            break-inside: avoid;
+            page-break-inside: auto;
+            break-inside: auto;
         }
 
         .boletim-entry:last-of-type {
@@ -496,6 +496,8 @@ export function generateBoletimHTML(options: BoletimRenderOptions): string {
             background-color: #ffffff;
             page-break-inside: avoid;
             break-inside: avoid;
+            page-break-after: avoid;
+            break-after: avoid;
         }
 
         .descriptors-container {
@@ -602,10 +604,14 @@ export function generateBoletimHTML(options: BoletimRenderOptions): string {
             line-height: var(--summary-line-height, 1.6);
             margin-bottom: 1.25rem;
             color: #111827;
+            page-break-inside: auto;
+            break-inside: auto;
         }
 
         .entry-summary p {
             margin-bottom: 0.75rem;
+            orphans: 3;
+            widows: 3;
         }
 
         /* Alphabetical Descriptor Index Section */
@@ -750,8 +756,25 @@ export function generateBoletimHTML(options: BoletimRenderOptions): string {
             }
 
             .boletim-entry {
+                page-break-inside: auto;
+                break-inside: auto;
+            }
+
+            .entry-metadata-box {
                 page-break-inside: avoid;
                 break-inside: avoid;
+                page-break-after: avoid;
+                break-after: avoid;
+            }
+
+            .entry-summary {
+                page-break-inside: auto;
+                break-inside: auto;
+            }
+
+            .entry-summary p {
+                orphans: 3;
+                widows: 3;
             }
 
             .index-section.index-at-end {
@@ -925,6 +948,9 @@ export function generateBoletimMarkdown(options: BoletimRenderOptions): string {
     lines.push("  - \\usepackage{fancyhdr}");
     lines.push("  - \\usepackage{lastpage}");
     lines.push("  - \\usepackage{graphicx}");
+    lines.push("  - \\usepackage{framed}");
+    lines.push("  - \\setlength{\\fboxrule}{1.2pt}");
+    lines.push("  - \\setlength{\\fboxsep}{8pt}");
     lines.push("  - \\pagestyle{fancy}");
     lines.push("  - \\fancyhead{}");
     lines.push(`  - \\fancyhead[L]{\\small\\textbf{${subtitle.replace(/[\\&%$#_{}~^]/g, "\\$&")}}}`);
@@ -964,39 +990,37 @@ export function generateBoletimMarkdown(options: BoletimRenderOptions): string {
 
     for (const entry of entries) {
         lines.push("\\noindent");
+        lines.push("\\fbox{\\begin{minipage}{\\dimexpr\\textwidth-2\\fboxsep-2\\fboxrule\\relax}");
         const { regular, discontinued } = splitDescritores(entry.descritores);
         if (discontinued.length > 0) {
-            lines.push("**Descritores:**\\");
+            lines.push("{\\small\\textbf{Descritores}}\\par\\vspace{1pt}");
             for (const desc of regular) {
-                lines.push(`\\quad **${desc.replace(/`/g, "")}**\\`);
+                lines.push(`\\quad {\\small\\textbf{${desc.replace(/`/g, "")}}}\\par`);
             }
-            lines.push("**Descritores Descontinuados:**\\");
+            lines.push("\\vspace{3pt}{\\small\\textbf{Descritores Descontinuados}}\\par\\vspace{1pt}");
             for (const desc of discontinued) {
-                lines.push(`\\quad *${desc.replace(/`/g, "")}*\\`);
+                lines.push(`\\quad {\\small\\textit{${desc.replace(/`/g, "")}}}\\par`);
             }
         } else {
-            lines.push("**Descritores:**\\");
+            lines.push("{\\small\\textbf{Descritores}}\\par\\vspace{1pt}");
             for (const desc of regular) {
-                lines.push(`\\quad **${desc.replace(/`/g, "")}**\\`);
+                lines.push(`\\quad {\\small\\textbf{${desc.replace(/`/g, "")}}}\\par`);
             }
         }
-        lines.push("");
-        lines.push(`\\noindent ${entry.data}\\`);
-        lines.push(`Proc. n.º ${entry.processo}${entry.seccao ? ` - ${entry.seccao}` : ""}\\`);
-        lines.push(`${entry.colectivo.relator}\\`);
+        lines.push("\\vspace{4pt}\\hrule\\vspace{4pt}");
+        lines.push(`{\\small\\textbf{${entry.data}}}\\par`);
+        lines.push(`{\\small\\textbf{Proc. n.º ${entry.processo}${entry.seccao ? ` - ${entry.seccao}` : ""}}}\\par`);
+        lines.push(`{\\small ${entry.colectivo.relator}}\\par`);
         for (const adj of entry.colectivo.adjuntos) {
-            lines.push(`${adj}\\`);
+            lines.push(`{\\small ${adj}}\\par`);
         }
-        // Markdown autolink: pandoc escapes the "%" in percent-encoded URLs, which breaks a raw \href.
-        lines.push(`<${entry.permalink}>`);
+        lines.push(`\\vspace{2pt}{\\footnotesize\\url{${entry.permalink}}}`);
+        lines.push("\\end{minipage}}");
         lines.push("");
-        lines.push("\\medskip");
+        lines.push("\\vspace{8pt}");
         lines.push(cleanSummaryForMarkdown(entry.sumario));
         lines.push("");
-        lines.push("\\bigskip");
-        lines.push("\\hrule");
-        lines.push("\\bigskip");
-        lines.push("");
+        lines.push("\\vspace{20pt}");
     }
 
     if (indexPosition === "end") {

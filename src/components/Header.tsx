@@ -5,7 +5,36 @@ import { usePathname, useSearchParams } from "next/navigation"
 import logoname from '../../public/images/PT-logoLogo-STJ.png'
 import { useAuth } from "@/contexts/auth";
 
-const NAVEGACAO = ["Pesquisa", "Índices", "Boletim"]
+interface NavItem {
+    label: string;
+    getHref: (qs: string) => string;
+    isActive: (pathname: string) => boolean;
+    openInNewTab?: boolean;
+}
+
+const NAVEGACAO: NavItem[] = [
+    {
+        label: "Pesquisa",
+        getHref: (qs) => `/pesquisa?${qs}`,
+        isActive: (p) => p.startsWith("/pesquisa"),
+    },
+    {
+        label: "Índices",
+        getHref: (qs) => `/indices?${qs}`,
+        isActive: (p) => p.startsWith("/indices"),
+    },
+    {
+        label: "Ver como Boletim",
+        getHref: (qs) => `/api/boletim/pesquisa/html?${qs}`,
+        isActive: () => false,
+        openInNewTab: true,
+    },
+    {
+        label: "Boletim de Jurisprudência",
+        getHref: (qs) => `/boletim?${qs}`,
+        isActive: (p) => p.startsWith("/boletim"),
+    },
+];
 
 export default function Header(props: { keys_to_remove: string[] }) {
     const pathname = usePathname();
@@ -50,12 +79,18 @@ export default function Header(props: { keys_to_remove: string[] }) {
                                 className={`border-0 nav-link fs-6 bg-transparent`}>Utilizador</Link>
                         </li>
                         <li>|</li></>}
-                    {NAVEGACAO.map((name, i) => <li key={i} className="nav-link py-1 px-2 mx-1">
-                        <Link
-                            href={`/${name.normalize("NFKD").replace(/[^\w]/g, "").toLocaleLowerCase()}?${new_query_string.toString()}`}
-                            className={`${pathname.startsWith(`/${name.normalize("NFKD").replace(/[^\w]/g, "").toLocaleLowerCase()}`) ? "active" : ""} border-0 nav-link fs-6 bg-transparent`}>
-                            {name}</Link>
-                    </li>)}
+                    {NAVEGACAO.map((item, i) => (
+                        <li key={i} className="nav-link py-1 px-2 mx-1">
+                            <Link
+                                href={item.getHref(new_query_string.toString())}
+                                target={item.openInNewTab ? "_blank" : undefined}
+                                rel={item.openInNewTab ? "noopener noreferrer" : undefined}
+                                className={`${item.isActive(pathname) ? "active" : ""} border-0 nav-link fs-6 bg-transparent`}
+                            >
+                                {item.label}
+                            </Link>
+                        </li>
+                    ))}
                     <li>|</li>
                     <li className="nav-link py-1 px-2 mx-1">
                         <Link href={`#`} className="border-0 nav-link fs-6 bg-transparent" role="button" data-bs-toggle="modal" data-bs-target="#modal-about">Sobre</Link>

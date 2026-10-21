@@ -335,27 +335,15 @@ export default function Boletim({ areas, minYear, maxYear }: BoletimProps) {
                                     Não existem acórdãos para esta combinação.
                                 </div>
                             ) : (
-                                <div className="row g-2">
-                                    <div className="col-6">
-                                        <button
-                                            type="button"
-                                            className="btn btn-primary w-100"
-                                            disabled={!hasAcordaos || !previewStale}
-                                            onClick={generatePreview}
-                                        >
-                                            Gerar Boletim
-                                        </button>
-                                    </div>
-                                    <div className="col-6">
-                                        <button
-                                            type="button"
-                                            className="btn btn-outline-primary w-100"
-                                            disabled={!hasAcordaos || !pdfStale}
-                                            onClick={generatePdf}
-                                        >
-                                            Gerar PDF
-                                        </button>
-                                    </div>
+                                <div>
+                                    <button
+                                        type="button"
+                                        className="btn btn-primary w-100"
+                                        disabled={!hasAcordaos || !previewStale}
+                                        onClick={generatePreview}
+                                    >
+                                        Gerar Boletim
+                                    </button>
                                 </div>
                             )}
                         </div>
@@ -378,9 +366,17 @@ export default function Boletim({ areas, minYear, maxYear }: BoletimProps) {
                                     <button
                                         type="button"
                                         className="btn btn-sm btn-outline-primary"
+                                        disabled={!hasAcordaos}
+                                        onClick={generatePdf}
+                                    >
+                                        Gerar PDF
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="btn btn-sm btn-outline-primary"
                                         onClick={printIframe}
                                     >
-                                        Imprimir / Guardar PDF
+                                        Imprimir
                                     </button>
                                 </div>
                             </div>

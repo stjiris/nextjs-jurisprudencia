@@ -324,6 +324,25 @@ assert(fs.statSync(logoPath).size > 10000, "Logótipo do STJ possui tamanho aut�
 const rootLogoPath = path.join(__dirname, "stj-logo.png");
 assert(fs.existsSync(rootLogoPath), "Logótipo do STJ existe na raiz para compilação LaTeX/Pandoc");
 
+// TEST 6: Page Breaks & Print Styling QA (Fix Prof. Borbinha)
+console.log("\n--- 6. Testes de Paginação e Quebras de Página (Fix Borbinha) ---");
+assert(!boletimUtilCode.match(/\.boletim-entry\s*\{[^}]*break-inside:\s*avoid;/), "boletim-entry permite quebras de página (break-inside: auto) evitando páginas em branco");
+assert(boletimUtilCode.includes(".entry-metadata-box {") && boletimUtilCode.includes("break-inside: avoid;"), "entry-metadata-box mantém break-inside: avoid para integridade da caixa");
+assert(boletimUtilCode.includes("break-after: avoid;"), "entry-metadata-box previne ficar órfão no fundo da página (break-after: avoid)");
+assert(boletimUtilCode.includes("orphans: 3;") && boletimUtilCode.includes("widows: 3;"), "entry-summary tem regras de tipografia para viúvas e órfãos na impressão");
+assert(boletimUtilCode.includes("fbox") && boletimUtilCode.includes("minipage"), "generateBoletimMarkdown utiliza fbox/minipage estruturada para estilo idêntico ao HTML");
+
+// TEST 7: UI & Navigation QA
+console.log("\n--- 7. Testes de Botões e Navegação ---");
+const boletimPageCode = fs.readFileSync(path.join(__dirname, "src", "pages", "boletim.tsx"), "utf-8");
+assert(boletimPageCode.includes("Abrir noutro separador") && boletimPageCode.includes("Gerar PDF") && boletimPageCode.includes("Imprimir"), "Os 3 botões (Abrir noutro separador, Gerar PDF e Imprimir) estão no cabeçalho da pré-visualização");
+assert(!boletimPageCode.includes("Imprimir / Guardar PDF"), "Botão 'Imprimir / Guardar PDF' foi renomeado para 'Imprimir'");
+
+const headerCode = fs.readFileSync(path.join(__dirname, "src", "components", "Header.tsx"), "utf-8");
+assert(headerCode.includes("Boletim de Jurisprudência"), "Barra de navegação inclui 'Boletim de Jurisprudência'");
+assert(headerCode.includes("Ver como Boletim"), "Barra de navegação inclui opção 'Ver como Boletim'");
+assert(fs.existsSync(path.join(__dirname, "src", "pages", "api", "boletim", "pesquisa", "html.ts")), "Endpoint /api/boletim/pesquisa/html existe e está operacional");
+
 console.log("\n=======================================================");
 console.log(`   RESULTADO: ${passed} PASSOU / ${failed} FALHOU`);
 console.log("=======================================================\n");

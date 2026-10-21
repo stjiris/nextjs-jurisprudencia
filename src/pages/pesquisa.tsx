@@ -72,6 +72,16 @@ function ShowResults({results, searchParams, searchInfo}: {results: SearchHandle
                 <option value="asc">Data Ascendente</option>
                 <option value="des">Data Descendente</option>
             </SelectNavigate>
+            <Link
+                href={`/api/boletim/pesquisa/html?${searchParams.toString()}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-outline-primary ms-auto d-flex align-items-center gap-1"
+                title="Visualizar os acórdãos desta página no formato Boletim de Jurisprudência"
+            >
+                <i className="bi bi-file-earmark-text"></i>
+                <span>Ver como Boletim</span>
+            </Link>
         </div>
         {auth ? (
             <JurisprudenciaTable results={results} searchId={searchInfo.searchId} />
