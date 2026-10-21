@@ -75,6 +75,9 @@ export default function Boletim({ areas, minYear, maxYear }: BoletimProps) {
     const [year, setYear] = useState(now.getFullYear().toString())
     const [month, setMonth] = useState((now.getMonth() + 1).toString())
     const [descritor, setDescritor] = useState("")
+    const [debouncedDescritor, setDebouncedDescritor] = useState("")
+    const [isDebouncing, setIsDebouncing] = useState(false)
+    const [suggestions, setSuggestions] = useState<string[]>([])
     const [fontSize, setFontSize] = useState("11pt")
     const [indexPosition, setIndexPosition] = useState<"start" | "end">("end")
 
@@ -91,14 +94,46 @@ export default function Boletim({ areas, minYear, maxYear }: BoletimProps) {
         return result
     }, [minYear, maxYear])
 
+    // Debounce the descriptor input to prevent premature count queries and warnings
+    useEffect(() => {
+        setIsDebouncing(true)
+        const timer = setTimeout(() => {
+            setDebouncedDescritor(descritor.trim())
+            setIsDebouncing(false)
+        }, 350)
+        return () => clearTimeout(timer)
+    }, [descritor])
+
+    // Autocomplete: fetch matching descriptors as the user types
+    useEffect(() => {
+        const term = descritor.trim()
+        if (term.length < 2) {
+            setSuggestions([])
+            return
+        }
+        let cancelled = false
+        fetch(`${router.basePath}/api/datalist?agg=Descritores&prefix=${encodeURIComponent(term)}`)
+            .then(r => r.json())
+            .then((items: { key: string; count?: number }[]) => {
+                if (cancelled) return
+                if (Array.isArray(items)) {
+                    setSuggestions(items.map(it => it.key).filter(Boolean).slice(0, 30))
+                }
+            })
+            .catch(() => {
+                if (!cancelled) setSuggestions([])
+            })
+        return () => { cancelled = true }
+    }, [descritor, router.basePath])
+
     const buildQueryString = useMemo(() => {
         const params = new URLSearchParams()
-        if (descritor.trim()) params.set("descritor", descritor.trim())
+        if (debouncedDescritor) params.set("descritor", debouncedDescritor)
         if (fontSize && fontSize !== "11pt") params.set("fontSize", fontSize)
         if (indexPosition && indexPosition !== "end") params.set("indexPosition", indexPosition)
         const qs = params.toString()
         return qs ? `?${qs}` : ""
-    }, [descritor, fontSize, indexPosition])
+    }, [debouncedDescritor, fontSize, indexPosition])
 
     const htmlUrl = useMemo(() => {
         return `${router.basePath}/api/boletim/${encodeURIComponent(area)}/${year}/${month}/html${buildQueryString}`
@@ -137,7 +172,7 @@ export default function Boletim({ areas, minYear, maxYear }: BoletimProps) {
         let cancelled = false
         setCount(null)
         const params = new URLSearchParams({ area, year, month })
-        if (descritor.trim()) params.set("descritor", descritor.trim())
+        if (debouncedDescritor) params.set("descritor", debouncedDescritor)
 
         fetch(`${router.basePath}/api/boletim/count?${params.toString()}`)
             .then(r => r.json())
@@ -152,7 +187,7 @@ export default function Boletim({ areas, minYear, maxYear }: BoletimProps) {
             })
             .catch(() => { if (!cancelled) setCount(0) })
         return () => { cancelled = true }
-    }, [router.basePath, area, year, month, descritor, buildQueryString])
+    }, [router.basePath, area, year, month, debouncedDescritor, buildQueryString])
 
     const hasAcordaos = count !== null && count > 0
     const previewStale = previewUrl !== htmlUrl
@@ -268,14 +303,29 @@ export default function Boletim({ areas, minYear, maxYear }: BoletimProps) {
                                 </label>
                                 <input
                                     id="descritor-input"
+                                    list="descritores-datalist"
                                     type="text"
                                     className="form-control"
                                     placeholder="Ex: Acordo de empresa, Herança indivisa, Tráfico de menor gravidade..."
                                     value={descritor}
                                     onChange={e => setDescritor(e.target.value)}
+                                    autoComplete="off"
                                 />
+                                <datalist id="descritores-datalist">
+                                    {suggestions.map((s, idx) => (
+                                        <option key={`${s}-${idx}`} value={s} />
+                                    ))}
+                                </datalist>
+                                {descritor.trim().length >= 2 && suggestions.length > 0 && (
+                                    <div className="form-text text-muted mt-1">
+                                        <small>
+                                            <i className="bi bi-lightbulb me-1 text-warning"></i>
+                                            Sugestões: {suggestions.slice(0, 3).join(", ")}{suggestions.length > 3 ? "..." : ""}
+                                        </small>
+                                    </div>
+                                )}
                             </div>
-                            {count === null ? (
+                            {count === null || isDebouncing ? (
                                 <div className="d-flex align-items-center text-muted">
                                     <SmallSpinner className="me-2" />
                                     A verificar acórdãos...

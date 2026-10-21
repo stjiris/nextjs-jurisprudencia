@@ -19,15 +19,19 @@ export function withForm<
         const filtersUsed = populateFilters(sfilters, ctx.query)
         const queryObj = createQueryDslQueryContainer(ctx.query.q);
         const authed = await authenticatedHandler(ctx.req);
-        const result = await search(queryObj, sfilters, 0, DEFAULT_AGGS, 0, {track_scores: true, _source: []}, authed)
         let total = 0;
-        if( result.hits.total ){
-            if( Number.isInteger(result.hits.total) ){
-                total = result.hits.total as long;
+        try {
+            const result = await search(queryObj, sfilters, 0, DEFAULT_AGGS, 0, {track_scores: true, _source: []}, authed);
+            if (result?.hits?.total) {
+                if (Number.isInteger(result.hits.total)) {
+                    total = result.hits.total as long;
+                } else {
+                    total = (result.hits.total as SearchTotalHits).value;
+                }
             }
-            else{
-                total = (result.hits.total as SearchTotalHits).value;
-            }
+        } catch (err) {
+            console.warn("[withForm] Elasticsearch offline or error, setting total to 0:", (err as any)?.message || err);
+            total = 0;
         }
 
         let formProps = {

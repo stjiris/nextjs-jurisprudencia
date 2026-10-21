@@ -75,44 +75,92 @@ async function getClient(): Promise<Client> {
     return client;
 }
 
-export async function getAllKeys(authed: boolean = false) {
-    let client = await getClient();
-    return await client.search<JurisprudenciaKey>({
-        index: KEYS_INFO_INDEX_VERSION,
-        size: 1000,
-        sort: [{
-            "filtersOrder": "asc"
-        }, {
-            "key": "asc"
-        }]
-    }).then(r => r.hits.hits.map<JurisprudenciaKey>(({ _source: key }) => {
-        if (!key) throw new Error("Unreachable");
-
-        if (!authed && key.authentication) {
-            return {
-                key: key.key,
-                name: key.name,
-                description: key.description,
-                filtersOrder: key.filtersOrder,
-                active: false,
-                authentication: true,
-                documentShow: false,
-                filtersShow: false,
-                filtersSuggest: false,
-                indicesGroup: false,
-                indicesList: false,
-                editorEnabled: false,
-                editorRestricted: false,
-                editorSuggestions: false
-            }
-        }
-
-        return key;
+export function getDefaultKeys(authed: boolean = false): JurisprudenciaKey[] {
+    return JurisprudenciaDocumentKeys.map((key, i) => ({
+        key: key,
+        name: key,
+        description: "Sem descrição",
+        active: true,
+        filtersSuggest: true,
+        filtersShow: true,
+        filtersOrder: i + 1,
+        indicesList: true,
+        indicesGroup: key === "Secção" || key === "Área",
+        documentShow: true,
+        authentication: false,
+        editorEnabled: false,
+        editorRestricted: false,
+        editorSuggestions: false
     }));
 }
 
-export function getKey(k: JurisprudenciaDocumentKey) {
-    return getClient().then(c => c.search<JurisprudenciaKey>({ index: KEYS_INFO_INDEX_VERSION, query: { term: { key: k } } })).then(r => r.hits.hits[0]._source!)
+export async function getAllKeys(authed: boolean = false) {
+    try {
+        let client = await getClient();
+        return await client.search<JurisprudenciaKey>({
+            index: KEYS_INFO_INDEX_VERSION,
+            size: 1000,
+            sort: [{
+                "filtersOrder": "asc"
+            }, {
+                "key": "asc"
+            }]
+        }).then(r => r.hits.hits.map<JurisprudenciaKey>(({ _source: key }) => {
+            if (!key) throw new Error("Unreachable");
+
+            if (!authed && key.authentication) {
+                return {
+                    key: key.key,
+                    name: key.name,
+                    description: key.description,
+                    filtersOrder: key.filtersOrder,
+                    active: false,
+                    authentication: true,
+                    documentShow: false,
+                    filtersShow: false,
+                    filtersSuggest: false,
+                    indicesGroup: false,
+                    indicesList: false,
+                    editorEnabled: false,
+                    editorRestricted: false,
+                    editorSuggestions: false
+                }
+            }
+
+            return key;
+        }));
+    } catch (e) {
+        console.warn("[keys] Elasticsearch offline, using default keys:", (e as any)?.message || e);
+        return getDefaultKeys(authed);
+    }
+}
+
+export async function getKey(k: JurisprudenciaDocumentKey) {
+    try {
+        const client = await getClient();
+        const r = await client.search<JurisprudenciaKey>({ index: KEYS_INFO_INDEX_VERSION, query: { term: { key: k } } });
+        if (r.hits.hits.length > 0 && r.hits.hits[0]._source) {
+            return r.hits.hits[0]._source;
+        }
+    } catch (e) {
+        console.warn(`[keys] Elasticsearch offline, using default for key '${k}'`);
+    }
+    return getDefaultKeys(true).find(item => item.key === k) || {
+        key: k,
+        name: k,
+        description: "Sem descrição",
+        active: true,
+        filtersSuggest: true,
+        filtersShow: true,
+        filtersOrder: 1,
+        indicesList: true,
+        indicesGroup: false,
+        documentShow: true,
+        authentication: false,
+        editorEnabled: false,
+        editorRestricted: false,
+        editorSuggestions: false
+    };
 }
 
 export async function updateKey(key: JurisprudenciaDocumentKey, update: Partial<JurisprudenciaKey>) {

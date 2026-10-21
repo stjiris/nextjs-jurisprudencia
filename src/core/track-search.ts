@@ -44,7 +44,8 @@ function shakeHash(str: string) {
 }
 
 export async function saveSearch(reqString: string) {
-    let client = await getClient();
+    try {
+        let client = await getClient();
     let r = await client.search<{ searchHash: string }>({ index: SAVED_SEARCH_INDEX, query: { term: { searchParams: reqString } }, _source: ["searchHash"] });
     if (r.hits.hits.length > 0) {
         return r.hits.hits[0]._source?.searchHash;
@@ -74,6 +75,10 @@ export async function saveSearch(reqString: string) {
     });
 
     return hashStr;
+    } catch (e) {
+        console.warn("[track-search] Elasticsearch offline, fallback hash:", (e as any)?.message || e);
+        return shakeHash(reqString);
+    }
 }
 
 export async function trackClickedDocument(searchHash: string, documentId: string) {

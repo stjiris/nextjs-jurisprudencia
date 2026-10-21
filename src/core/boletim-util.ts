@@ -22,11 +22,44 @@ export interface BoletimEntry {
 
 export interface DescriptorIndexItem {
     descriptor: string;
+    isDiscontinued?: boolean;
     entries: {
         index: number;
         processo: string;
         data: string;
     }[];
+}
+
+export function isDiscontinuedDescriptor(desc: string): boolean {
+    const trimmed = desc.trim();
+    return trimmed.startsWith("'") || trimmed.startsWith("’") || trimmed.startsWith("`");
+}
+
+export function cleanDescriptorName(desc: string): string {
+    return desc.trim().replace(/^['’`]|['’`]$/g, "").trim();
+}
+
+export function splitDescritores(descritores: string[]): {
+    regular: string[];
+    discontinued: string[];
+} {
+    const regular: string[] = [];
+    const discontinued: string[] = [];
+
+    for (const d of descritores) {
+        const trimmed = d.trim();
+        if (!trimmed) continue;
+        if (isDiscontinuedDescriptor(trimmed)) {
+            discontinued.push(cleanDescriptorName(trimmed));
+        } else {
+            regular.push(trimmed);
+        }
+    }
+
+    regular.sort((a, b) => a.localeCompare(b, "pt-PT", { sensitivity: "base" }));
+    discontinued.sort((a, b) => a.localeCompare(b, "pt-PT", { sensitivity: "base" }));
+
+    return { regular, discontinued };
 }
 
 export interface DescriptorIndexGroup {
@@ -206,18 +239,21 @@ export function generatePermalink(proc?: string | null, uuid?: string | null, ba
  * Normalizes descriptors and builds an Alphabetical Descriptor Index.
  */
 export function buildDescriptorIndex(entries: BoletimEntry[]): DescriptorIndexGroup[] {
-    const map = new Map<string, DescriptorIndexItem["entries"]>();
+    const map = new Map<string, { isDiscontinued: boolean; entries: DescriptorIndexItem["entries"] }>();
 
     for (const entry of entries) {
         for (const rawDesc of entry.descritores) {
-            const desc = rawDesc.trim().replace(/^[:\-–,."“«]+|[:\-–,."”»]+$/g, "").trim();
+            const isDiscontinued = isDiscontinuedDescriptor(rawDesc);
+            const cleaned = cleanDescriptorName(rawDesc);
+            const desc = cleaned.replace(/^[:\-–,."“«]+|[:\-–,."”»]+$/g, "").trim();
             if (!desc) continue;
             if (!map.has(desc)) {
-                map.set(desc, []);
+                map.set(desc, { isDiscontinued, entries: [] });
             }
-            const list = map.get(desc)!;
-            if (!list.some(e => e.index === entry.index)) {
-                list.push({
+            const item = map.get(desc)!;
+            if (isDiscontinued) item.isDiscontinued = true;
+            if (!item.entries.some(e => e.index === entry.index)) {
+                item.entries.push({
                     index: entry.index,
                     processo: entry.processo,
                     data: entry.data
@@ -239,9 +275,11 @@ export function buildDescriptorIndex(entries: BoletimEntry[]): DescriptorIndexGr
         if (!groupMap.has(letter)) {
             groupMap.set(letter, []);
         }
+        const data = map.get(desc)!;
         groupMap.get(letter)!.push({
             descriptor: desc,
-            entries: map.get(desc)!
+            isDiscontinued: data.isDiscontinued,
+            entries: data.entries
         });
     }
 
@@ -449,33 +487,69 @@ export function generateBoletimHTML(options: BoletimRenderOptions): string {
             border-bottom: none;
         }
 
-        .entry-descriptors {
-            margin-bottom: 1rem;
+        /* Caixa de Metadados com Contornos Pretos */
+        .entry-metadata-box {
+            border: 1.5px solid #000000;
+            border-radius: 4px;
+            padding: 1.15rem 1.35rem;
+            margin-bottom: 1.35rem;
+            background-color: #ffffff;
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
 
-        .descriptor-item {
+        .descriptors-container {
+            display: grid;
+            grid-template-columns: 1fr 1px 1fr;
+            gap: 1.25rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.85rem;
+            border-bottom: 1px solid #d1d5db;
+        }
+
+        .descriptors-container.single-column {
+            display: block;
+            grid-template-columns: none;
+        }
+
+        .desc-column {
+            min-width: 0;
+        }
+
+        .desc-column-divider {
+            background-color: #9ca3af;
+            width: 1px;
+        }
+
+        .desc-column-title {
             font-weight: bold;
             font-size: var(--desc-font-size, 1.05rem);
             color: #000000;
-            line-height: 1.35;
-            margin-bottom: 0.15rem;
+            margin-bottom: 0.45rem;
+            text-align: left;
         }
 
-        .entry-summary {
-            font-size: var(--summary-font-size, 1rem);
-            text-align: justify;
-            text-justify: inter-word;
-            line-height: var(--summary-line-height, 1.6);
-            margin-bottom: 1.25rem;
+        .desc-list {
+            list-style-type: none;
+            padding-left: 0.85rem;
+            margin: 0;
+        }
+
+        .desc-list li {
+            font-weight: bold;
+            font-size: var(--desc-font-size, 1.02rem);
             color: #111827;
+            line-height: 1.35;
+            margin-bottom: 0.2rem;
         }
 
-        .entry-summary p {
-            margin-bottom: 0.75rem;
+        .desc-list.discontinued li {
+            font-style: italic;
+            font-weight: normal;
+            color: #374151;
         }
 
-        .entry-metadata {
-            margin-top: 1rem;
+        .box-meta-details {
             font-size: var(--meta-font-size, 0.95rem);
             color: #1f2937;
             line-height: 1.5;
@@ -519,6 +593,19 @@ export function generateBoletimHTML(options: BoletimRenderOptions): string {
 
         .entry-permalink a:hover {
             color: #1e40af;
+        }
+
+        .entry-summary {
+            font-size: var(--summary-font-size, 1rem);
+            text-align: justify;
+            text-justify: inter-word;
+            line-height: var(--summary-line-height, 1.6);
+            margin-bottom: 1.25rem;
+            color: #111827;
+        }
+
+        .entry-summary p {
+            margin-bottom: 0.75rem;
         }
 
         /* Alphabetical Descriptor Index Section */
@@ -719,7 +806,7 @@ export function generateBoletimHTML(options: BoletimRenderOptions): string {
                     <div class="index-letter-header">${group.letter}</div>
                     ${group.items.map(item => `
                     <div class="index-item">
-                        <span class="index-descriptor-name">${escapeHTML(item.descriptor)}</span>
+                        <span class="index-descriptor-name">${item.isDiscontinued ? `<em>${escapeHTML(item.descriptor)}</em>` : escapeHTML(item.descriptor)}</span>
                         <span class="index-entry-links">
                             ${item.entries.map(e => `<a href="#entry-${e.index}" title="Proc. n.º ${escapeHTML(e.processo)} (${escapeHTML(e.data)})">${e.index}</a>`).join("")}
                         </span>
@@ -734,24 +821,55 @@ export function generateBoletimHTML(options: BoletimRenderOptions): string {
         <main class="boletim-body">
             ${entries.map(entry => `
             <article id="entry-${entry.index}" class="boletim-entry">
-                <div class="entry-descriptors">
-                    ${entry.descritores.map(d => `<div class="descriptor-item">${escapeHTML(d)}</div>`).join("")}
+                <div class="entry-metadata-box">
+                    ${(() => {
+                        const { regular, discontinued } = splitDescritores(entry.descritores);
+                        const hasDiscontinued = discontinued.length > 0;
+                        if (hasDiscontinued) {
+                            return `
+                            <div class="descriptors-container">
+                                <div class="desc-column">
+                                    <div class="desc-column-title">Descritores</div>
+                                    <ul class="desc-list">
+                                        ${regular.map(d => `<li>${escapeHTML(d)}</li>`).join("")}
+                                    </ul>
+                                </div>
+                                <div class="desc-column-divider"></div>
+                                <div class="desc-column">
+                                    <div class="desc-column-title">Descritores Descontinuados</div>
+                                    <ul class="desc-list discontinued">
+                                        ${discontinued.map(d => `<li><em>${escapeHTML(d)}</em></li>`).join("")}
+                                    </ul>
+                                </div>
+                            </div>`;
+                        } else {
+                            return `
+                            <div class="descriptors-container single-column">
+                                <div class="desc-column">
+                                    <div class="desc-column-title">Descritores</div>
+                                    <ul class="desc-list">
+                                        ${regular.map(d => `<li>${escapeHTML(d)}</li>`).join("")}
+                                    </ul>
+                                </div>
+                            </div>`;
+                        }
+                    })()}
+
+                    <div class="box-meta-details">
+                        <div class="meta-line meta-date">${escapeHTML(entry.data)}</div>
+                        <div class="meta-line meta-proc">Proc. n.º ${escapeHTML(entry.processo)}${entry.seccao ? ` - ${escapeHTML(entry.seccao)}` : ""}</div>
+                        <div class="entry-colectivo">
+                            <span class="judge-name relator">${escapeHTML(entry.colectivo.relator)}</span>
+                            ${entry.colectivo.adjuntos.map(adj => `<span class="judge-name adjunto">${escapeHTML(adj)}</span>`).join("")}
+                        </div>
+                        <div class="entry-permalink">
+                            <a href="${escapeHTML(entry.permalink)}" target="_blank" rel="noopener noreferrer">${escapeHTML(entry.permalink)}</a>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="entry-summary">
                     ${formatSummaryHTML(entry.sumario)}
-                </div>
-
-                <div class="entry-metadata">
-                    <div class="meta-line meta-date">${escapeHTML(entry.data)}</div>
-                    <div class="meta-line meta-proc">Proc. n.º ${escapeHTML(entry.processo)}${entry.seccao ? ` - ${escapeHTML(entry.seccao)}` : ""}</div>
-                    <div class="entry-colectivo">
-                        <span class="judge-name relator">${escapeHTML(entry.colectivo.relator)}</span>
-                        ${entry.colectivo.adjuntos.map(adj => `<span class="judge-name adjunto">${escapeHTML(adj)}</span>`).join("")}
-                    </div>
-                    <div class="entry-permalink">
-                        <a href="${escapeHTML(entry.permalink)}" target="_blank" rel="noopener noreferrer">${escapeHTML(entry.permalink)}</a>
-                    </div>
                 </div>
             </article>
             `).join("")}
@@ -767,7 +885,7 @@ export function generateBoletimHTML(options: BoletimRenderOptions): string {
                     <div class="index-letter-header">${group.letter}</div>
                     ${group.items.map(item => `
                     <div class="index-item">
-                        <span class="index-descriptor-name">${escapeHTML(item.descriptor)}</span>
+                        <span class="index-descriptor-name">${item.isDiscontinued ? `<em>${escapeHTML(item.descriptor)}</em>` : escapeHTML(item.descriptor)}</span>
                         <span class="index-entry-links">
                             ${item.entries.map(e => `<a href="#entry-${e.index}" title="Proc. n.º ${escapeHTML(e.processo)} (${escapeHTML(e.data)})">${e.index}</a>`).join("")}
                         </span>
@@ -832,7 +950,8 @@ export function generateBoletimMarkdown(options: BoletimRenderOptions): string {
             lines.push(`## ${group.letter} {.unnumbered}`);
             for (const item of group.items) {
                 const entryRefs = item.entries.map(e => `[${e.index}](#entry-${e.index})`).join(", ");
-                lines.push(`* **${item.descriptor}**: ${entryRefs}`);
+                const formattedDesc = item.isDiscontinued ? `*${item.descriptor}*` : `**${item.descriptor}**`;
+                lines.push(`* ${formattedDesc}: ${entryRefs}`);
             }
             lines.push("");
         }
@@ -845,13 +964,23 @@ export function generateBoletimMarkdown(options: BoletimRenderOptions): string {
 
     for (const entry of entries) {
         lines.push("\\noindent");
-        for (const desc of entry.descritores) {
-            lines.push(`**${desc.replace(/`/g, "")}**\\`);
+        const { regular, discontinued } = splitDescritores(entry.descritores);
+        if (discontinued.length > 0) {
+            lines.push("**Descritores:**\\");
+            for (const desc of regular) {
+                lines.push(`\\quad **${desc.replace(/`/g, "")}**\\`);
+            }
+            lines.push("**Descritores Descontinuados:**\\");
+            for (const desc of discontinued) {
+                lines.push(`\\quad *${desc.replace(/`/g, "")}*\\`);
+            }
+        } else {
+            lines.push("**Descritores:**\\");
+            for (const desc of regular) {
+                lines.push(`\\quad **${desc.replace(/`/g, "")}**\\`);
+            }
         }
         lines.push("");
-        lines.push(cleanSummaryForMarkdown(entry.sumario));
-        lines.push("");
-        lines.push(`\\medskip`);
         lines.push(`\\noindent ${entry.data}\\`);
         lines.push(`Proc. n.º ${entry.processo}${entry.seccao ? ` - ${entry.seccao}` : ""}\\`);
         lines.push(`${entry.colectivo.relator}\\`);
@@ -860,6 +989,9 @@ export function generateBoletimMarkdown(options: BoletimRenderOptions): string {
         }
         // Markdown autolink: pandoc escapes the "%" in percent-encoded URLs, which breaks a raw \href.
         lines.push(`<${entry.permalink}>`);
+        lines.push("");
+        lines.push("\\medskip");
+        lines.push(cleanSummaryForMarkdown(entry.sumario));
         lines.push("");
         lines.push("\\bigskip");
         lines.push("\\hrule");

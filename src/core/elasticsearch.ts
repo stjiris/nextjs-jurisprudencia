@@ -87,7 +87,8 @@ export default async function search(query: QueryDslQueryContainer | QueryDslQue
         must.push({ terms: { STATE: _PUBLIC_STATES } });
     }
     const client = await getElasticSearchClient();
-    return await client.search<JurisprudenciaDocument>({
+    try {
+        return await client.search<JurisprudenciaDocument>({
         index: JurisprudenciaVersion,
         query: {
             bool: {
@@ -107,6 +108,33 @@ export default async function search(query: QueryDslQueryContainer | QueryDslQue
         _source: (filterableProps as any[]).concat("Sumário"),
         ...extras // Allows
     });
+    } catch (e) {
+        console.warn("[ES] Search failed (Elasticsearch may be offline):", (e as any)?.message || e);
+        const emptyAggs: Record<string, any> = {
+            MinAno: { value: null },
+            MaxAno: { value: null }
+        };
+        if (saggs) {
+            for (const k of Object.keys(saggs)) {
+                emptyAggs[k] = {
+                    doc_count_error_upper_bound: 0,
+                    sum_other_doc_count: 0,
+                    buckets: []
+                };
+            }
+        }
+        return {
+            took: 0,
+            timed_out: false,
+            _shards: { total: 0, successful: 0, skipped: 0, failed: 0 },
+            hits: {
+                total: { value: 0, relation: "eq" },
+                max_score: null,
+                hits: []
+            },
+            aggregations: emptyAggs
+        } as any;
+    }
 }
 
 export const asciiFold = (s: string) => s
@@ -120,6 +148,10 @@ export const asciiFold = (s: string) => s
     .replace(/[\xDE\xFE]/g, 'th')
     .replace(/\xDF/g, 'ss')
     .replace(/[\u0152\u0153]/g, 'oe');
+
+export function escapeLuceneSlash(s: string): string {
+    return s.replace(/(?<!\\)\//g, "\\/");
+}
 
 export function padZero(num: number | string, size: number = 4): string {
     let s = num.toString();
@@ -148,15 +180,58 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
             let must_not = filtersUsed[aggName].filter((o) => o.startsWith("not:")).map((o) => o.substring(4));
             let must_or_should = !isJurisprudenciaDocumentGenericKey(aggName) || body["_should"]?.includes(aggName) ? "should" : "must";
 
-            // Detect advanced operators in any value (literal parens/quotes, or whole words AND/OR/NOT)
-            const hasAdvanced = (arr: string[]) => arr.some((v) => /[()"]|\bAND\b|\bOR\b|\bNOT\b/i.test(v));
+            // Detect advanced operators in any value (literal parens, or whole words AND/OR/NOT).
+            // A simple quoted string (e.g. "1ª Secção" or "Admitir") is an exact filter term, NOT a boolean query expression!
+            const hasAdvanced = (arr: string[]) => arr.some((v) => {
+                const trimmed = v.trim();
+                if (/^"[^"]*"$/.test(trimmed)) return false;
+                return /[()]|\bAND\b|\bOR\b|\bNOT\b/i.test(trimmed);
+            });
             const termClause = (fieldName: string, o: string) => {
-                if (o.startsWith('"') && o.endsWith('"')) {
-                    // Exact match: use keyword field so the normalizer is applied automatically
-                    return { term: { [fieldName]: { value: o.slice(1, -1) } } };
+                const isQuoted = o.startsWith('"') && o.endsWith('"');
+                const val = isQuoted ? o.slice(1, -1) : o;
+                const isGenericKeyword = fieldName.endsWith('.Index.keyword');
+                const rawField = isGenericKeyword ? fieldName.replace(/\.keyword$/, '.raw') : fieldName;
+
+                if (isQuoted) {
+                    if (isGenericKeyword) {
+                        return {
+                            bool: {
+                                should: [
+                                    { term: { [rawField]: { value: val } } },
+                                    { term: { [fieldName]: { value: val } } },
+                                    { term: { [fieldName]: { value: asciiFold(val).toLowerCase() } } },
+                                    { term: { [fieldName]: { value: asciiFold(val).toUpperCase() } } },
+                                    { term: { [fieldName]: { value: val, case_insensitive: true } } }
+                                ],
+                                minimum_should_match: 1
+                            }
+                        };
+                    }
+                    return { term: { [fieldName]: { value: val } } };
                 }
-                // Wildcard: strip accents from the pattern to match the asciifolding normalizer on stored values
-                const pattern = fieldName.endsWith('.keyword') ? asciiFold(o) : o;
+
+                // Unquoted: match exact term on raw or normalized, or wildcard substring
+                if (isGenericKeyword) {
+                    const folded = asciiFold(val);
+                    return {
+                        bool: {
+                            should: [
+                                { term: { [rawField]: { value: val } } },
+                                { term: { [rawField]: { value: val, case_insensitive: true } } },
+                                { term: { [fieldName]: { value: folded.toLowerCase() } } },
+                                { term: { [fieldName]: { value: folded.toUpperCase() } } },
+                                { wildcard: { [rawField]: { value: `*${val}*`, case_insensitive: true } } },
+                                { wildcard: { [fieldName]: { value: `*${folded.toLowerCase()}*` } } },
+                                { wildcard: { [fieldName]: { value: `*${folded.toUpperCase()}*` } } },
+                                { wildcard: { [fieldName]: { value: `*${folded}*`, case_insensitive: true } } }
+                            ],
+                            minimum_should_match: 1
+                        }
+                    };
+                }
+
+                const pattern = fieldName.endsWith('.keyword') ? asciiFold(val) : val;
                 return { wildcard: { [fieldName]: { value: `*${pattern}*`, case_insensitive: true } } };
             };
 
@@ -170,11 +245,11 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
             //   + A, + B, ∨ C → (A AND B) OR C
             if (must_include.length > 0 || or_include.length > 0) {
                 const mustClauses = hasAdvanced(must_include)
-                    ? [{ query_string: { query: must_include.join(" "), fields: [fieldName], default_operator: "OR" as const } }]
+                    ? [{ query_string: { query: must_include.map(escapeLuceneSlash).join(" "), fields: [fieldName], default_operator: "OR" as const } }]
                     : must_include.map(o => termClause(fieldName, o));
 
                 const orClauses = hasAdvanced(or_include)
-                    ? [{ query_string: { query: or_include.join(" OR "), fields: [fieldName], default_operator: "OR" as const } }]
+                    ? [{ query_string: { query: or_include.map(escapeLuceneSlash).join(" OR "), fields: [fieldName], default_operator: "OR" as const } }]
                     : or_include.map(o => termClause(fieldName, o));
 
                 if (orClauses.length === 0) {
@@ -198,7 +273,7 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
                         must_not: [
                             {
                                 query_string: {
-                                    query: must_not.join(" "),
+                                    query: must_not.map(escapeLuceneSlash).join(" "),
                                     fields: [fieldName],
                                     default_operator: "OR" as const
                                 }
@@ -315,7 +390,7 @@ export function createQueryDslQueryContainer(string?: string | string[]): QueryD
     const TEXT_FIELDS = ["Texto", "Sumário", "CONTENT", "*.Index"];
 
     return values.map(q => {
-        const trimmed = q.trim();
+        const trimmed = escapeLuceneSlash(q.trim());
         // Fully quoted → exact phrase query (default analyzer preserves position gaps for stopwords)
         if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
             return { query_string: { query: trimmed, fields: TEXT_FIELDS, phrase_slop: 0 } };
