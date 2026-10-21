@@ -180,12 +180,12 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
             let must_not = filtersUsed[aggName].filter((o) => o.startsWith("not:")).map((o) => o.substring(4));
             let must_or_should = !isJurisprudenciaDocumentGenericKey(aggName) || body["_should"]?.includes(aggName) ? "should" : "must";
 
-            // Detect advanced operators in any value (literal parens, or whole words AND/OR/NOT).
-            // A simple quoted string (e.g. "1ª Secção" or "Admitir") is an exact filter term, NOT a boolean query expression!
+            // Detect advanced boolean operators (whole words AND/OR/NOT).
+            // Normal values with parentheses (e.g. "4.ª Secção (Social)") or simple quoted strings are filter terms, NOT boolean query expressions!
             const hasAdvanced = (arr: string[]) => arr.some((v) => {
                 const trimmed = v.trim();
                 if (/^"[^"]*"$/.test(trimmed)) return false;
-                return /[()]|\bAND\b|\bOR\b|\bNOT\b/i.test(trimmed);
+                return /\bAND\b|\bOR\b|\bNOT\b/i.test(trimmed);
             });
             const termClause = (fieldName: string, o: string) => {
                 const isQuoted = o.startsWith('"') && o.endsWith('"');
