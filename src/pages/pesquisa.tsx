@@ -57,7 +57,7 @@ function ShowResults({results, searchParams, searchInfo}: {results: SearchHandle
 
     return <>
         <div className="mb-2 d-flex align-items-center gap-2">
-            <SelectNavigate name="rpp-select" className="me-1" defaultValue={rpp} valueToHref={(v, params) => {
+            <SelectNavigate name="rpp-select" className="results-toolbar-control" defaultValue={rpp} valueToHref={(v, params) => {
                                                                                                     const newParams = modifySearchParams(params, "rpp", v);
                                                                                                     return `/pesquisa?${modifySearchParams(newParams, "page", "0")}`;
                                                                                                 } }>
@@ -67,7 +67,7 @@ function ShowResults({results, searchParams, searchInfo}: {results: SearchHandle
                 <option value="100">100</option>
                 <option value="500">500</option>
             </SelectNavigate>
-            <SelectNavigate name="sort" className="me-2" defaultValue={sort} valueToHref={(v, params) => `/pesquisa?${modifySearchParams(params, "sort", v)}` }>
+            <SelectNavigate name="sort" className="results-toolbar-control" defaultValue={sort} valueToHref={(v, params) => `/pesquisa?${modifySearchParams(params, "sort", v)}` }>
                 <option value="score">Relevância</option>
                 <option value="asc">Data Ascendente</option>
                 <option value="des">Data Descendente</option>
@@ -76,7 +76,7 @@ function ShowResults({results, searchParams, searchInfo}: {results: SearchHandle
                 href={`/api/boletim/pesquisa/html?${searchParams.toString()}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-sm btn-outline-secondary ms-auto d-flex align-items-center gap-1"
+                className="results-toolbar-control ms-auto"
                 title="Visualizar os acórdãos desta página no formato Boletim de Jurisprudência"
             >
                 <i className="bi bi-file-earmark-text"></i>
