@@ -8,9 +8,6 @@ export const SHAREPOINT_FONTE = "STJ (Sharepoint)";
 export const DGSI_FONTE = "STJ (DGSI)";
 export const SYNC_REVIEW_INDEX = "juris-sync-review";
 
-// Editors' work is at stake in the other states, so those are held for a person.
-const ADOPTABLE_STATES = ["importação", "público"];
-
 // Interno-only data that externo's copy doesn't carry and must survive the overwrite.
 const PRESERVED_FIELDS = ["Texto Não Anonimizado", "Sumário Não Anonimizado", "ENTITIES", "Original"];
 const PRESERVED_HASH_FIELDS = ["Texto Não Anonimizado", "Sumário Não Anonimizado"];
@@ -31,19 +28,15 @@ const isAdoption = (existing, incoming) =>
  * Returns { action, target?, reason?, possibleDuplicate? } where action is one of
  * "overwrite" | "adopt" | "create" | "hold".
  *
- * A SharePoint document is only adopted on process number + Data, because one
- * process can hold several decisions. A process-only match creates the document
- * and flags it, so a different decision is never overwritten.
+ * A SharePoint document is adopted on process number + Data, whatever its state:
+ * what arrives from externo is the finished production work, and interno only needs
+ * to show it. One process can hold several decisions, so a process-only match
+ * creates the document and flags it, and a different decision is never overwritten.
  */
 export function planSyncDoc(incoming, uuidHit, processHits) {
     const sameUrl = incoming.URL ? processHits.find(h => h.source.URL === incoming.URL) : undefined;
     const direct = uuidHit ?? sameUrl;
-    if (direct) {
-        if (!isAdoption(direct.source, incoming)) return { action: "overwrite", target: direct };
-        return ADOPTABLE_STATES.includes(direct.source.STATE)
-            ? { action: "adopt", target: direct }
-            : { action: "hold", target: direct, reason: "in-progress" };
-    }
+    if (direct) return { action: isAdoption(direct.source, incoming) ? "adopt" : "overwrite", target: direct };
 
     if (incoming.Fonte !== DGSI_FONTE) return { action: "create" };
 
@@ -52,10 +45,7 @@ export function planSyncDoc(incoming, uuidHit, processHits) {
     if (sameDate.length === 0) return { action: "create", possibleDuplicate: sharepoint.length > 0 };
     if (sameDate.length > 1) return { action: "hold", reason: "several-candidates" };
 
-    const [target] = sameDate;
-    return ADOPTABLE_STATES.includes(target.source.STATE)
-        ? { action: "adopt", target }
-        : { action: "hold", target, reason: "in-progress" };
+    return { action: "adopt", target: sameDate[0] };
 }
 
 /**

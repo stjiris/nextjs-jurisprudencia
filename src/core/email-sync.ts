@@ -31,22 +31,26 @@ interface SyncPayload {
 // Fields holding the ORIGINAL, non-anonimized text. These must never reach the
 // público (externo) deployment — not over the shared mailbox, not into externo's
 // index. Same set the public document page already gates behind authentication.
+// CONTENT and Original can hold it too: see stripNonAnon.
 const NON_ANON_FIELDS = ["Texto Não Anonimizado", "Sumário Não Anonimizado"] as const;
 
-// Only DGSI documents carry a CONTENT that is safe for externo (scraped from the
-// public DGSI site). See stripNonAnon.
+// Only DGSI documents carry a CONTENT and an Original that are safe for externo
+// (scraped from the public DGSI site). See stripNonAnon.
 const PUBLIC_CONTENT_FONTE = "STJ (DGSI)";
 
 // Return a shallow copy of the content safe to send to / store on externo: the
-// non-anonimized text fields removed, and CONTENT removed unless it comes from DGSI.
-// CONTENT is a flat bag of the document's raw text — for SharePoint and manually
-// created docs it can hold the original, pre-anonimization text (names and all), so
-// it must not reach the público index. For DGSI docs CONTENT is public and feeds
-// público full-text search, so it is kept.
+// non-anonimized text fields removed, and CONTENT and Original removed unless they
+// come from DGSI. For SharePoint and manually created docs both can hold the
+// pre-anonimization text (names and all), and anonymization doesn't clear them, so
+// they must not reach the público index. For DGSI docs they are public, and CONTENT
+// feeds público full-text search, so they are kept.
 function stripNonAnon<T extends Record<string, any>>(content: T): T {
     const clone: Record<string, any> = { ...content };
     for (const field of NON_ANON_FIELDS) delete clone[field];
-    if (clone.Fonte !== PUBLIC_CONTENT_FONTE) delete clone.CONTENT;
+    if (clone.Fonte !== PUBLIC_CONTENT_FONTE) {
+        delete clone.CONTENT;
+        delete clone.Original;
+    }
     return clone as T;
 }
 

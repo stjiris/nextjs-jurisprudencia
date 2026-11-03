@@ -25,20 +25,17 @@ test("SharePoint document with the same process and date is adopted despite a di
     assert.equal(plan.target.id, "a");
 });
 
-test("a published SharePoint document is adopted", () => {
-    assert.equal(planSyncDoc(dgsi(), null, [sp("a", { STATE: "público" })]).action, "adopt");
-});
-
-for (const STATE of ["preparação", "privado", "eliminado"]) {
-    test(`SharePoint document in ${STATE} is held, by process match and by UUID`, () => {
+for (const STATE of ["importação", "preparação", "privado", "eliminado", "público"]) {
+    test(`SharePoint document in ${STATE} is adopted, by process match and by UUID`, () => {
         const hit = sp("a", { STATE });
-        assert.deepEqual(
-            { action: planSyncDoc(dgsi(), null, [hit]).action, reason: planSyncDoc(dgsi(), null, [hit]).reason },
-            { action: "hold", reason: "in-progress" },
-        );
-        assert.equal(planSyncDoc(dgsi(), hit, [hit]).action, "hold");
+        assert.equal(planSyncDoc(dgsi(), null, [hit]).action, "adopt");
+        assert.equal(planSyncDoc(dgsi(), hit, [hit]).action, "adopt");
     });
 }
+
+test("adoption takes externo's STATE, so interno shows the finished work", () => {
+    assert.equal(mergeSyncDoc(dgsi(), sp("a", { STATE: "preparação" }).source).STATE, "público");
+});
 
 test("same process with a different date creates and flags, never overwrites", () => {
     const plan = planSyncDoc(dgsi(), null, [sp("a", { Data: "05/05/2025" })]);
