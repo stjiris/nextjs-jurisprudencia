@@ -8,8 +8,8 @@ type Response = { ok: boolean; processed?: number; errors?: number; message?: st
  * POST /api/gestao/sync-import
  *
  * Polls the mailbox for [JURIS-SYNC-BACK] emails from externo and applies
- * them: every received document fully overwrites the local copy (externo is
- * the source of truth) and is stored with STATE=público.
+ * them as described in core/sync-merge.mjs: externo is the source of truth,
+ * except for interno-only data such as the non-anonimized text.
  * Only active on internal deployments (SYNC_ROLE=interno).
  * Called by the sync_back_import Docker service every minute or manually.
  */

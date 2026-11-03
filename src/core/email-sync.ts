@@ -2,6 +2,7 @@ import crypto from "crypto";
 import { getElasticSearchClient } from "./elasticsearch";
 import { JurisprudenciaDocument, JurisprudenciaVersion } from "@stjiris/jurisprudencia-document";
 import { updateDoc } from "./doc";
+import { mergeSyncDoc, moveAdoptedFolder, planSyncDoc, reviewEntry, SYNC_REVIEW_INDEX } from "./sync-merge.mjs";
 
 const SYNC_SUBJECT_PREFIX = "[JURIS-SYNC]";
 const SYNC_REQUEST_SUBJECT_PREFIX = "[JURIS-SYNC-REQUEST]";
@@ -15,7 +16,7 @@ const SYNC_BODY_MARKER = "JURISSYNCv1:";
 const SYNC_BODY_END = ":ENDJURISSYNC";
 const GRAPH_BASE = "https://graph.microsoft.com/v1.0";
 
-// "sync-doc" carries one full document externo→interno (full overwrite, STATE=público).
+// "sync-doc" carries one full document externo→interno (see sync-merge.mjs).
 // "sync-request" is an empty interno→externo signal asking externo to run its export.
 export type SyncAction = "publicar" | "tornar-privado" | "editar" | "sync-doc" | "sync-request";
 
@@ -208,6 +209,60 @@ async function findDocIdByUUID(uuid: string): Promise<string | null> {
     return hit?._id ?? null;
 }
 
+// --- Apply a document from externo on interno ---
+
+async function applySyncDoc(uuid: string, content: Record<string, any>): Promise<boolean> {
+    const client = await getElasticSearchClient();
+    const processo = content["Número de Processo"];
+    const toHit = (h: any) => ({ id: h._id as string, source: h._source as Record<string, any> });
+
+    const uuidResult = await client.search<Record<string, any>>({
+        index: JurisprudenciaVersion,
+        query: { term: { UUID: uuid } },
+        size: 1,
+    });
+    const processResult = processo
+        ? await client.search<Record<string, any>>({
+            index: JurisprudenciaVersion,
+            query: { term: { "Número de Processo": processo } },
+            size: 50,
+        })
+        : null;
+    const uuidHit = uuidResult.hits.hits[0] ? toHit(uuidResult.hits.hits[0]) : null;
+    const processHits = (processResult?.hits.hits ?? []).map(toHit);
+
+    const plan = planSyncDoc(content, uuidHit, processHits);
+
+    if (plan.action === "hold" || plan.possibleDuplicate) {
+        await client.index({ index: SYNC_REVIEW_INDEX, id: uuid, document: reviewEntry(content, uuid, plan, processHits) });
+    }
+    if (plan.action === "hold") {
+        console.warn(`[email-sync-back] Held UUID=${uuid} for review: ${plan.reason}`);
+        return true;
+    }
+
+    const existing = plan.target?.source;
+    const doc = mergeSyncDoc(content, existing) as JurisprudenciaDocument;
+    if (plan.target) {
+        await client.index({ index: JurisprudenciaVersion, id: plan.target.id, document: doc });
+        console.log(`[email-sync-back] ${plan.action} UUID=${uuid} (id=${plan.target.id})`);
+    } else {
+        await client.index({ index: JurisprudenciaVersion, document: doc });
+        console.log(`[email-sync-back] Created UUID=${uuid}`);
+    }
+
+    if (plan.action === "adopt") {
+        // The document is already saved, so a folder problem must not fail the import.
+        try {
+            const lib = await import("@stjiris/filesystem-lib");
+            console.log(`[email-sync-back] Folder for UUID=${uuid}: ${moveAdoptedFolder(lib, existing, doc)}`);
+        } catch (err) {
+            console.error(`[email-sync-back] Could not move the folder for UUID=${uuid}:`, err);
+        }
+    }
+    return true;
+}
+
 // --- Apply action on external deployment ---
 
 async function applyAction(action: SyncAction, uuid: string, content?: Record<string, any>): Promise<boolean> {
@@ -237,22 +292,13 @@ async function applyAction(action: SyncAction, uuid: string, content?: Record<st
         return true;
     }
 
-    // sync-doc (externo→interno): externo is the source of truth, so replace the
-    // whole document (or create it), always público. No merge.
+    // sync-doc (externo→interno): see sync-merge.mjs for the matching and merge rules.
     if (action === "sync-doc") {
         if (!content) {
             console.warn(`[email-sync-back] sync-doc for UUID ${uuid} has no content, skipping`);
             return false;
         }
-        const doc = { ...content, STATE: "público" } as JurisprudenciaDocument;
-        if (docId) {
-            await client.index({ index: JurisprudenciaVersion, id: docId, document: doc });
-            console.log(`[email-sync-back] Overwrote UUID=${uuid} (id=${docId})`);
-        } else {
-            await client.index({ index: JurisprudenciaVersion, document: doc });
-            console.log(`[email-sync-back] Created UUID=${uuid}`);
-        }
-        return true;
+        return applySyncDoc(uuid, content);
     }
 
     if (!docId) {
@@ -457,8 +503,8 @@ export async function pollAndProcessSyncEmails(): Promise<{ processed: number; e
 // ============================================================================
 // Sync-back: externo → interno. Externo is the source of truth during the
 // testing phase — it exports every document changed since the last export
-// (tracked by _seq_no) as ONE email per document, and interno fully overwrites
-// its copy on import. No conflict detection by design. Reuses the single-doc
+// (tracked by _seq_no) as ONE email per document, and interno applies it per
+// sync-merge.mjs: externo wins except for interno-only data. Reuses the single-doc
 // SyncPayload machinery (buildSyncPayload / decodeSyncBody / verifySyncPayload /
 // applyAction) with action "sync-doc".
 // ============================================================================
