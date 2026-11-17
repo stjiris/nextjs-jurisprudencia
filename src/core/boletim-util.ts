@@ -846,36 +846,19 @@ export function generateBoletimHTML(options: BoletimRenderOptions): string {
             <article id="entry-${entry.index}" class="boletim-entry">
                 <div class="entry-metadata-box">
                     ${(() => {
-                        const { regular, discontinued } = splitDescritores(entry.descritores);
-                        const hasDiscontinued = discontinued.length > 0;
-                        if (hasDiscontinued) {
-                            return `
-                            <div class="descriptors-container">
-                                <div class="desc-column">
-                                    <div class="desc-column-title">Descritores</div>
-                                    <ul class="desc-list">
-                                        ${regular.map(d => `<li>${escapeHTML(d)}</li>`).join("")}
-                                    </ul>
-                                </div>
-                                <div class="desc-column-divider"></div>
-                                <div class="desc-column">
-                                    <div class="desc-column-title">Descritores Descontinuados</div>
-                                    <ul class="desc-list discontinued">
-                                        ${discontinued.map(d => `<li><em>${escapeHTML(d)}</em></li>`).join("")}
-                                    </ul>
-                                </div>
-                            </div>`;
-                        } else {
-                            return `
-                            <div class="descriptors-container single-column">
-                                <div class="desc-column">
-                                    <div class="desc-column-title">Descritores</div>
-                                    <ul class="desc-list">
-                                        ${regular.map(d => `<li>${escapeHTML(d)}</li>`).join("")}
-                                    </ul>
-                                </div>
-                            </div>`;
-                        }
+                        const cleanedList = (entry.descritores || [])
+                            .map(d => cleanDescriptorName(d))
+                            .filter(Boolean);
+                        const unique = [...new Set(cleanedList)].sort((a, b) => a.localeCompare(b, "pt-PT", { sensitivity: "base" }));
+                        return `
+                        <div class="descriptors-container single-column">
+                            <div class="desc-column">
+                                <div class="desc-column-title">Descritores</div>
+                                <ul class="desc-list">
+                                    ${unique.map(d => `<li>${escapeHTML(d)}</li>`).join("")}
+                                </ul>
+                            </div>
+                        </div>`;
                     })()}
 
                     <div class="box-meta-details">
@@ -995,21 +978,13 @@ export function generateBoletimMarkdown(options: BoletimRenderOptions): string {
     for (const entry of entries) {
         lines.push("\\noindent");
         lines.push("\\fbox{\\begin{minipage}{\\dimexpr\\textwidth-2\\fboxsep-2\\fboxrule\\relax}");
-        const { regular, discontinued } = splitDescritores(entry.descritores);
-        if (discontinued.length > 0) {
-            lines.push("{\\small\\textbf{Descritores}}\\par\\vspace{1pt}");
-            for (const desc of regular) {
-                lines.push(`\\quad {\\small\\textbf{${desc.replace(/`/g, "")}}}\\par`);
-            }
-            lines.push("\\vspace{3pt}{\\small\\textbf{Descritores Descontinuados}}\\par\\vspace{1pt}");
-            for (const desc of discontinued) {
-                lines.push(`\\quad {\\small\\textit{${desc.replace(/`/g, "")}}}\\par`);
-            }
-        } else {
-            lines.push("{\\small\\textbf{Descritores}}\\par\\vspace{1pt}");
-            for (const desc of regular) {
-                lines.push(`\\quad {\\small\\textbf{${desc.replace(/`/g, "")}}}\\par`);
-            }
+        const cleanedList = (entry.descritores || [])
+            .map(d => cleanDescriptorName(d))
+            .filter(Boolean);
+        const unique = [...new Set(cleanedList)].sort((a, b) => a.localeCompare(b, "pt-PT", { sensitivity: "base" }));
+        lines.push("{\\small\\textbf{Descritores}}\\par\\vspace{1pt}");
+        for (const desc of unique) {
+            lines.push(`\\quad {\\small\\textbf{${desc.replace(/[`\\&%$#_{}~^]/g, "")}}}\\par`);
         }
         lines.push("\\vspace{4pt}\\hrule\\vspace{4pt}");
         lines.push(`{\\small\\textbf{${entry.data}}}\\par`);

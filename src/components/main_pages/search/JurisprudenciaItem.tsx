@@ -58,6 +58,11 @@ export default function JurisprudenciaItem({ hit, searchId, hasQuery, searchQuer
                     {area ? secao ? ` - ${area} - ${secao}` : ` - ${area}` : ""}
                 </span>
                 {keys?.STATE.active && hit._source.STATE ? <span className="px-1"><BadgeFromState state={hit._source["STATE"]} /></span> : <></>}
+                {(hit._source as any)?.hasImages ? (
+                    <span className="badge bg-secondary ms-1 text-light" title="Esta decisão contém anexos gráficos ou imagens">
+                        <i className="bi bi-image me-1"></i>Imagens
+                    </span>
+                ) : null}
             </div>
         </div>
 

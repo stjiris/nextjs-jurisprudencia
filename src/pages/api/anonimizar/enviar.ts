@@ -91,6 +91,44 @@ export default LoggerApi(async function anonimizarHandler(
             console.warn("Failed to load/validate Anonimizado.json:", err);
         }
 
+        // Extract and structure image metadata for the Anonimizador
+        const rawHashes: string[] = [];
+        if (Array.isArray(doc.imageHashes)) {
+            for (const h of doc.imageHashes) {
+                if (typeof h === "string" && !rawHashes.includes(h)) {
+                    rawHashes.push(h);
+                }
+            }
+        }
+
+        // Also detect any image URLs embedded in the text fields
+        const textsToSearch = [
+            doc["Texto Não Anonimizado"],
+            doc["Texto"],
+            doc["Sumário Não Anonimizado"],
+            doc["Sumário"],
+            doc.Original?.["Decisão Texto Integral"],
+        ].filter(Boolean) as string[];
+
+        for (const t of textsToSearch) {
+            const matches = t.matchAll(/<img[^>]+src=["']?\/api\/images\/([^"'>\s]+)["']?[^>]*>/gi);
+            for (const m of matches) {
+                if (m[1] && !rawHashes.includes(m[1])) {
+                    rawHashes.push(m[1]);
+                }
+            }
+        }
+
+        if (rawHashes.length > 0) {
+            doc.hasImages = true;
+            doc.imageHashes = rawHashes;
+            doc.images = rawHashes.map((h: string) => ({
+                hash: h,
+                url: `/api/images/${h}`,
+                status: h.includes("_anon") ? "anonimizada" : "pendente_anonimizacao",
+            }));
+        }
+
         const sendRes = await fetch(`${anonimizadorUrl}/api/juris/save_document`, {
             method: "POST",
             headers: {

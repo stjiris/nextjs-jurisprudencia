@@ -11,6 +11,7 @@ import {
     BoletimEntry,
     BoletimRenderOptions
 } from '@/core/boletim-util';
+import { resolveRelator } from '../[[...filters]]';
 
 const useSource: JurisprudenciaDocumentKey[] = [
     "Data",
@@ -75,7 +76,7 @@ export default LoggerApi(async function boletimPesquisaHtmlHandler(
 
         const entries: BoletimEntry[] = hits.map((hit, idx) => {
             const src = (hit._source || {}) as any;
-            const relatorRaw = src["Relator Nome Profissional"]?.Show || src["Relator Nome Completo"]?.Show;
+            const relatorRaw = resolveRelator(src);
             const colectivo = extractColectivo(src.Texto, relatorRaw);
             const rawDesc = src.Descritores?.Show || src.Descritores?.Original || [];
             const descritores = Array.isArray(rawDesc) ? rawDesc.map((d: any) => `${d}`) : [];

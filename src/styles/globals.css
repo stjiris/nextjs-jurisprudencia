@@ -139,3 +139,16 @@ form label {
         width: 100%;
     }
 }
+
+/* ---- Decision Images Responsive Styling ---- */
+.doc-body img,
+.decisao-html img,
+.p-2 img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 1rem auto;
+    border: 1px solid var(--card-border, #e2e8f0);
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}

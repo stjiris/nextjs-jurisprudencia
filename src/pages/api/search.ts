@@ -1,4 +1,4 @@
-import search, { createQueryDslQueryContainer, DEFAULT_RESULTS_PER_PAGE, filterableProps, parseSort, populateFilters } from '@/core/elasticsearch';
+import search, { createQueryDslQueryContainer, DEFAULT_RESULTS_PER_PAGE, filterableProps, parseSort, populateFilters, SearchFilters } from '@/core/elasticsearch';
 import LoggerApi from '@/core/logger-api';
 import { authenticatedHandler } from '@/core/user/authenticate';
 import { HighlightFragment, SearchHandlerResponse } from '@/types/search';
@@ -7,14 +7,23 @@ import { JurisprudenciaDocumentKey } from '@stjiris/jurisprudencia-document';
 import type { NextApiRequest, NextApiResponse } from 'next'
 
 const TEXTO_PREVIEW_SIZE = 350
-const useSource: JurisprudenciaDocumentKey[] = ["ECLI", "Número de Processo", "UUID", "Data", "Área", "Meio Processual", "Relator Nome Profissional", "Secção", "Votação", "Decisão", "Descritores", "Sumário", "Texto", "STATE"]
+const useSource: (JurisprudenciaDocumentKey | "hasImages")[] = ["ECLI", "Número de Processo", "UUID", "Data", "Área", "Meio Processual", "Relator Nome Profissional", "Secção", "Votação", "Decisão", "Descritores", "Sumário", "Texto", "STATE", "hasImages" as any]
 
 export default LoggerApi(async function searchHandler(
     req: NextApiRequest,
     res: NextApiResponse<SearchHandlerResponse>
 ) {
-    const sfilters = { pre: [], after: [] };
+    const sfilters: SearchFilters = { pre: [], after: [] };
     populateFilters(sfilters, req.query)
+    const imgParam = (Array.isArray(req.query?.IMG) ? req.query.IMG[0] : req.query?.IMG)
+                  || (Array.isArray(req.query?.img) ? req.query.img[0] : req.query?.img);
+    if (imgParam && ["s", "sim", "1", "true", "yes", "y"].includes(imgParam.toLowerCase().trim())) {
+        sfilters.pre.push({
+            term: {
+                hasImages: true
+            }
+        });
+    }
     const sort: SortCombinations[] = [];
     parseSort(Array.isArray(req.query?.sort) ? req.query.sort[0] : req.query.sort, sort)
     const page = parseInt(Array.isArray(req.query.page) ? req.query.page[0] : req.query.page || "") || 0

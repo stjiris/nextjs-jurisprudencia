@@ -1,4 +1,6 @@
 import crypto from "crypto";
+import fs from "fs";
+import path from "path";
 import { getElasticSearchClient } from "./elasticsearch";
 import { JurisprudenciaDocument, JurisprudenciaVersion } from "@stjiris/jurisprudencia-document";
 import { updateDoc } from "./doc";
@@ -51,6 +53,37 @@ function stripNonAnon<T extends Record<string, any>>(content: T): T {
         delete clone.CONTENT;
         delete clone.Original;
     }
+
+    // Strict Privacy Barrier for Visual Media:
+    // Any <img> in public Texto or Sumário MUST be an internal anonymized image (_anon).
+    // If an un-redacted/original image is present, replace it with a safe placeholder
+    // to prevent any leak of handwritten signatures, IDs, or other personal data.
+    for (const textField of ["Texto", "Sumário"] as const) {
+        if (typeof clone[textField] === "string") {
+            clone[textField] = clone[textField].replace(
+                /<img\b([^>]*?)src=["']?([^"'>\s]+)["']?([^>]*?)>/gi,
+                (match: string, p1: string, src: string, p2: string) => {
+                    const cleanSrc = src.split(/[?#]/)[0];
+                    const filename = path.basename(cleanSrc);
+                    // Strictly verify it's an internal image endpoint with _anon in filename
+                    const isInternal = cleanSrc.startsWith("/api/images/") || !cleanSrc.includes("://");
+                    if (isInternal && filename.includes("_anon") && /^[a-zA-Z0-9_\-\.]+$/.test(filename)) {
+                        return match;
+                    }
+                    return `<span class="image-redacted-notice d-block text-muted fst-italic p-2 border my-2">[Imagem original não anonimizada omitida por salvaguarda de privacidade]</span>`;
+                }
+            );
+        }
+    }
+
+    // Keep only _anon image hashes with safe filenames
+    if (Array.isArray(clone.imageHashes)) {
+        clone.imageHashes = clone.imageHashes.filter(
+            (h: any) => typeof h === "string" && h.includes("_anon") && /^[a-zA-Z0-9_\-\.]+$/.test(h)
+        );
+        clone.hasImages = clone.imageHashes.length > 0;
+    }
+
     return clone as T;
 }
 
@@ -156,6 +189,60 @@ async function sendSyncEmailInternal(action: SyncAction, uuid: string, content?:
     // interno→externo: the público deployment must never receive the non-anonimized
     // text, so strip it before it ever enters the (shared) mailbox.
     const safeContent = content ? stripNonAnon(content) : content;
+
+    // Bundle anonymized image files when publishing
+    if (action === "publicar" && safeContent) {
+        const baseDir = process.env.IMAGES_PATH || path.join(process.cwd(), "images");
+        const anonImagesToBundle: string[] = [];
+
+        if (Array.isArray(safeContent.imageHashes)) {
+            for (const h of safeContent.imageHashes) {
+                if (typeof h === "string" && h.includes("_anon") && !anonImagesToBundle.includes(h)) {
+                    anonImagesToBundle.push(h);
+                }
+            }
+        }
+
+        // Also extract any _anon image from safeContent.Texto
+        if (typeof safeContent.Texto === "string") {
+            const matches = safeContent.Texto.matchAll(/\/api\/images\/([a-zA-Z0-9_\-\.]*_anon[a-zA-Z0-9_\-\.]*)/g);
+            for (const m of matches) {
+                if (m[1] && !anonImagesToBundle.includes(m[1])) {
+                    anonImagesToBundle.push(m[1]);
+                }
+            }
+        }
+
+        if (anonImagesToBundle.length > 0) {
+            const syncImages: Array<{ filename: string; data: string }> = [];
+            for (const imgName of anonImagesToBundle) {
+                const safeName = path.basename(imgName);
+                const filePath = path.join(baseDir, safeName);
+                try {
+                    if (fs.existsSync(filePath)) {
+                        const fileBuf = await fs.promises.readFile(filePath);
+                        // Only bundle if under 3MB to fit within email message limits
+                        if (fileBuf.length <= 3 * 1024 * 1024) {
+                            syncImages.push({
+                                filename: safeName,
+                                data: fileBuf.toString("base64"),
+                            });
+                        } else {
+                            console.warn(`[email-sync] Image ${safeName} is too large (${fileBuf.length} bytes) to bundle in sync email`);
+                        }
+                    } else {
+                        console.warn(`[email-sync] Image ${safeName} not found on disk at ${filePath}`);
+                    }
+                } catch (fsErr) {
+                    console.error(`[email-sync] Error reading image ${safeName}:`, fsErr);
+                }
+            }
+            if (syncImages.length > 0) {
+                safeContent.syncImages = syncImages;
+            }
+        }
+    }
+
     const payload = buildSyncPayload(action, uuid, safeContent);
 
     const payloadJson = JSON.stringify(payload);
@@ -280,6 +367,30 @@ async function applyAction(action: SyncAction, uuid: string, content?: Record<st
         content = stripNonAnon(content);
     }
 
+    // Persist any bundled anonymized images to the local IMAGES_PATH
+    if (content && Array.isArray(content.syncImages)) {
+        const baseDir = process.env.IMAGES_PATH || path.join(process.cwd(), "images");
+        try {
+            await fs.promises.mkdir(baseDir, { recursive: true });
+            for (const img of content.syncImages) {
+                if (img.filename && img.data) {
+                    const safeName = path.basename(img.filename.split(/[?#]/)[0]);
+                    // Strictly enforce _anon suffix, safe characters, and directory traversal protection
+                    if (safeName.includes("_anon") && !safeName.includes("..") && !safeName.includes("\0") && /^[a-zA-Z0-9_\-\.]+$/.test(safeName)) {
+                        const targetPath = path.join(baseDir, safeName);
+                        await fs.promises.writeFile(targetPath, Buffer.from(img.data, "base64"));
+                        console.log(`[email-sync] Persisted sync image ${safeName} to ${targetPath}`);
+                    } else {
+                        console.warn(`[email-sync] Rejected sync image without _anon or unsafe name: ${safeName}`);
+                    }
+                }
+            }
+        } catch (imgErr) {
+            console.error("[email-sync] Error saving syncImages:", imgErr);
+        }
+        delete content.syncImages;
+    }
+
     if (action === "publicar") {
         if (!docId) {
             if (!content) {
@@ -290,7 +401,12 @@ async function applyAction(action: SyncAction, uuid: string, content?: Record<st
             await client.index({ index: JurisprudenciaVersion, document: doc, refresh: "wait_for" });
             console.log(`[email-sync] Created document for UUID=${uuid} via publicar sync`);
         } else {
-            await updateDoc(docId, { STATE: "público" });
+            const updateFields: Record<string, any> = { STATE: "público" };
+            if (content?.Texto) updateFields.Texto = content.Texto;
+            if (content?.Sumário) updateFields.Sumário = content.Sumário;
+            if (content?.hasImages !== undefined) updateFields.hasImages = content.hasImages;
+            if (content?.imageHashes !== undefined) updateFields.imageHashes = content.imageHashes;
+            await updateDoc(docId, updateFields);
             console.log(`[email-sync] Updated STATE=público for UUID=${uuid} (id=${docId})`);
         }
         return true;

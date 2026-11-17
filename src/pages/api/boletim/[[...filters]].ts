@@ -13,12 +13,41 @@ import {
 import { spawn } from 'child_process';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
+export function resolveRelator(src: any): string[] | string | null {
+    if (!src) return null;
+    const rProf = src["Relator Nome Profissional"];
+    if (rProf) {
+        if (Array.isArray(rProf)) return rProf;
+        if (typeof rProf === "string") return rProf;
+        if (Array.isArray(rProf.Show) && rProf.Show.length > 0) return rProf.Show;
+        if (Array.isArray(rProf.Original) && rProf.Original.length > 0) return rProf.Original;
+        if (typeof rProf.Show === "string") return rProf.Show;
+        if (typeof rProf.Original === "string") return rProf.Original;
+    }
+    const rComp = src["Relator Nome Completo"];
+    if (rComp) {
+        if (Array.isArray(rComp)) return rComp;
+        if (typeof rComp === "string") return rComp;
+        if (Array.isArray(rComp.Show) && rComp.Show.length > 0) return rComp.Show;
+        if (Array.isArray(rComp.Original) && rComp.Original.length > 0) return rComp.Original;
+    }
+    const rOrig = src.Original?.["Relator Nome Profissional"] || src.Original?.["Relator"] || src.Original?.["Relator Nome Completo"];
+    if (rOrig) {
+        if (Array.isArray(rOrig)) return rOrig;
+        if (typeof rOrig === "string") return rOrig;
+    }
+    return null;
+}
+
 function formatSubtitle(area: string): string {
-    if (area.includes("Social")) return "Sumários de Acórdãos da Secção Social";
-    if (area.includes("Cível") || area.includes("Civel")) return "Sumários de Acórdãos das Secções Cíveis";
-    if (area.includes("Criminal")) return "Sumários de Acórdãos das Secções Criminais";
-    if (area.includes("Contencioso")) return "Sumários de Acórdãos do Contencioso";
-    return `Sumários de Acórdãos - ${area}`;
+    const clean = (area || "").trim();
+    if (/social/i.test(clean)) return "Sumários de Acórdãos da Secção Social";
+    if (/c[ií]vel/i.test(clean)) return "Sumários de Acórdãos das Secções Cíveis";
+    if (/criminal/i.test(clean)) return "Sumários de Acórdãos das Secções Criminais";
+    if (/contencioso/i.test(clean)) return "Sumários de Acórdãos do Contencioso";
+    if (/conflitos/i.test(clean)) return "Sumários de Acórdãos do Tribunal de Conflitos";
+    const withAccent = clean.replace(/^Area\b/i, "Área");
+    return `Sumários de Acórdãos - ${withAccent}`;
 }
 
 function parseDateForSort(dateStr: string): number {
@@ -162,7 +191,7 @@ export default LoggerApi(async function boletimHandler(
         // Map to structured BoletimEntry
         const entries: BoletimEntry[] = rawHits.map((hit, idx) => {
             const src = hit._source || {};
-            const relatorRaw = src["Relator Nome Profissional"]?.Show || src["Relator Nome Completo"]?.Show;
+            const relatorRaw = resolveRelator(src);
             const colectivo = extractColectivo(src.Texto, relatorRaw);
             const rawDesc = src.Descritores?.Show || src.Descritores?.Original || [];
             const descritores = Array.isArray(rawDesc) ? rawDesc.map(d => `${d}`) : [];

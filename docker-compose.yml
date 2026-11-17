@@ -4,6 +4,7 @@ volumes:
     rss_data: {}
     redis_data: {}
     etl_results: {}
+    acordaos_images: {}
 networks:
     juris-network:
         name: juris-network
@@ -30,11 +31,13 @@ services:
             SYNC_MS_MAILBOX: ${SYNC_MS_MAILBOX:-}
             SYNC_MS_TRUSTED_FROM: ${SYNC_MS_TRUSTED_FROM:-}
             SYNC_MS_CC: ${SYNC_MS_CC:-}
+            IMAGES_PATH: ${IMAGES_PATH:-/images}
         ports:
             - "${SERVER_HOST:-0.0.0.0}:${SERVER_PORT:-3000}:3000"
         volumes:
             - excel_data:/usr/src/app/files:rw
             - rss_data:/rss
+            - acordaos_images:${IMAGES_PATH:-/images}:rw
         depends_on:
             elasticsearch:
                 condition: service_healthy
@@ -71,11 +74,13 @@ services:
             SYNC_MS_MAILBOX: ${SYNC_MS_MAILBOX:-}
             SYNC_MS_RECIPIENT: ${SYNC_MS_RECIPIENT:-}
             SYNC_MS_CC: ${SYNC_MS_CC:-}
+            IMAGES_PATH: ${IMAGES_PATH:-/images}
         ports:
             - "${SERVER_HOST:-0.0.0.0}:${SERVER_PORT:-3000}:3000"
         volumes:
             - excel_data:/usr/src/app/files:rw
             - rss_data:/rss
+            - acordaos_images:${IMAGES_PATH:-/images}:rw
             - etl_results:/filesystem-results:rw
         depends_on:
             elasticsearch:
@@ -104,6 +109,7 @@ services:
             ANONIMIZADOR_SECRET: ${ANONIMIZADOR_SECRET}
             ANONIMIZADOR_URL: ${ANONIMIZADOR_URL:-http://anonimizador_dev:7999/anon-service}
             LOCAL_ROOT: /filesystem-results
+            IMAGES_PATH: ${IMAGES_PATH:-/images}
         ports:
             - "${SERVER_HOST:-0.0.0.0}:${SERVER_PORT:-3000}:3000"
         volumes:
@@ -112,6 +118,7 @@ services:
             - /usr/src/app/node_modules
             - rss_data:/rss
             - etl_results:/filesystem-results:rw
+            - acordaos_images:${IMAGES_PATH:-/images}:rw
         depends_on:
             elasticsearch:
                 condition: service_healthy
@@ -203,9 +210,11 @@ services:
             CLIENT_SECRET: ${CLIENT_SECRET:-}
             SITE_ID: ${SITE_ID:-}
             DRIVES: ${DRIVES:-}
+            IMAGES_PATH: ${IMAGES_PATH:-/images}
         volumes:
             - etl_results:/home/clitools/jurisprudencia-privada-etl/results
             - rss_data:/rss
+            - acordaos_images:${IMAGES_PATH:-/images}:rw
         profiles:
             - interno
         networks:
@@ -229,12 +238,14 @@ services:
             CLIENT_SECRET: ${CLIENT_SECRET:-}
             SITE_ID: ${SITE_ID:-}
             DRIVES: ${DRIVES:-}
+            IMAGES_PATH: ${IMAGES_PATH:-/images}
         volumes:
             - ../jurisprudencia-privada-etl:/home/clitools/jurisprudencia-privada-etl:rw
             - ../jurisprudencia-etl:/home/clitools/jurisprudencia-etl:rw
             - ../version-converter:/home/clitools/version-converter:rw
             - ../backup-jurisprudencia:/home/clitools/backup-jurisprudencia:rw
             - rss_data:/rss
+            - acordaos_images:${IMAGES_PATH:-/images}:rw
         profiles:
             - dev
         networks:

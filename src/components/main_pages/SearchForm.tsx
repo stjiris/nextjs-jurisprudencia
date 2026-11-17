@@ -200,6 +200,20 @@ export default function SearchForm({ count, filtersUsed }: { count: number; filt
                     </label>
                 </div>
 
+                <div className="form-check my-1">
+                    <input
+                        id="checkbox-has-images"
+                        type="checkbox"
+                        name="IMG"
+                        value="s"
+                        defaultChecked={search.get("IMG") === "s" || search.get("img") === "s"}
+                        className="form-check-input"
+                    />
+                    <label htmlFor="checkbox-has-images" className="form-check-label">
+                        <i className="bi bi-image me-1" /> Apenas com Imagens
+                    </label>
+                </div>
+
                 <SwapableFilterList filtersUsed={filtersUsed} />
             </div>
         </form>

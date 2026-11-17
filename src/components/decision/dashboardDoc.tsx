@@ -327,39 +327,36 @@ function GenericTokenSelection({ accessKey, doc, editorSuggestions, editorRestri
     const handlePaste = useCallback(async (e: ClipboardEvent<HTMLDivElement>) => {
         const text = e.clipboardData?.getData("text/plain") || "";
         const cleaned = text.replace(/^descritores\s*:\s*/i, "");
-        const tokens = cleaned.split(/[,;]/).map(t => t.trim()).filter(Boolean);
-        if (tokens.length < 2) return;
+        const tokens = cleaned.split(/[,;\r\n\t]+/).map(t => t.trim().replace(/^['’`]|['’`]$/g, "")).filter(Boolean);
+        if (tokens.length === 0) return;
 
         e.preventDefault();
 
         const results = await Promise.all(tokens.map(token => loadOptions(token)));
-        const matched: { value: string; label: string }[] = [];
-        const unmatched: string[] = [];
+        const finalTokens: { value: string; label: string }[] = [];
 
         for (let i = 0; i < tokens.length; i++) {
-            const normalizedToken = tokens[i].toLowerCase();
+            const rawToken = tokens[i];
+            const normalizedToken = rawToken.toLowerCase();
             const match = results[i].find(o => o.value.toLowerCase() === normalizedToken);
             if (match) {
-                matched.push(match);
-            } else {
-                unmatched.push(tokens[i]);
+                finalTokens.push(match);
+            } else if (!blockNewValues) {
+                // For non-restricted fields (like Descritores), accept the pasted token seamlessly without error popups
+                finalTokens.push({ value: rawToken, label: rawToken });
             }
         }
 
-        if (matched.length > 0) {
+        if (finalTokens.length > 0) {
             setSelectedValues(prev => {
-                const existing = new Set(prev.map(v => v.value));
-                const newValues = matched.filter(m => !existing.has(m.value));
-                const merged = [...prev, ...newValues];
+                const existing = new Set(prev.map(v => v.value.toLowerCase()));
+                const toAdd = finalTokens.filter(m => !existing.has(m.value.toLowerCase()));
+                const merged = [...prev, ...toAdd];
                 update(merged.map(v => v.value).join("\n"));
                 return merged;
             });
         }
-
-        if (unmatched.length > 0) {
-            alert(`${unmatched.length} descritor(es) não encontrado(s):\n${unmatched.join(", ")}`);
-        }
-    }, [loadOptions, update]);
+    }, [blockNewValues, loadOptions, update]);
 
     if (controlledKey) {
         const options = CanonicalValues[controlledKey].map(v => ({ value: v, label: v }));
