@@ -362,7 +362,7 @@ export default function SavedSessionsModal({ id = "modal-saved-sessions", onSess
                                 <i className="bi bi-inbox text-muted fs-1 d-block mb-2"></i>
                                 <h6 className="fw-semibold text-muted">Nenhuma pesquisa no histórico ainda</h6>
                                 <p className="text-muted small mb-0 max-w-md mx-auto px-3">
-                                    Pesquisa com os filtros ou termos pretendidos e clica em <b>"Guardar Pesquisa"</b> para adicionares ao teu histórico.
+                                    Pesquisa com os filtros ou termos pretendidos e clica em <b>&quot;Guardar Pesquisa&quot;</b> para adicionares ao teu histórico.
                                 </p>
                             </div>
                         ) : (
@@ -426,7 +426,7 @@ export default function SavedSessionsModal({ id = "modal-saved-sessions", onSess
                                                             {save.summary?.queryText && (
                                                                 <span className="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle">
                                                                     <i className="bi bi-search me-1"></i>
-                                                                    "{save.summary.queryText}"
+                                                                    &quot;{save.summary.queryText}&quot;
                                                                 </span>
                                                             )}
                                                             {save.summary?.dateRange && (
