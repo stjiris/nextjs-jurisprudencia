@@ -9,6 +9,7 @@ import {
     normalizeSeccao,
     formatSubtitle,
     renderDocx,
+    cleanDescriptorName,
     BoletimEntry,
     BoletimRenderOptions,
     formatPeriodHeader
