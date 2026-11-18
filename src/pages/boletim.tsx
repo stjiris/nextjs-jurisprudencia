@@ -143,6 +143,10 @@ export default function Boletim({ areas, minYear, maxYear }: BoletimProps) {
         return `${router.basePath}/api/boletim/${encodeURIComponent(area)}/${year}/${month}/pdf${buildQueryString}`
     }, [router.basePath, area, year, month, buildQueryString])
 
+    const docxUrl = useMemo(() => {
+        return `${router.basePath}/api/boletim/${encodeURIComponent(area)}/${year}/${month}/docx${buildQueryString}`
+    }, [router.basePath, area, year, month, buildQueryString])
+
     const handleFontSizeChange = (newSize: string) => {
         setFontSize(newSize)
         if (previewUrl) {
@@ -363,6 +367,16 @@ export default function Boletim({ areas, minYear, maxYear }: BoletimProps) {
                                     >
                                         Abrir noutro separador
                                     </a>
+                                    <button
+                                        type="button"
+                                        className="btn btn-sm btn-outline-success"
+                                        disabled={!hasAcordaos}
+                                        onClick={() => window.open(docxUrl, "_blank")}
+                                        title="Descarregar Boletim em formato Microsoft Word (.docx)"
+                                    >
+                                        <i className="bi bi-file-earmark-word me-1"></i>
+                                        Descarregar Word (.docx)
+                                    </button>
                                     <button
                                         type="button"
                                         className="btn btn-sm btn-outline-primary"

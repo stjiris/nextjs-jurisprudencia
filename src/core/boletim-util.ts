@@ -1,5 +1,7 @@
 import fs from "fs";
 import path from "path";
+import { spawn } from "child_process";
+import type { NextApiResponse } from "next";
 
 export interface ColectivoJudges {
     relator: string;
@@ -31,12 +33,80 @@ export interface DescriptorIndexItem {
 }
 
 export function isDiscontinuedDescriptor(desc: string): boolean {
-    const trimmed = desc.trim();
-    return trimmed.startsWith("'") || trimmed.startsWith("’") || trimmed.startsWith("`");
+    // Deprecated quote-based heuristic removed: quotes/apostrophes are formatting artifacts from Word/OCR.
+    return false;
+}
+
+export function resolveRelator(src: any): string[] | string | null {
+    if (!src) return null;
+    const rProf = src["Relator Nome Profissional"];
+    if (rProf) {
+        if (Array.isArray(rProf)) return rProf;
+        if (typeof rProf === "string") return rProf;
+        if (Array.isArray(rProf.Show) && rProf.Show.length > 0) return rProf.Show;
+        if (Array.isArray(rProf.Original) && rProf.Original.length > 0) return rProf.Original;
+        if (typeof rProf.Show === "string") return rProf.Show;
+        if (typeof rProf.Original === "string") return rProf.Original;
+    }
+    const rComp = src["Relator Nome Completo"];
+    if (rComp) {
+        if (Array.isArray(rComp)) return rComp;
+        if (typeof rComp === "string") return rComp;
+        if (Array.isArray(rComp.Show) && rComp.Show.length > 0) return rComp.Show;
+        if (Array.isArray(rComp.Original) && rComp.Original.length > 0) return rComp.Original;
+    }
+    const rOrig = src.Original?.["Relator Nome Profissional"] || src.Original?.["Relator"] || src.Original?.["Relator Nome Completo"];
+    if (rOrig) {
+        if (Array.isArray(rOrig)) return rOrig;
+        if (typeof rOrig === "string") return rOrig;
+    }
+    return null;
 }
 
 export function cleanDescriptorName(desc: string): string {
-    return desc.trim().replace(/^['’`]|['’`]$/g, "").trim();
+    if (!desc) return "";
+    return desc
+        .trim()
+        .replace(/^['’`"“”«»\s]+|['’`"“”«»\s]+$/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+export function normalizeSeccao(raw?: string): string | undefined {
+    if (!raw) return undefined;
+    let s = raw.trim();
+    if (!s) return undefined;
+
+    // Normalizar variações sem acento de Seccao / Secao
+    s = s.replace(/\bse[cç][aã]o\s*social\b/gi, "Secção Social");
+    s = s.replace(/\bse[cç][oõ]es\s*c[ií]veis\b/gi, "Secções Cíveis");
+    s = s.replace(/\bse[cç][aã]o\s*c[ií]vel\b/gi, "Secção Cível");
+    s = s.replace(/\bse[cç][oõ]es\s*criminais\b/gi, "Secções Criminais");
+    s = s.replace(/\bse[cç][aã]o\s*criminal\b/gi, "Secção Criminal");
+    s = s.replace(/\bse[cç][aã]o\s*(?:do\s*)?contencioso\b/gi, "Secção do Contencioso");
+    
+    // Normalizar ordinais: "1ª", "1a", "1 ª", "1.ª"
+    s = s.replace(/\b([1-7])\s*[ºªa]\s*(?:se[cç][aã]o)?\b/gi, "$1.ª Secção");
+    s = s.replace(/\bse[cç][aã]o\b/gi, "Secção");
+    s = s.replace(/\bse[cç][oõ]es\b/gi, "Secções");
+    return s;
+}
+
+export function formatSubtitle(area: string): string {
+    const clean = (area || "").trim();
+    if (/social/i.test(clean)) return "Sumários de Acórdãos da Secção Social (4.ª Secção)";
+    if (/c[ií]vel|c[ií]veis/i.test(clean)) return "Sumários de Acórdãos das Secções Cíveis (1.ª, 2.ª e 7.ª Secções)";
+    if (/criminal|criminais/i.test(clean)) return "Sumários de Acórdãos das Secções Criminais (3.ª e 5.ª Secções)";
+    if (/contencioso/i.test(clean)) return "Sumários de Acórdãos da Secção de Contencioso";
+    if (/conflitos/i.test(clean)) return "Sumários de Acórdãos do Tribunal de Conflitos";
+
+    let normalized = clean
+        .replace(/^Area\b/i, "Área")
+        .replace(/\b([1-7])\s*[ºªa]\s*(?:se[cç][aã]o)?\b/gi, "$1.ª Secção")
+        .replace(/\bse[cç][aã]o\b/gi, "Secção")
+        .replace(/\bse[cç][oõ]es\b/gi, "Secções");
+
+    return `Sumários de Acórdãos — ${normalized}`;
 }
 
 export function splitDescritores(descritores: string[]): {
@@ -47,12 +117,12 @@ export function splitDescritores(descritores: string[]): {
     const discontinued: string[] = [];
 
     for (const d of descritores) {
-        const trimmed = d.trim();
-        if (!trimmed) continue;
-        if (isDiscontinuedDescriptor(trimmed)) {
-            discontinued.push(cleanDescriptorName(trimmed));
+        const cleaned = cleanDescriptorName(d);
+        if (!cleaned) continue;
+        if (isDiscontinuedDescriptor(cleaned)) {
+            discontinued.push(cleaned);
         } else {
-            regular.push(trimmed);
+            regular.push(cleaned);
         }
     }
 
@@ -76,8 +146,15 @@ export interface BoletimRenderOptions {
     entries: BoletimEntry[];
     descritorFilter?: string;
     searchQuery?: string;
+    periodStr?: string;
+    emissionDate?: string;
     fontSize?: string; // e.g. "10pt" | "11pt" | "12pt" | "13pt" (default: "11pt")
-    indexPosition?: "start" | "end"; // default: "end"
+    indexPosition?: "start" | "end" | "none"; // default: "end"
+    docxDownloadUrl?: string;
+    omitLogo?: boolean;
+    omitTitle?: boolean;
+    omitPeriod?: boolean;
+    omitFilters?: boolean;
 }
 
 // Cached Base64 of STJ Institutional Logo
@@ -313,10 +390,28 @@ export function formatPeriodHeader(month: string, year: string): string {
  * Generates institutional, responsive, print-ready HTML matching the official STJ Docx standards.
  */
 export function generateBoletimHTML(options: BoletimRenderOptions): string {
-    const { title, subtitle, area, year, month, entries, descritorFilter, searchQuery, fontSize = "11pt", indexPosition = "end" } = options;
+    const {
+        title,
+        subtitle,
+        area,
+        year,
+        month,
+        entries,
+        descritorFilter,
+        searchQuery,
+        periodStr: customPeriodStr,
+        emissionDate,
+        fontSize = "11pt",
+        indexPosition = "end",
+        docxDownloadUrl,
+        omitLogo = false,
+        omitTitle = false,
+        omitPeriod = false,
+        omitFilters = false
+    } = options;
     const logoBase64 = getStjLogoBase64();
     const logoSrc = logoBase64 ? `data:image/png;base64,${logoBase64}` : "/stj-logo.png";
-    const periodStr = formatPeriodHeader(month, year);
+    const periodStr = customPeriodStr || formatPeriodHeader(month, year);
     const indexGroups = buildDescriptorIndex(entries);
 
     // Font size scaling
@@ -791,32 +886,153 @@ export function generateBoletimHTML(options: BoletimRenderOptions): string {
                 color: #000000;
                 text-decoration: underline;
             }
+
+            .boletim-interactive-toolbar {
+                display: none !important;
+            }
+        }
+
+        /* Interactive Customization Toolbar */
+        .boletim-interactive-toolbar {
+            position: sticky;
+            top: 0;
+            z-index: 9999;
+            background: #1e293b;
+            color: #f8fafc;
+            padding: 0.65rem 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.12);
+            font-family: var(--font-sans);
+            font-size: 0.875rem;
+        }
+
+        .toolbar-brand {
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            white-space: nowrap;
+            color: #94a3b8;
+        }
+
+        .toolbar-toggles {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            flex-wrap: wrap;
+        }
+
+        .toolbar-toggles label {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            cursor: pointer;
+            margin: 0;
+            user-select: none;
+            color: #e2e8f0;
+            font-size: 0.85rem;
+        }
+
+        .toolbar-toggles input[type="checkbox"] {
+            cursor: pointer;
+            width: 15px;
+            height: 15px;
+            accent-color: #3b82f6;
+        }
+
+        .toolbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            white-space: nowrap;
+        }
+
+        .toolbar-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.4rem 0.85rem;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            border: none;
+            font-size: 0.85rem;
+            line-height: 1.2;
+            transition: background 0.15s, transform 0.1s;
+        }
+
+        .btn-print {
+            background: #2563eb;
+            color: #ffffff;
+        }
+
+        .btn-print:hover {
+            background: #1d4ed8;
+        }
+
+        .btn-docx {
+            background: #059669;
+            color: #ffffff;
+        }
+
+        .btn-docx:hover {
+            background: #047857;
+        }
+
+        @media print {
+            .d-print-none, .boletim-interactive-toolbar {
+                display: none !important;
+            }
         }
     </style>
 </head>
 <body>
+    <!-- Interactive Header Customization Toolbar -->
+    <div class="boletim-interactive-toolbar d-print-none">
+        <div class="toolbar-brand">
+            <span>Ajustar Cabeçalho:</span>
+        </div>
+        <div class="toolbar-toggles">
+            <label><input type="checkbox" id="toggle-logo"${omitLogo ? " checked" : ""} onchange="toggleHeaderElement('boletim-logo', !this.checked)" /> Omitir Logótipo</label>
+            <label><input type="checkbox" id="toggle-title"${omitTitle ? " checked" : ""} onchange="toggleHeaderElement('boletim-header-text', !this.checked)" /> Omitir Título</label>
+            <label><input type="checkbox" id="toggle-period"${omitPeriod ? " checked" : ""} onchange="toggleHeaderElement('boletim-period', !this.checked)" /> Omitir Período</label>
+            <label><input type="checkbox" id="toggle-filters"${omitFilters ? " checked" : ""} onchange="toggleHeaderElement('boletim-filters', !this.checked)" /> Omitir Filtros</label>
+        </div>
+        <div class="toolbar-actions">
+            <button type="button" class="toolbar-btn btn-print" onclick="window.print()" title="Imprimir documento ou Guardar em PDF">
+                Imprimir / PDF
+            </button>
+            ${docxDownloadUrl ? `
+            <a id="btn-export-docx" href="${escapeHTML(docxDownloadUrl)}" class="toolbar-btn btn-docx" download title="Descarregar documento formatado para Microsoft Word (.docx)">
+                Guardar Word (.docx)
+            </a>` : ""}
+        </div>
+    </div>
+
     <div class="document-container">
         <!-- STJ Institutional Header -->
-        <header class="boletim-header">
-            <div class="header-logo-container">
+        <header class="boletim-header" id="boletim-header">
+            <div class="header-logo-container" id="boletim-logo"${omitLogo ? ' style="display:none;"' : ''}>
                 <img src="${logoSrc}" alt="Supremo Tribunal de Justiça" />
             </div>
-            <div class="header-text">
+            <div class="header-text" id="boletim-header-text"${omitTitle ? ' style="display:none;"' : ''}>
                 <div class="stj-republica">República Portuguesa</div>
                 <div class="stj-org-title">Supremo Tribunal de Justiça</div>
                 <div class="boletim-title">${escapeHTML(subtitle)}</div>
-                <div class="boletim-period">${escapeHTML(periodStr)}</div>
+                <div class="boletim-period" id="boletim-period"${omitPeriod ? ' style="display:none;"' : ''}>
+                    ${escapeHTML(periodStr)}
+                    ${emissionDate ? ` &nbsp;•&nbsp; <span style="font-weight: normal; font-size: 0.9em; color: var(--stj-gray);">Compilado em ${escapeHTML(emissionDate)}</span>` : ""}
+                </div>
             </div>
         </header>
 
         ${descritorFilter ? `
-        <div class="filter-badge-box">
+        <div class="filter-badge-box" id="boletim-filters"${omitFilters ? ' style="display:none;"' : ''}>
             <strong>Caderno Temático:</strong> Filtrado pelo descritor "<em>${escapeHTML(descritorFilter)}</em>"
-        </div>` : ""}
-
-        ${searchQuery ? `
-        <div class="filter-badge-box">
-            <strong>Pesquisa Textual:</strong> "<em>${escapeHTML(searchQuery)}</em>"
         </div>` : ""}
 
         ${indexPosition === "start" ? `
@@ -902,6 +1118,34 @@ export function generateBoletimHTML(options: BoletimRenderOptions): string {
             </div>
         </footer>` : ""}
     </div>
+    <script>
+    function toggleHeaderElement(id, show) {
+        var el = document.getElementById(id);
+        if (el) {
+            el.style.display = show ? "" : "none";
+        }
+        var docxBtn = document.getElementById("btn-export-docx");
+        if (docxBtn) {
+            try {
+                var url = new URL(docxBtn.href, window.location.origin);
+                var map = {
+                    'boletim-logo': 'omitLogo',
+                    'boletim-header-text': 'omitTitle',
+                    'boletim-period': 'omitPeriod',
+                    'boletim-filters': 'omitFilters'
+                };
+                if (map[id]) {
+                    if (!show) {
+                        url.searchParams.set(map[id], "1");
+                    } else {
+                        url.searchParams.delete(map[id]);
+                    }
+                    docxBtn.href = url.pathname + url.search;
+                }
+            } catch(e){}
+        }
+    }
+    </script>
 </body>
 </html>`;
 }
@@ -1042,8 +1286,177 @@ function cleanSummaryForMarkdown(sumario: string): string {
         .replace(/<[^>]+>/g, " ")
         .replace(/&nbsp;/gi, " ")
         .replace(/&amp;/gi, "&")
-        // Collapse the spaces left by nested tags and trim each line: 4+ leading spaces would make pandoc render a code block.
-        .replace(/[ \t ]+/g, " ")
+        .replace(/[ \t\u00A0]+/g, " ")
         .split("\n").map(l => l.trim()).join("\n")
         .trim();
+}
+
+/**
+ * Generates structured Markdown optimized specifically for Pandoc Word (.docx) export.
+ */
+export function generateBoletimDocxMarkdown(options: BoletimRenderOptions): string {
+    const {
+        title,
+        subtitle,
+        area,
+        year,
+        month,
+        entries,
+        descritorFilter,
+        fontSize = "11pt",
+        indexPosition = "end",
+        periodStr: customPeriodStr,
+        emissionDate,
+        omitLogo,
+        omitTitle,
+        omitPeriod,
+        omitFilters
+    } = options;
+    const periodStr = customPeriodStr || formatPeriodHeader(month, year);
+    const indexGroups = buildDescriptorIndex(entries);
+
+    const lines: string[] = [];
+
+    lines.push("---");
+    lines.push(`title: "${title.replace(/"/g, '\\"')}"`);
+    lines.push(`subtitle: "${subtitle.replace(/"/g, '\\"')}"`);
+    lines.push(`date: "${periodStr}"`);
+    lines.push("---");
+    lines.push("");
+
+    if (!omitTitle) {
+        lines.push("# República Portuguesa {.unnumbered}");
+        lines.push("## Supremo Tribunal de Justiça {.unnumbered}");
+        lines.push(`### ${subtitle} {.unnumbered}`);
+        lines.push("");
+    }
+
+    if (!omitPeriod) {
+        lines.push(`**${periodStr}**`);
+        if (emissionDate) {
+            lines.push(`\n*Compilado em: ${emissionDate}*`);
+        }
+        lines.push("");
+    }
+
+    if (!omitFilters && descritorFilter) {
+        lines.push(`> **Caderno Temático:** *${descritorFilter}*\n`);
+    }
+
+    const appendIndex = () => {
+        lines.push("# Índice Alfabético por Tema / Descritor {.unnumbered}");
+        lines.push("");
+        for (const group of indexGroups) {
+            lines.push(`## ${group.letter} {.unnumbered}`);
+            for (const item of group.items) {
+                const entryRefs = item.entries.map(e => `[${e.index}](#entry-${e.index})`).join(", ");
+                lines.push(`* **${item.descriptor}**: ${entryRefs}`);
+            }
+            lines.push("");
+        }
+    };
+
+    if (indexPosition === "start") {
+        appendIndex();
+        lines.push("\n---\n");
+    }
+
+    for (const entry of entries) {
+        lines.push(`## Acórdão n.º ${entry.index} {#entry-${entry.index} .unnumbered}`);
+        lines.push("");
+        
+        // Institutional metadata block
+        const cleanedDesc = (entry.descritores || []).map(d => cleanDescriptorName(d)).filter(Boolean).join(" • ");
+        lines.push(`> **Descritores:** ${cleanedDesc}`);
+        lines.push(`> `);
+        lines.push(`> **Data:** ${entry.data} | **Processo:** ${entry.processo}${entry.seccao ? ` - ${entry.seccao}` : ""}`);
+        lines.push(`> `);
+        lines.push(`> **Relator:** ${entry.colectivo.relator}` + (entry.colectivo.adjuntos.length > 0 ? ` | **Adjuntos:** ${entry.colectivo.adjuntos.join(", ")}` : ""));
+        lines.push(`> `);
+        lines.push(`> **Hiperligação Oficial:** [${entry.permalink}](${entry.permalink})`);
+        lines.push("");
+        lines.push("### Sumário {.unnumbered}");
+        lines.push("");
+        lines.push(cleanSummaryForMarkdown(entry.sumario));
+        lines.push("");
+        lines.push("---");
+        lines.push("");
+    }
+
+    if (indexPosition === "end") {
+        appendIndex();
+    }
+
+    return lines.join("\n");
+}
+
+/**
+ * Compiles renderOptions directly into a downloadable Word .docx file using Pandoc.
+ */
+export async function renderDocx(
+    renderOptions: BoletimRenderOptions,
+    filename: string,
+    res: NextApiResponse
+): Promise<void> {
+    const markdown = generateBoletimDocxMarkdown(renderOptions);
+
+    return await new Promise<void>((resolve) => {
+        let pandocProc: any;
+        try {
+            pandocProc = spawn("pandoc", [
+                "-f", "markdown",
+                "-t", "docx",
+                "-o", "-",
+                "--standalone"
+            ]);
+        } catch (e: any) {
+            console.warn("[Boletim DOCX] Não foi possível iniciar o Pandoc:", e?.message);
+            res.status(500).json({ error: "Erro ao gerar DOCX: Pandoc indisponível no ambiente" });
+            resolve();
+            return;
+        }
+
+        const stdoutChunks: Buffer[] = [];
+        const stderrChunks: Buffer[] = [];
+        let hasError = false;
+
+        pandocProc.stdout.on("data", (chunk: Buffer) => {
+            stdoutChunks.push(chunk);
+        });
+
+        pandocProc.stderr.on("data", (chunk: Buffer) => {
+            stderrChunks.push(chunk);
+        });
+
+        pandocProc.on("error", (err: any) => {
+            hasError = true;
+            console.warn("[Boletim DOCX] Erro no processo Pandoc:", err.message);
+            if (!res.headersSent && !res.writableEnded) {
+                res.status(500).json({ error: `Erro ao compilar documento Word: ${err.message}` });
+            }
+            resolve();
+        });
+
+        pandocProc.on("close", (code: number) => {
+            if (code === 0 && stdoutChunks.length > 0 && !hasError) {
+                const docxBuffer = Buffer.concat(stdoutChunks);
+                res.writeHead(200, {
+                    "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    "Content-Disposition": `attachment; filename="${filename.replace(/[/\\?%*:|"<>]/g, "_")}.docx"`,
+                    "Content-Length": docxBuffer.length
+                });
+                res.end(docxBuffer);
+            } else {
+                const errMsg = Buffer.concat(stderrChunks).toString("utf-8");
+                console.error("[Boletim DOCX] Pandoc falhou com código", code, ":", errMsg);
+                if (!res.headersSent && !res.writableEnded) {
+                    res.status(500).json({ error: `Erro ao gerar documento Word (Pandoc exit ${code})` });
+                }
+            }
+            resolve();
+        });
+
+        pandocProc.stdin.write(markdown);
+        pandocProc.stdin.end();
+    });
 }

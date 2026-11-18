@@ -6,6 +6,9 @@ import {
     generatePermalink,
     generateBoletimHTML,
     generateBoletimMarkdown,
+    normalizeSeccao,
+    formatSubtitle,
+    renderDocx,
     BoletimEntry,
     BoletimRenderOptions,
     formatPeriodHeader
@@ -39,16 +42,6 @@ export function resolveRelator(src: any): string[] | string | null {
     return null;
 }
 
-function formatSubtitle(area: string): string {
-    const clean = (area || "").trim();
-    if (/social/i.test(clean)) return "Sumários de Acórdãos da Secção Social";
-    if (/c[ií]vel/i.test(clean)) return "Sumários de Acórdãos das Secções Cíveis";
-    if (/criminal/i.test(clean)) return "Sumários de Acórdãos das Secções Criminais";
-    if (/contencioso/i.test(clean)) return "Sumários de Acórdãos do Contencioso";
-    if (/conflitos/i.test(clean)) return "Sumários de Acórdãos do Tribunal de Conflitos";
-    const withAccent = clean.replace(/^Area\b/i, "Área");
-    return `Sumários de Acórdãos - ${withAccent}`;
-}
 
 function parseDateForSort(dateStr: string): number {
     if (!dateStr) return 0;
@@ -194,11 +187,13 @@ export default LoggerApi(async function boletimHandler(
             const relatorRaw = resolveRelator(src);
             const colectivo = extractColectivo(src.Texto, relatorRaw);
             const rawDesc = src.Descritores?.Show || src.Descritores?.Original || [];
-            const descritores = Array.isArray(rawDesc) ? rawDesc.map(d => `${d}`) : [];
+            const descritores = Array.isArray(rawDesc)
+                ? rawDesc.map(d => cleanDescriptorName(`${d}`)).filter(Boolean)
+                : [];
             const proc = src["Número de Processo"] || "Sem número";
             const uuid = src.UUID || hit._id;
             const permalink = generatePermalink(proc, uuid, getSiteBaseUrl(req));
-            const seccao = src.Secção?.Show?.[0] || undefined;
+            const seccao = normalizeSeccao(src.Secção?.Show?.[0] || src.Secção?.Original?.[0]) || undefined;
             const dataFormatted = src.Data ? src.Data.replace(/\//g, "-") : "";
 
             return {
@@ -216,6 +211,21 @@ export default LoggerApi(async function boletimHandler(
             };
         });
 
+        const omitLogo = req.query.omitLogo === "true" || req.query.omitLogo === "1";
+        const omitTitle = req.query.omitTitle === "true" || req.query.omitTitle === "1";
+        const omitPeriod = req.query.omitPeriod === "true" || req.query.omitPeriod === "1";
+        const omitFilters = req.query.omitFilters === "true" || req.query.omitFilters === "1";
+        const emissionDate = new Date().toLocaleDateString("pt-PT", {
+            day: "2-digit",
+            month: "long",
+            year: "numeric"
+        });
+
+        const docxParams = new URLSearchParams(req.query as any);
+        docxParams.delete("filters");
+        const docxQs = docxParams.toString() ? `?${docxParams.toString()}` : "";
+        const docxDownloadUrl = `${process.env.NEXT_BASE_PATH || ""}/api/boletim/${encodeURIComponent(area)}/${year}/${month}/docx${docxQs}`;
+
         const renderOptions: BoletimRenderOptions = {
             title,
             subtitle,
@@ -226,7 +236,14 @@ export default LoggerApi(async function boletimHandler(
             descritorFilter,
             searchQuery,
             fontSize,
-            indexPosition
+            indexPosition,
+            periodStr,
+            emissionDate,
+            docxDownloadUrl,
+            omitLogo,
+            omitTitle,
+            omitPeriod,
+            omitFilters
         };
 
         if (format === "html") {
@@ -236,11 +253,32 @@ export default LoggerApi(async function boletimHandler(
             return;
         }
 
+        if (format === "docx") {
+            const filename = `Boletim-${area}-${year}-${month}`.replace(/[\s\/\\?%*:|"<>]+/g, "-");
+            return await renderDocx(renderOptions, filename, res);
+        }
+
         // PDF Generation via Pandoc + XeLaTeX
         return await renderPDF(renderOptions, area, year, month, res);
     } catch (e) {
         console.warn("[Boletim API] Elasticsearch offline ou indisponível. A apresentar dados de referência das decisões oficiais:", (e as any)?.message);
         const entries = getReferenceEntriesForArea(area, year);
+
+        const omitLogo = req.query.omitLogo === "true" || req.query.omitLogo === "1";
+        const omitTitle = req.query.omitTitle === "true" || req.query.omitTitle === "1";
+        const omitPeriod = req.query.omitPeriod === "true" || req.query.omitPeriod === "1";
+        const omitFilters = req.query.omitFilters === "true" || req.query.omitFilters === "1";
+        const emissionDate = new Date().toLocaleDateString("pt-PT", {
+            day: "2-digit",
+            month: "long",
+            year: "numeric"
+        });
+
+        const docxParams = new URLSearchParams(req.query as any);
+        docxParams.delete("filters");
+        const docxQs = docxParams.toString() ? `?${docxParams.toString()}` : "";
+        const docxDownloadUrl = `${process.env.NEXT_BASE_PATH || ""}/api/boletim/${encodeURIComponent(area)}/${year}/${month}/docx${docxQs}`;
+
         const renderOptions: BoletimRenderOptions = {
             title,
             subtitle,
@@ -251,7 +289,14 @@ export default LoggerApi(async function boletimHandler(
             descritorFilter,
             searchQuery,
             fontSize,
-            indexPosition
+            indexPosition,
+            periodStr,
+            emissionDate,
+            docxDownloadUrl,
+            omitLogo,
+            omitTitle,
+            omitPeriod,
+            omitFilters
         };
 
         if (format === "html") {
@@ -259,6 +304,11 @@ export default LoggerApi(async function boletimHandler(
             res.setHeader("Content-Type", "text/html; charset=utf-8");
             res.status(200).send(html);
             return;
+        }
+
+        if (format === "docx") {
+            const filename = `Boletim-${area}-${year}-${month}`.replace(/[\s\/\\?%*:|"<>]+/g, "-");
+            return await renderDocx(renderOptions, filename, res);
         }
 
         return await renderPDF(renderOptions, area, year, month, res);

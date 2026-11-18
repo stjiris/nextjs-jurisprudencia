@@ -183,8 +183,9 @@ article:focus-within::after, article:hover::after{
     transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
-select.results-toolbar-control {
-    display: inline-block;
+select.results-toolbar-control,
+button.results-toolbar-control,
+a.results-toolbar-control {
     cursor: pointer;
 }
 

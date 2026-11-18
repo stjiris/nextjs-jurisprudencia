@@ -8,10 +8,13 @@ import { saveSearch } from "@/core/track-search"
 import { SearchHandlerResponse } from "@/types/search"
 import Link from "next/link"
 import { ReadonlyURLSearchParams, useSearchParams } from "next/navigation"
+import dynamic from "next/dynamic"
 import { modifySearchParams, SelectNavigate } from "@/components/main_pages/SelectNavigate"
 import JurisprudenciaItem from "@/components/main_pages/search/JurisprudenciaItem"
 import JurisprudenciaTable from "@/components/main_pages/search/JurisprudenciaTable"
 import { useAuth } from "@/contexts/auth"
+
+const SavedSessionsModal = dynamic(() => import("@/components/saved_sessions/SavedSessionsModal"), { ssr: false });
 
 interface PesquisaProps extends FormProps{
     searchedArray: string[]
@@ -44,6 +47,7 @@ export default function Pesquisa(props: PesquisaProps){
                 <NoResults /> :
             <Loading />
         }
+        <SavedSessionsModal />
     </GenericPageWithForm>
 }
 
@@ -76,12 +80,22 @@ function ShowResults({results, searchParams, searchInfo}: {results: SearchHandle
                 href={`/api/boletim/pesquisa/html?${searchParams.toString()}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="results-toolbar-control ms-auto"
+                className="results-toolbar-control"
                 title="Visualizar os acórdãos desta página no formato Boletim de Jurisprudência"
             >
                 <i className="bi bi-file-earmark-text"></i>
                 <span>Ver como Boletim</span>
             </Link>
+            <button
+                type="button"
+                className="results-toolbar-control"
+                data-bs-toggle="modal"
+                data-bs-target="#modal-saved-sessions"
+                title="Pesquisas Guardadas e Boletim Composto"
+            >
+                <i className="bi bi-bookmarks"></i>
+                <span>Pesquisas Guardadas</span>
+            </button>
         </div>
         {auth ? (
             <JurisprudenciaTable results={results} searchId={searchInfo.searchId} />
