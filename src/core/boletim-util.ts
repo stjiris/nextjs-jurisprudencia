@@ -1319,7 +1319,16 @@ export function generateBoletimDocxHTML(options: BoletimRenderOptions): string {
         omitFilters
     } = options;
     const periodStr = customPeriodStr || formatPeriodHeader(month, year);
+    let formattedPeriod = periodStr;
+    if (!formattedPeriod.toLowerCase().startsWith("período") && !formattedPeriod.toLowerCase().startsWith("decisões")) {
+        formattedPeriod = `Período das Decisões: ${formattedPeriod}`;
+    }
+
     const indexGroups = buildDescriptorIndex(entries);
+
+    const logoFile = fs.existsSync(path.join(process.cwd(), "public", "stj-logo.png"))
+        ? path.join(process.cwd(), "public", "stj-logo.png").replace(/\\/g, "/")
+        : "public/stj-logo.png";
 
     const parts: string[] = [];
 
@@ -1327,22 +1336,29 @@ export function generateBoletimDocxHTML(options: BoletimRenderOptions): string {
     parts.push('<html lang="pt-PT">');
     parts.push('<head>');
     parts.push('<meta charset="utf-8" />');
-    parts.push(`<title>${escapeHTML(title)}</title>`);
+    // Note: omit <title> so Pandoc standalone does not generate an unwanted oversized top banner
     parts.push('</head>');
     parts.push('<body style="font-family: \'Times New Roman\', Times, serif; color: #111827; line-height: 1.5;">');
 
-    // Institutional Header
+    // Institutional Header with Logo
     if (!omitTitle) {
-        parts.push('<div style="text-align: center; margin-bottom: 12pt;">');
-        parts.push('<p style="font-size: 11pt; letter-spacing: 0.15em; color: #4b5563; text-transform: uppercase; font-weight: bold; margin: 0 0 4pt 0;">REPÚBLICA PORTUGUESA</p>');
-        parts.push('<h1 style="font-size: 18pt; color: #800000; margin: 0 0 6pt 0; font-weight: bold;">Supremo Tribunal de Justiça</h1>');
-        parts.push(`<h2 style="font-size: 13pt; color: #111827; margin: 0 0 6pt 0; font-weight: bold;">${escapeHTML(subtitle || title)}</h2>`);
-        if (!omitPeriod) {
-            parts.push(`<p style="font-size: 10pt; color: #374151; margin: 0 0 10pt 0;"><em>Período das Decisões: ${escapeHTML(periodStr)}${emissionDate ? ` &bull; Compilado em ${escapeHTML(emissionDate)}` : ""}</em></p>`);
+        parts.push('<table style="width: 100%; border: none; margin-bottom: 12pt;">');
+        parts.push('<tr>');
+        if (!omitLogo) {
+            parts.push(`<td style="width: 25%; vertical-align: middle; border: none; text-align: left;"><img src="${logoFile}" width="120" height="60" alt="STJ" /></td>`);
         }
-        parts.push('</div>');
+        parts.push(`<td style="width: ${!omitLogo ? "75%" : "100%"}; text-align: right; vertical-align: middle; border: none;">`);
+        parts.push('<p style="font-size: 10pt; letter-spacing: 0.15em; color: #4b5563; text-transform: uppercase; font-weight: bold; margin: 0 0 3pt 0;">REPÚBLICA PORTUGUESA</p>');
+        parts.push('<h1 style="font-size: 18pt; color: #800000; margin: 0 0 5pt 0; font-weight: bold;">Supremo Tribunal de Justiça</h1>');
+        parts.push(`<h2 style="font-size: 13pt; color: #111827; margin: 0 0 5pt 0; font-weight: bold;">${escapeHTML(subtitle || title)}</h2>`);
+        if (!omitPeriod) {
+            parts.push(`<p style="font-size: 9.5pt; color: #374151; margin: 0;"><em>${escapeHTML(formattedPeriod)}${emissionDate ? ` &bull; Compilado em ${escapeHTML(emissionDate)}` : ""}</em></p>`);
+        }
+        parts.push('</td>');
+        parts.push('</tr>');
+        parts.push('</table>');
     } else if (!omitPeriod) {
-        parts.push(`<p style="text-align: center; font-size: 10pt; color: #374151; margin: 0 0 10pt 0;"><em>Período das Decisões: ${escapeHTML(periodStr)}${emissionDate ? ` &bull; Compilado em ${escapeHTML(emissionDate)}` : ""}</em></p>`);
+        parts.push(`<p style="text-align: center; font-size: 10pt; color: #374151; margin: 0 0 10pt 0;"><em>${escapeHTML(formattedPeriod)}${emissionDate ? ` &bull; Compilado em ${escapeHTML(emissionDate)}` : ""}</em></p>`);
     }
 
     if (!omitFilters && descritorFilter) {
@@ -1351,7 +1367,7 @@ export function generateBoletimDocxHTML(options: BoletimRenderOptions): string {
         parts.push('</div>');
     }
 
-    parts.push('<hr style="border: none; border-top: 1.5pt solid #800000; margin: 12pt 0 18pt 0;" />');
+    parts.push('<hr style="border: none; border-top: 1.5pt solid #800000; margin: 10pt 0 18pt 0;" />');
 
     const renderIndexHTML = () => {
         const indexParts: string[] = [];
@@ -1359,12 +1375,10 @@ export function generateBoletimDocxHTML(options: BoletimRenderOptions): string {
         indexParts.push('<h2 style="font-size: 15pt; color: #800000; text-align: center; text-transform: uppercase; margin-bottom: 14pt;">Índice Alfabético por Tema / Descritor</h2>');
         for (const group of indexGroups) {
             indexParts.push(`<h3 style="font-size: 12pt; color: #800000; border-bottom: 1px solid #d1d5db; margin-top: 14pt; margin-bottom: 6pt;">${escapeHTML(group.letter)}</h3>`);
-            indexParts.push('<ul style="margin-top: 4pt; margin-bottom: 10pt; padding-left: 18pt;">');
             for (const item of group.items) {
                 const links = item.entries.map(e => `<a href="#entry-${e.index}">Proc. ${escapeHTML(e.processo)}</a>`).join(", ");
-                indexParts.push(`<li style="margin-bottom: 3pt; font-size: 10pt;"><strong>${escapeHTML(item.descriptor)}</strong>: ${links}</li>`);
+                indexParts.push(`<p style="margin: 2pt 0 2pt 12pt; font-size: 10pt;"><strong>${escapeHTML(item.descriptor)}</strong>: ${links}</p>`);
             }
-            indexParts.push('</ul>');
         }
         indexParts.push('</div>');
         return indexParts.join('\n');
@@ -1387,34 +1401,31 @@ export function generateBoletimDocxHTML(options: BoletimRenderOptions): string {
         // Bookmark anchor for cross-referencing from index
         parts.push(`<a id="entry-${entry.index}" name="entry-${entry.index}"></a>`);
 
-        // Bordered Metadata Box (Official STJ rectangular frame)
-        parts.push('<table border="1" cellpadding="8" cellspacing="0" style="width: 100%; border: 1.5pt solid #000000; border-collapse: collapse; margin-bottom: 10pt;">');
+        // Bordered Metadata Box (Official STJ rectangular frame using pure paragraphs for Word table block fidelity)
+        parts.push('<table border="1" cellpadding="8" cellspacing="0" style="width: 100%; border: 1.5pt solid #000000; border-collapse: collapse; margin-bottom: 12pt;">');
+        parts.push('<colgroup><col style="width: 100%;" /></colgroup>');
         parts.push('<tbody>');
         parts.push('<tr>');
         parts.push('<td style="border: 1.5pt solid #000000; padding: 10pt; background-color: #ffffff;">');
 
-        parts.push('<p style="font-weight: bold; font-size: 11pt; margin: 0 0 4pt 0; color: #000000;">Descritores</p>');
+        parts.push('<p style="font-weight: bold; font-size: 11pt; margin: 0 0 6pt 0; color: #000000;">Descritores</p>');
         if (uniqueDesc.length > 0) {
-            parts.push('<ul style="margin: 0 0 8pt 0; padding-left: 18pt;">');
             for (const desc of uniqueDesc) {
-                parts.push(`<li style="margin-bottom: 2pt; font-size: 10pt; color: #111827;">${escapeHTML(desc)}</li>`);
+                parts.push(`<p style="margin: 1pt 0 1pt 12pt; font-size: 10pt; color: #111827;">&bull; &nbsp;${escapeHTML(desc)}</p>`);
             }
-            parts.push('</ul>');
         } else {
-            parts.push('<p style="font-size: 10pt; font-style: italic; margin: 0 0 8pt 0; color: #4b5563;">Sem descritores registados.</p>');
+            parts.push('<p style="margin: 2pt 0; font-size: 10pt; font-style: italic; color: #4b5563;">Sem descritores registados.</p>');
         }
 
-        parts.push('<hr style="border: none; border-top: 1px solid #9ca3af; margin: 8pt 0;" />');
+        parts.push('<p style="margin: 8pt 0 6pt 0; color: #9ca3af; font-size: 9pt;">__________________________________________________________________________________</p>');
 
-        parts.push('<p style="font-size: 10pt; margin: 0; line-height: 1.45; color: #111827;">');
-        parts.push(`<strong>${escapeHTML(entry.data)}</strong><br />`);
-        parts.push(`<strong>Proc. n.º ${escapeHTML(entry.processo)}${entry.seccao ? ` - ${escapeHTML(entry.seccao)}` : ""}</strong><br />`);
-        parts.push(`${escapeHTML(entry.colectivo.relator)}<br />`);
+        parts.push(`<p style="margin: 2pt 0; font-size: 10pt; color: #111827;"><strong>${escapeHTML(entry.data)}</strong></p>`);
+        parts.push(`<p style="margin: 2pt 0; font-size: 10pt; color: #111827;"><strong>Proc. n.º ${escapeHTML(entry.processo)}${entry.seccao ? ` - ${escapeHTML(entry.seccao)}` : ""}</strong></p>`);
+        parts.push(`<p style="margin: 2pt 0; font-size: 10pt; color: #111827;">${escapeHTML(entry.colectivo.relator)}</p>`);
         for (const adj of entry.colectivo.adjuntos) {
-            parts.push(`${escapeHTML(adj)}<br />`);
+            parts.push(`<p style="margin: 2pt 0; font-size: 10pt; color: #111827;">${escapeHTML(adj)}</p>`);
         }
-        parts.push(`<a href="${escapeHTML(entry.permalink)}" style="color: #1e40af; text-decoration: underline;">${escapeHTML(entry.permalink)}</a>`);
-        parts.push('</p>');
+        parts.push(`<p style="margin: 4pt 0 2pt 0; font-size: 9.5pt;"><a href="${escapeHTML(entry.permalink)}" style="color: #1e40af; text-decoration: underline;">${escapeHTML(entry.permalink)}</a></p>`);
 
         parts.push('</td>');
         parts.push('</tr>');
