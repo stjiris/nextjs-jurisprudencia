@@ -1292,9 +1292,15 @@ function cleanSummaryForMarkdown(sumario: string): string {
 }
 
 /**
- * Generates structured Markdown optimized specifically for Pandoc Word (.docx) export.
+ * Generates clean, semantic HTML tailored specifically for Pandoc Word (.docx) export.
+ * This ensures that:
+ * 1. The decision metadata and descriptors are enclosed in an official solid rectangular table box (<table border="1">).
+ * 2. Descriptors appear as an indented native bullet list (<ul><li>).
+ * 3. Metadata fields (Data, Processo, Relator, Adjuntos, Hiperligação) are rendered line-by-line.
+ * 4. Sumário paragraphs are cleanly formatted directly below the metadata box.
+ * 5. An alphabetical descriptor index is included at the start or end with working internal anchors.
  */
-export function generateBoletimDocxMarkdown(options: BoletimRenderOptions): string {
+export function generateBoletimDocxHTML(options: BoletimRenderOptions): string {
     const {
         title,
         subtitle,
@@ -1315,45 +1321,58 @@ export function generateBoletimDocxMarkdown(options: BoletimRenderOptions): stri
     const periodStr = customPeriodStr || formatPeriodHeader(month, year);
     const indexGroups = buildDescriptorIndex(entries);
 
-    const lines: string[] = [];
+    const parts: string[] = [];
 
-    // Note: We deliberately omit YAML frontmatter (title/subtitle/date) to prevent
-    // Word from injecting a duplicate oversized title banner above the institutional header.
+    parts.push('<!DOCTYPE html>');
+    parts.push('<html lang="pt-PT">');
+    parts.push('<head>');
+    parts.push('<meta charset="utf-8" />');
+    parts.push(`<title>${escapeHTML(title)}</title>`);
+    parts.push('</head>');
+    parts.push('<body style="font-family: \'Times New Roman\', Times, serif; color: #111827; line-height: 1.5;">');
+
+    // Institutional Header
     if (!omitTitle) {
-        lines.push("# REPÚBLICA PORTUGUESA {.unnumbered}");
-        lines.push("## Supremo Tribunal de Justiça {.unnumbered}");
-        lines.push(`### ${subtitle || title} {.unnumbered}`);
-        lines.push("");
-    }
-
-    if (!omitPeriod) {
-        lines.push(`*${periodStr}${emissionDate ? ` • Compilado em ${emissionDate}` : ""}*`);
-        lines.push("");
+        parts.push('<div style="text-align: center; margin-bottom: 12pt;">');
+        parts.push('<p style="font-size: 11pt; letter-spacing: 0.15em; color: #4b5563; text-transform: uppercase; font-weight: bold; margin: 0 0 4pt 0;">REPÚBLICA PORTUGUESA</p>');
+        parts.push('<h1 style="font-size: 18pt; color: #800000; margin: 0 0 6pt 0; font-weight: bold;">Supremo Tribunal de Justiça</h1>');
+        parts.push(`<h2 style="font-size: 13pt; color: #111827; margin: 0 0 6pt 0; font-weight: bold;">${escapeHTML(subtitle || title)}</h2>`);
+        if (!omitPeriod) {
+            parts.push(`<p style="font-size: 10pt; color: #374151; margin: 0 0 10pt 0;"><em>Período das Decisões: ${escapeHTML(periodStr)}${emissionDate ? ` &bull; Compilado em ${escapeHTML(emissionDate)}` : ""}</em></p>`);
+        }
+        parts.push('</div>');
+    } else if (!omitPeriod) {
+        parts.push(`<p style="text-align: center; font-size: 10pt; color: #374151; margin: 0 0 10pt 0;"><em>Período das Decisões: ${escapeHTML(periodStr)}${emissionDate ? ` &bull; Compilado em ${escapeHTML(emissionDate)}` : ""}</em></p>`);
     }
 
     if (!omitFilters && descritorFilter) {
-        lines.push(`> **Caderno Temático:** *${descritorFilter}*\n`);
+        parts.push('<div style="background-color: #fef3c7; border: 1px solid #fde68a; padding: 8pt 12pt; margin-bottom: 14pt;">');
+        parts.push(`<p style="margin: 0; font-size: 10pt; color: #92400e;"><strong>Caderno Temático:</strong> Filtrado pelo descritor "<em>${escapeHTML(descritorFilter)}</em>"</p>`);
+        parts.push('</div>');
     }
 
-    lines.push("---");
-    lines.push("");
+    parts.push('<hr style="border: none; border-top: 1.5pt solid #800000; margin: 12pt 0 18pt 0;" />');
 
-    const appendIndex = () => {
-        lines.push("# Índice Alfabético por Tema / Descritor {.unnumbered}");
-        lines.push("");
+    const renderIndexHTML = () => {
+        const indexParts: string[] = [];
+        indexParts.push('<div style="margin-top: 24pt; margin-bottom: 24pt;">');
+        indexParts.push('<h2 style="font-size: 15pt; color: #800000; text-align: center; text-transform: uppercase; margin-bottom: 14pt;">Índice Alfabético por Tema / Descritor</h2>');
         for (const group of indexGroups) {
-            lines.push(`## ${group.letter} {.unnumbered}`);
+            indexParts.push(`<h3 style="font-size: 12pt; color: #800000; border-bottom: 1px solid #d1d5db; margin-top: 14pt; margin-bottom: 6pt;">${escapeHTML(group.letter)}</h3>`);
+            indexParts.push('<ul style="margin-top: 4pt; margin-bottom: 10pt; padding-left: 18pt;">');
             for (const item of group.items) {
-                const entryRefs = item.entries.map(e => `[Proc. ${e.processo}](#entry-${e.index})`).join(", ");
-                lines.push(`* **${item.descriptor}**: ${entryRefs}`);
+                const links = item.entries.map(e => `<a href="#entry-${e.index}">Proc. ${escapeHTML(e.processo)}</a>`).join(", ");
+                indexParts.push(`<li style="margin-bottom: 3pt; font-size: 10pt;"><strong>${escapeHTML(item.descriptor)}</strong>: ${links}</li>`);
             }
-            lines.push("");
+            indexParts.push('</ul>');
         }
+        indexParts.push('</div>');
+        return indexParts.join('\n');
     };
 
     if (indexPosition === "start") {
-        appendIndex();
-        lines.push("\n---\n");
+        parts.push(renderIndexHTML());
+        parts.push('<hr style="border: none; border-top: 1.5pt solid #800000; margin: 18pt 0;" />');
     }
 
     for (const entry of entries) {
@@ -1365,49 +1384,66 @@ export function generateBoletimDocxMarkdown(options: BoletimRenderOptions): stri
             a.localeCompare(b, "pt-PT", { sensitivity: "base" })
         );
 
-        // Build the institutional metadata box as a bordered table (matching the PDF/HTML box layout)
-        lines.push('<table width="100%" border="1" cellpadding="8" cellspacing="0">');
-        lines.push("<tr>");
-        lines.push("<td>");
+        // Bookmark anchor for cross-referencing from index
+        parts.push(`<a id="entry-${entry.index}" name="entry-${entry.index}"></a>`);
 
-        lines.push("<p><strong>Descritores</strong></p>");
+        // Bordered Metadata Box (Official STJ rectangular frame)
+        parts.push('<table border="1" cellpadding="8" cellspacing="0" style="width: 100%; border: 1.5pt solid #000000; border-collapse: collapse; margin-bottom: 10pt;">');
+        parts.push('<tbody>');
+        parts.push('<tr>');
+        parts.push('<td style="border: 1.5pt solid #000000; padding: 10pt; background-color: #ffffff;">');
+
+        parts.push('<p style="font-weight: bold; font-size: 11pt; margin: 0 0 4pt 0; color: #000000;">Descritores</p>');
         if (uniqueDesc.length > 0) {
-            lines.push("<ul>");
+            parts.push('<ul style="margin: 0 0 8pt 0; padding-left: 18pt;">');
             for (const desc of uniqueDesc) {
-                lines.push(`<li>${escapeHTML(desc)}</li>`);
+                parts.push(`<li style="margin-bottom: 2pt; font-size: 10pt; color: #111827;">${escapeHTML(desc)}</li>`);
             }
-            lines.push("</ul>");
+            parts.push('</ul>');
         } else {
-            lines.push("<p><em>Sem descritores registados.</em></p>");
+            parts.push('<p style="font-size: 10pt; font-style: italic; margin: 0 0 8pt 0; color: #4b5563;">Sem descritores registados.</p>');
         }
 
-        lines.push("<hr />");
+        parts.push('<hr style="border: none; border-top: 1px solid #9ca3af; margin: 8pt 0;" />');
 
-        lines.push(`<p><strong>${escapeHTML(entry.data)}</strong><br />`);
-        lines.push(`<strong>Proc. n.º ${escapeHTML(entry.processo)}${entry.seccao ? ` - ${escapeHTML(entry.seccao)}` : ""}</strong><br />`);
-        lines.push(`${escapeHTML(entry.colectivo.relator)}<br />`);
+        parts.push('<p style="font-size: 10pt; margin: 0; line-height: 1.45; color: #111827;">');
+        parts.push(`<strong>${escapeHTML(entry.data)}</strong><br />`);
+        parts.push(`<strong>Proc. n.º ${escapeHTML(entry.processo)}${entry.seccao ? ` - ${escapeHTML(entry.seccao)}` : ""}</strong><br />`);
+        parts.push(`${escapeHTML(entry.colectivo.relator)}<br />`);
         for (const adj of entry.colectivo.adjuntos) {
-            lines.push(`${escapeHTML(adj)}<br />`);
+            parts.push(`${escapeHTML(adj)}<br />`);
         }
-        lines.push(`<a href="${escapeHTML(entry.permalink)}">${escapeHTML(entry.permalink)}</a></p>`);
+        parts.push(`<a href="${escapeHTML(entry.permalink)}" style="color: #1e40af; text-decoration: underline;">${escapeHTML(entry.permalink)}</a>`);
+        parts.push('</p>');
 
-        lines.push("</td>");
-        lines.push("</tr>");
-        lines.push("</table>");
-        lines.push("");
+        parts.push('</td>');
+        parts.push('</tr>');
+        parts.push('</tbody>');
+        parts.push('</table>');
 
-        // Sumário directly below the box (matching the PDF/HTML bulletin structure)
-        lines.push(cleanSummaryForMarkdown(entry.sumario));
-        lines.push("");
-        lines.push("<br />");
-        lines.push("");
+        // Sumário directly below the box
+        parts.push('<div style="font-size: 10.5pt; line-height: 1.55; text-align: justify; color: #111827; margin-top: 8pt; margin-bottom: 20pt;">');
+        parts.push(formatSummaryHTML(entry.sumario));
+        parts.push('</div>');
+
+        parts.push('<hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20pt 0;" />');
     }
 
     if (indexPosition === "end") {
-        appendIndex();
+        parts.push(renderIndexHTML());
     }
 
-    return lines.join("\n");
+    parts.push('</body>');
+    parts.push('</html>');
+
+    return parts.join('\n');
+}
+
+/**
+ * Generates structured Markdown optimized specifically for Pandoc Word (.docx) export.
+ */
+export function generateBoletimDocxMarkdown(options: BoletimRenderOptions): string {
+    return generateBoletimDocxHTML(options);
 }
 
 /**
@@ -1418,13 +1454,13 @@ export async function renderDocx(
     filename: string,
     res: NextApiResponse
 ): Promise<void> {
-    const markdown = generateBoletimDocxMarkdown(renderOptions);
+    const htmlContent = generateBoletimDocxHTML(renderOptions);
 
     return await new Promise<void>((resolve) => {
         let pandocProc: any;
         try {
             pandocProc = spawn("pandoc", [
-                "-f", "markdown",
+                "-f", "html",
                 "-t", "docx",
                 "-o", "-",
                 "--standalone"
@@ -1476,7 +1512,7 @@ export async function renderDocx(
             resolve();
         });
 
-        pandocProc.stdin.write(markdown);
+        pandocProc.stdin.write(htmlContent);
         pandocProc.stdin.end();
     });
 }
