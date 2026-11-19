@@ -1,4 +1,4 @@
-FROM node:20.19-bullseye-slim
+FROM node:20.19-bookworm-slim
 
 RUN apt update && apt install -y pandoc texlive-xetex
 
