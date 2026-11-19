@@ -984,8 +984,10 @@ export function generateBoletimHTML(options: BoletimRenderOptions): string {
         }
 
         @media print {
-            .d-print-none, .boletim-interactive-toolbar {
+            .d-print-none, .boletim-interactive-toolbar, #word-guide-modal {
                 display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
             }
         }
     </style>
@@ -1013,7 +1015,7 @@ export function generateBoletimHTML(options: BoletimRenderOptions): string {
     </div>
 
     <!-- Word Guide Modal (Opção C: Alta Fidelidade via PDF Reflow ou DOCX Direto) -->
-    <div id="word-guide-modal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.65); z-index:99999; align-items:center; justify-content:center; padding:1rem; backdrop-filter:blur(3px);">
+    <div id="word-guide-modal" class="d-print-none" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.65); z-index:99999; align-items:center; justify-content:center; padding:1rem; backdrop-filter:blur(3px);">
         <div style="background:#ffffff; border-radius:10px; max-width:540px; width:100%; padding:1.75rem; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; position:relative; max-height:90vh; overflow-y:auto;">
             <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.25rem; border-bottom:1px solid #e2e8f0; padding-bottom:0.75rem;">
                 <h3 style="margin:0; font-size:1.25rem; font-weight:700; color:#1e293b; display:flex; align-items:center; gap:0.5rem;">
@@ -1035,7 +1037,7 @@ export function generateBoletimHTML(options: BoletimRenderOptions): string {
                     <li>Clique abaixo em <strong>"Guardar como PDF"</strong> (no diálogo do navegador, escolha o destino <em>"Guardar como PDF"</em>).</li>
                     <li>No seu computador, clique com o botão direito no PDF descarregado e escolha <strong>"Abrir com" &rarr; "Word"</strong> (ou no Word: <em>Ficheiro &rarr; Abrir</em>).</li>
                 </ol>
-                <button type="button" onclick="window.print(); closeWordModal();" style="background:#2563eb; color:#ffffff; border:none; padding:0.55rem 1.15rem; border-radius:6px; font-weight:600; font-size:0.9rem; cursor:pointer; display:inline-flex; align-items:center; gap:0.5rem; box-shadow:0 2px 4px rgba(37,99,235,0.2);">
+                <button type="button" onclick="printPdfFromModal()" style="background:#2563eb; color:#ffffff; border:none; padding:0.55rem 1.15rem; border-radius:6px; font-weight:600; font-size:0.9rem; cursor:pointer; display:inline-flex; align-items:center; gap:0.5rem; box-shadow:0 2px 4px rgba(37,99,235,0.2);">
                     <span>📄</span> 1. Guardar como PDF
                 </button>
             </div>
@@ -1169,6 +1171,12 @@ export function generateBoletimHTML(options: BoletimRenderOptions): string {
     function closeWordModal() {
         var m = document.getElementById("word-guide-modal");
         if (m) m.style.display = "none";
+    }
+    function printPdfFromModal() {
+        closeWordModal();
+        setTimeout(function() {
+            window.print();
+        }, 150);
     }
     window.addEventListener("keydown", function(e) {
         if (e.key === "Escape") closeWordModal();
@@ -1459,12 +1467,12 @@ export function generateBoletimDocxHTML(options: BoletimRenderOptions): string {
         // Bookmark anchor and Acórdão Title
         parts.push(`<h3 id="entry-${entry.index}" style="color: #800000; font-size: 12pt; font-weight: bold; margin-top: 18pt; margin-bottom: 6pt;">Acórdão n.º ${entry.index}</h3>`);
 
-        // Bordered Metadata Box (2-row table: top row for descriptors, bottom row for metadata with clean dividing border)
+        // Bordered Metadata Box (Single solid frame matching the official PDF box)
         parts.push('<table border="1" cellpadding="8" cellspacing="0" style="width: 100%; border: 1.5pt solid #000000; border-collapse: collapse; margin-bottom: 12pt;">');
         parts.push('<colgroup><col style="width: 100%;" /></colgroup>');
         parts.push('<tbody>');
         parts.push('<tr>');
-        parts.push('<td style="border: 1.5pt solid #000000; border-bottom: 1pt solid #9ca3af; padding: 10pt 12pt 8pt 12pt; background-color: #ffffff;">');
+        parts.push('<td style="border: 1.5pt solid #000000; padding: 10pt 12pt; background-color: #ffffff;">');
         parts.push('<p style="font-weight: bold; font-size: 11pt; margin: 0 0 6pt 0; color: #000000;">Descritores</p>');
         if (uniqueDesc.length > 0) {
             for (const desc of uniqueDesc) {
@@ -1473,10 +1481,7 @@ export function generateBoletimDocxHTML(options: BoletimRenderOptions): string {
         } else {
             parts.push('<p style="margin: 2pt 0; font-size: 10pt; font-style: italic; color: #4b5563;">Sem descritores registados.</p>');
         }
-        parts.push('</td>');
-        parts.push('</tr>');
-        parts.push('<tr>');
-        parts.push('<td style="border: 1.5pt solid #000000; border-top: 1pt solid #9ca3af; padding: 8pt 12pt 10pt 12pt; background-color: #ffffff;">');
+        parts.push('<hr style="border: none; border-top: 1pt solid #9ca3af; margin: 8pt 0;" />');
         parts.push(`<p style="margin: 2pt 0; font-size: 10pt; color: #111827;"><strong>${escapeHTML(entry.data)}</strong></p>`);
         parts.push(`<p style="margin: 2pt 0; font-size: 10pt; color: #111827;"><strong>Proc. n.º ${escapeHTML(entry.processo)}${entry.seccao ? ` - ${escapeHTML(entry.seccao)}` : ""}</strong></p>`);
         parts.push(`<p style="margin: 2pt 0; font-size: 10pt; color: #111827;">${escapeHTML(entry.colectivo.relator)}</p>`);
