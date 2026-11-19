@@ -394,6 +394,12 @@ export default function Boletim({ areas, minYear, maxYear }: BoletimProps) {
                                     </button>
                                 </div>
                             </div>
+                            <div className="px-3 py-2 bg-light border-bottom small text-muted d-flex align-items-center gap-2">
+                                <i className="bi bi-lightbulb-fill text-warning flex-shrink-0"></i>
+                                <span>
+                                    <strong>Dica de Edição STJ:</strong> Para editar no Word com a formatação 100% idêntica ao boletim oficial (com molduras, colunas e etiquetas), guarde como PDF e abra o ficheiro diretamente no <strong>Microsoft Word</strong>.
+                                </span>
+                            </div>
                             <div className="card-body p-0">
                                 <iframe
                                     src={previewUrl}

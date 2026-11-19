@@ -1006,10 +1006,53 @@ export function generateBoletimHTML(options: BoletimRenderOptions): string {
             <button type="button" class="toolbar-btn btn-print" onclick="window.print()" title="Imprimir documento ou Guardar em PDF">
                 Imprimir / PDF
             </button>
-            ${docxDownloadUrl ? `
-            <a id="btn-export-docx" href="${escapeHTML(docxDownloadUrl)}" class="toolbar-btn btn-docx" download title="Descarregar documento formatado para Microsoft Word (.docx)">
-                Guardar Word (.docx)
-            </a>` : ""}
+            <button type="button" class="toolbar-btn btn-docx" onclick="openWordModal()" title="Opções e instruções para editar no Microsoft Word">
+                Editar no Word
+            </button>
+        </div>
+    </div>
+
+    <!-- Word Guide Modal (Opção C: Alta Fidelidade via PDF Reflow ou DOCX Direto) -->
+    <div id="word-guide-modal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.65); z-index:99999; align-items:center; justify-content:center; padding:1rem; backdrop-filter:blur(3px);">
+        <div style="background:#ffffff; border-radius:10px; max-width:540px; width:100%; padding:1.75rem; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; position:relative; max-height:90vh; overflow-y:auto;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.25rem; border-bottom:1px solid #e2e8f0; padding-bottom:0.75rem;">
+                <h3 style="margin:0; font-size:1.25rem; font-weight:700; color:#1e293b; display:flex; align-items:center; gap:0.5rem;">
+                    <span style="font-size:1.35rem;">📝</span> Edição no Microsoft Word
+                </h3>
+                <button type="button" onclick="closeWordModal()" style="background:none; border:none; font-size:1.75rem; line-height:1; cursor:pointer; color:#94a3b8; padding:0 0.25rem;">&times;</button>
+            </div>
+
+            <!-- Recomendado: Abrir PDF no Word -->
+            <div style="background:#eff6ff; border:1.5px solid #bfdbfe; border-radius:8px; padding:1.25rem; margin-bottom:1.25rem;">
+                <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem;">
+                    <span style="background:#2563eb; color:#ffffff; font-size:0.75rem; font-weight:700; text-transform:uppercase; padding:0.15rem 0.5rem; border-radius:4px;">Recomendado</span>
+                    <h4 style="margin:0; font-size:1rem; color:#1e3a8a; font-weight:700;">Fidelidade Visual 100% Oficial</h4>
+                </div>
+                <p style="margin:0 0 0.75rem 0; font-size:0.875rem; color:#1e40af; line-height:1.5;">
+                    O motor <strong>PDF Reflow do Microsoft Word</strong> converte o PDF oficial mantendo com máxima perfeição o logótipo do STJ, as molduras pretas, a disposição em 2 colunas e as etiquetas de índice:
+                </p>
+                <ol style="margin:0 0 1rem 1.25rem; font-size:0.85rem; color:#1e3a8a; line-height:1.5;">
+                    <li>Clique abaixo em <strong>"Guardar como PDF"</strong> (no diálogo do navegador, escolha o destino <em>"Guardar como PDF"</em>).</li>
+                    <li>No seu computador, clique com o botão direito no PDF descarregado e escolha <strong>"Abrir com" &rarr; "Word"</strong> (ou no Word: <em>Ficheiro &rarr; Abrir</em>).</li>
+                </ol>
+                <button type="button" onclick="window.print(); closeWordModal();" style="background:#2563eb; color:#ffffff; border:none; padding:0.55rem 1.15rem; border-radius:6px; font-weight:600; font-size:0.9rem; cursor:pointer; display:inline-flex; align-items:center; gap:0.5rem; box-shadow:0 2px 4px rgba(37,99,235,0.2);">
+                    <span>📄</span> 1. Guardar como PDF
+                </button>
+            </div>
+
+            <!-- Alternativa: Descarregar .docx Direto -->
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:1rem;">
+                <h4 style="margin:0 0 0.35rem 0; font-size:0.9rem; color:#475569; font-weight:600;">
+                    Em alternativa: Descarregamento .docx Direto
+                </h4>
+                <p style="margin:0 0 0.75rem 0; font-size:0.825rem; color:#64748b; line-height:1.45;">
+                    Descarrega o documento Word gerado pelo servidor (ideal para rascunhos rápidos ou extração de texto):
+                </p>
+                ${docxDownloadUrl ? `
+                <a id="btn-export-docx" href="${escapeHTML(docxDownloadUrl)}" class="toolbar-btn btn-docx" download style="display:inline-flex; text-decoration:none;" onclick="closeWordModal()">
+                    <span>📥</span> Descarregar .docx Direto
+                </a>` : ""}
+            </div>
         </div>
     </div>
 
@@ -1119,6 +1162,25 @@ export function generateBoletimHTML(options: BoletimRenderOptions): string {
         </footer>` : ""}
     </div>
     <script>
+    function openWordModal() {
+        var m = document.getElementById("word-guide-modal");
+        if (m) m.style.display = "flex";
+    }
+    function closeWordModal() {
+        var m = document.getElementById("word-guide-modal");
+        if (m) m.style.display = "none";
+    }
+    window.addEventListener("keydown", function(e) {
+        if (e.key === "Escape") closeWordModal();
+    });
+    document.addEventListener("DOMContentLoaded", function() {
+        var modalEl = document.getElementById("word-guide-modal");
+        if (modalEl) {
+            modalEl.addEventListener("click", function(e) {
+                if (e.target === modalEl) closeWordModal();
+            });
+        }
+    });
     function toggleHeaderElement(id, show) {
         var el = document.getElementById(id);
         if (el) {
