@@ -1317,25 +1317,17 @@ export function generateBoletimDocxMarkdown(options: BoletimRenderOptions): stri
 
     const lines: string[] = [];
 
-    lines.push("---");
-    lines.push(`title: "${title.replace(/"/g, '\\"')}"`);
-    lines.push(`subtitle: "${subtitle.replace(/"/g, '\\"')}"`);
-    lines.push(`date: "${periodStr}"`);
-    lines.push("---");
-    lines.push("");
-
+    // Note: We deliberately omit YAML frontmatter (title/subtitle/date) to prevent
+    // Word from injecting a duplicate oversized title banner above the institutional header.
     if (!omitTitle) {
-        lines.push("# República Portuguesa {.unnumbered}");
+        lines.push("# REPÚBLICA PORTUGUESA {.unnumbered}");
         lines.push("## Supremo Tribunal de Justiça {.unnumbered}");
-        lines.push(`### ${subtitle} {.unnumbered}`);
+        lines.push(`### ${subtitle || title} {.unnumbered}`);
         lines.push("");
     }
 
     if (!omitPeriod) {
-        lines.push(`**${periodStr}**`);
-        if (emissionDate) {
-            lines.push(`\n*Compilado em: ${emissionDate}*`);
-        }
+        lines.push(`*${periodStr}${emissionDate ? ` • Compilado em ${emissionDate}` : ""}*`);
         lines.push("");
     }
 
@@ -1343,13 +1335,16 @@ export function generateBoletimDocxMarkdown(options: BoletimRenderOptions): stri
         lines.push(`> **Caderno Temático:** *${descritorFilter}*\n`);
     }
 
+    lines.push("---");
+    lines.push("");
+
     const appendIndex = () => {
         lines.push("# Índice Alfabético por Tema / Descritor {.unnumbered}");
         lines.push("");
         for (const group of indexGroups) {
             lines.push(`## ${group.letter} {.unnumbered}`);
             for (const item of group.items) {
-                const entryRefs = item.entries.map(e => `[${e.index}](#entry-${e.index})`).join(", ");
+                const entryRefs = item.entries.map(e => `[Proc. ${e.processo}](#entry-${e.index})`).join(", ");
                 lines.push(`* **${item.descriptor}**: ${entryRefs}`);
             }
             lines.push("");
@@ -1362,24 +1357,49 @@ export function generateBoletimDocxMarkdown(options: BoletimRenderOptions): stri
     }
 
     for (const entry of entries) {
-        lines.push(`## Acórdão n.º ${entry.index} {#entry-${entry.index} .unnumbered}`);
+        // Collect cleaned unique descriptors in alphabetical order
+        const cleanedList = (entry.descritores || [])
+            .map(d => cleanDescriptorName(d))
+            .filter(Boolean);
+        const uniqueDesc = [...new Set(cleanedList)].sort((a, b) =>
+            a.localeCompare(b, "pt-PT", { sensitivity: "base" })
+        );
+
+        // Build the institutional metadata box as a bordered table (matching the PDF/HTML box layout)
+        lines.push('<table width="100%" border="1" cellpadding="8" cellspacing="0">');
+        lines.push("<tr>");
+        lines.push("<td>");
+
+        lines.push("<p><strong>Descritores</strong></p>");
+        if (uniqueDesc.length > 0) {
+            lines.push("<ul>");
+            for (const desc of uniqueDesc) {
+                lines.push(`<li>${escapeHTML(desc)}</li>`);
+            }
+            lines.push("</ul>");
+        } else {
+            lines.push("<p><em>Sem descritores registados.</em></p>");
+        }
+
+        lines.push("<hr />");
+
+        lines.push(`<p><strong>${escapeHTML(entry.data)}</strong><br />`);
+        lines.push(`<strong>Proc. n.º ${escapeHTML(entry.processo)}${entry.seccao ? ` - ${escapeHTML(entry.seccao)}` : ""}</strong><br />`);
+        lines.push(`${escapeHTML(entry.colectivo.relator)}<br />`);
+        for (const adj of entry.colectivo.adjuntos) {
+            lines.push(`${escapeHTML(adj)}<br />`);
+        }
+        lines.push(`<a href="${escapeHTML(entry.permalink)}">${escapeHTML(entry.permalink)}</a></p>`);
+
+        lines.push("</td>");
+        lines.push("</tr>");
+        lines.push("</table>");
         lines.push("");
-        
-        // Institutional metadata block
-        const cleanedDesc = (entry.descritores || []).map(d => cleanDescriptorName(d)).filter(Boolean).join(" • ");
-        lines.push(`> **Descritores:** ${cleanedDesc}`);
-        lines.push(`> `);
-        lines.push(`> **Data:** ${entry.data} | **Processo:** ${entry.processo}${entry.seccao ? ` - ${entry.seccao}` : ""}`);
-        lines.push(`> `);
-        lines.push(`> **Relator:** ${entry.colectivo.relator}` + (entry.colectivo.adjuntos.length > 0 ? ` | **Adjuntos:** ${entry.colectivo.adjuntos.join(", ")}` : ""));
-        lines.push(`> `);
-        lines.push(`> **Hiperligação Oficial:** [${entry.permalink}](${entry.permalink})`);
-        lines.push("");
-        lines.push("### Sumário {.unnumbered}");
-        lines.push("");
+
+        // Sumário directly below the box (matching the PDF/HTML bulletin structure)
         lines.push(cleanSummaryForMarkdown(entry.sumario));
         lines.push("");
-        lines.push("---");
+        lines.push("<br />");
         lines.push("");
     }
 
