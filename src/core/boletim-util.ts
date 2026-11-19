@@ -1340,23 +1340,19 @@ export function generateBoletimDocxHTML(options: BoletimRenderOptions): string {
     parts.push('</head>');
     parts.push('<body style="font-family: \'Times New Roman\', Times, serif; color: #111827; line-height: 1.5;">');
 
-    // Institutional Header with Logo
+    // Institutional Header with Logo (centered without table to avoid unwanted border box in Word)
     if (!omitTitle) {
-        parts.push('<table style="width: 100%; border: none; margin-bottom: 12pt;">');
-        parts.push('<tr>');
+        parts.push('<div style="text-align: center; margin-bottom: 14pt;">');
         if (!omitLogo) {
-            parts.push(`<td style="width: 25%; vertical-align: middle; border: none; text-align: left;"><img src="${logoFile}" width="120" height="60" alt="STJ" /></td>`);
+            parts.push(`<p style="text-align: center; margin: 0 0 8pt 0;"><img src="${logoFile}" width="140" height="70" alt="Supremo Tribunal de Justiça" /></p>`);
         }
-        parts.push(`<td style="width: ${!omitLogo ? "75%" : "100%"}; text-align: right; vertical-align: middle; border: none;">`);
         parts.push('<p style="font-size: 10pt; letter-spacing: 0.15em; color: #4b5563; text-transform: uppercase; font-weight: bold; margin: 0 0 3pt 0;">REPÚBLICA PORTUGUESA</p>');
         parts.push('<h1 style="font-size: 18pt; color: #800000; margin: 0 0 5pt 0; font-weight: bold;">Supremo Tribunal de Justiça</h1>');
         parts.push(`<h2 style="font-size: 13pt; color: #111827; margin: 0 0 5pt 0; font-weight: bold;">${escapeHTML(subtitle || title)}</h2>`);
         if (!omitPeriod) {
-            parts.push(`<p style="font-size: 9.5pt; color: #374151; margin: 0;"><em>${escapeHTML(formattedPeriod)}${emissionDate ? ` &bull; Compilado em ${escapeHTML(emissionDate)}` : ""}</em></p>`);
+            parts.push(`<p style="font-size: 9.5pt; color: #374151; margin: 0 0 6pt 0;"><em>${escapeHTML(formattedPeriod)}${emissionDate ? ` &bull; Compilado em ${escapeHTML(emissionDate)}` : ""}</em></p>`);
         }
-        parts.push('</td>');
-        parts.push('</tr>');
-        parts.push('</table>');
+        parts.push('</div>');
     } else if (!omitPeriod) {
         parts.push(`<p style="text-align: center; font-size: 10pt; color: #374151; margin: 0 0 10pt 0;"><em>${escapeHTML(formattedPeriod)}${emissionDate ? ` &bull; Compilado em ${escapeHTML(emissionDate)}` : ""}</em></p>`);
     }
@@ -1371,13 +1367,13 @@ export function generateBoletimDocxHTML(options: BoletimRenderOptions): string {
 
     const renderIndexHTML = () => {
         const indexParts: string[] = [];
-        indexParts.push('<div style="margin-top: 24pt; margin-bottom: 24pt;">');
-        indexParts.push('<h2 style="font-size: 15pt; color: #800000; text-align: center; text-transform: uppercase; margin-bottom: 14pt;">Índice Alfabético por Tema / Descritor</h2>');
+        indexParts.push('<div style="margin-top: 28pt; margin-bottom: 28pt;">');
+        indexParts.push('<h2 style="font-size: 15pt; color: #800000; text-align: center; text-transform: uppercase; margin-bottom: 16pt; letter-spacing: 0.05em;">Índice Alfabético por Tema / Descritor</h2>');
         for (const group of indexGroups) {
-            indexParts.push(`<h3 style="font-size: 12pt; color: #800000; border-bottom: 1px solid #d1d5db; margin-top: 14pt; margin-bottom: 6pt;">${escapeHTML(group.letter)}</h3>`);
+            indexParts.push(`<h3 style="font-size: 13pt; color: #800000; border-bottom: 1.5pt solid #800000; margin-top: 16pt; margin-bottom: 8pt; padding-bottom: 2pt;">${escapeHTML(group.letter)}</h3>`);
             for (const item of group.items) {
-                const links = item.entries.map(e => `<a href="#entry-${e.index}">Proc. ${escapeHTML(e.processo)}</a>`).join(", ");
-                indexParts.push(`<p style="margin: 2pt 0 2pt 12pt; font-size: 10pt;"><strong>${escapeHTML(item.descriptor)}</strong>: ${links}</p>`);
+                const badges = item.entries.map(e => `<a href="#entry-${e.index}" style="color: #1d4ed8; text-decoration: none; font-weight: bold;">[${e.index}]</a>`).join("&nbsp; ");
+                indexParts.push(`<p style="margin: 3pt 0 3pt 10pt; font-size: 10pt; color: #111827; line-height: 1.45;"><strong>${escapeHTML(item.descriptor)}</strong> &nbsp;&nbsp;&bull;&bull;&bull;&nbsp;&nbsp; ${badges}</p>`);
             }
         }
         indexParts.push('</div>');
@@ -1398,16 +1394,15 @@ export function generateBoletimDocxHTML(options: BoletimRenderOptions): string {
             a.localeCompare(b, "pt-PT", { sensitivity: "base" })
         );
 
-        // Bookmark anchor for cross-referencing from index
-        parts.push(`<a id="entry-${entry.index}" name="entry-${entry.index}"></a>`);
+        // Bookmark anchor and Acórdão Title
+        parts.push(`<h3 id="entry-${entry.index}" style="color: #800000; font-size: 12pt; font-weight: bold; margin-top: 18pt; margin-bottom: 6pt;">Acórdão n.º ${entry.index}</h3>`);
 
-        // Bordered Metadata Box (Official STJ rectangular frame using pure paragraphs for Word table block fidelity)
+        // Bordered Metadata Box (2-row table: top row for descriptors, bottom row for metadata with clean dividing border)
         parts.push('<table border="1" cellpadding="8" cellspacing="0" style="width: 100%; border: 1.5pt solid #000000; border-collapse: collapse; margin-bottom: 12pt;">');
         parts.push('<colgroup><col style="width: 100%;" /></colgroup>');
         parts.push('<tbody>');
         parts.push('<tr>');
-        parts.push('<td style="border: 1.5pt solid #000000; padding: 10pt; background-color: #ffffff;">');
-
+        parts.push('<td style="border: 1.5pt solid #000000; border-bottom: 1pt solid #9ca3af; padding: 10pt 12pt 8pt 12pt; background-color: #ffffff;">');
         parts.push('<p style="font-weight: bold; font-size: 11pt; margin: 0 0 6pt 0; color: #000000;">Descritores</p>');
         if (uniqueDesc.length > 0) {
             for (const desc of uniqueDesc) {
@@ -1416,9 +1411,10 @@ export function generateBoletimDocxHTML(options: BoletimRenderOptions): string {
         } else {
             parts.push('<p style="margin: 2pt 0; font-size: 10pt; font-style: italic; color: #4b5563;">Sem descritores registados.</p>');
         }
-
-        parts.push('<p style="margin: 8pt 0 6pt 0; color: #9ca3af; font-size: 9pt;">__________________________________________________________________________________</p>');
-
+        parts.push('</td>');
+        parts.push('</tr>');
+        parts.push('<tr>');
+        parts.push('<td style="border: 1.5pt solid #000000; border-top: 1pt solid #9ca3af; padding: 8pt 12pt 10pt 12pt; background-color: #ffffff;">');
         parts.push(`<p style="margin: 2pt 0; font-size: 10pt; color: #111827;"><strong>${escapeHTML(entry.data)}</strong></p>`);
         parts.push(`<p style="margin: 2pt 0; font-size: 10pt; color: #111827;"><strong>Proc. n.º ${escapeHTML(entry.processo)}${entry.seccao ? ` - ${escapeHTML(entry.seccao)}` : ""}</strong></p>`);
         parts.push(`<p style="margin: 2pt 0; font-size: 10pt; color: #111827;">${escapeHTML(entry.colectivo.relator)}</p>`);
@@ -1426,7 +1422,6 @@ export function generateBoletimDocxHTML(options: BoletimRenderOptions): string {
             parts.push(`<p style="margin: 2pt 0; font-size: 10pt; color: #111827;">${escapeHTML(adj)}</p>`);
         }
         parts.push(`<p style="margin: 4pt 0 2pt 0; font-size: 9.5pt;"><a href="${escapeHTML(entry.permalink)}" style="color: #1e40af; text-decoration: underline;">${escapeHTML(entry.permalink)}</a></p>`);
-
         parts.push('</td>');
         parts.push('</tr>');
         parts.push('</tbody>');
