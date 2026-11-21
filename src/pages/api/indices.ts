@@ -6,6 +6,7 @@ import { listAggregation } from "@/core/indices-helpers";
 import { getAllKeys } from "@/core/keys";
 import { authenticatedHandler } from "@/core/user/authenticate";
 import LoggerApi from "@/core/logger-api";
+import { canonicalizeSeccao } from "@/core/seccao-util";
 
 export default LoggerApi(async function indicesCsvHandler(
     req: NextApiRequest,
@@ -46,7 +47,17 @@ export default LoggerApi(async function indicesCsvHandler(
             othersCount += buck.Group.sum_other_doc_count
             let subbuckets = (buck.Group as AggregationsStringTermsAggregate).buckets;
             if (Array.isArray(subbuckets)) {
-                subbuckets.forEach(s => groupObj[s.key] = (groupObj[s.key] || 0) + s.doc_count)
+                if (group === "Secção") {
+                    const subMap = new Map<string, number>();
+                    for (const s of subbuckets) {
+                        const canKey = canonicalizeSeccao(String(s.key));
+                        subMap.set(canKey, (subMap.get(canKey) || 0) + s.doc_count);
+                        groupObj[canKey] = (groupObj[canKey] || 0) + s.doc_count;
+                    }
+                    (buck.Group as any).buckets = Array.from(subMap.entries()).map(([key, doc_count]) => ({ key, doc_count }));
+                } else {
+                    subbuckets.forEach(s => groupObj[s.key] = (groupObj[s.key] || 0) + s.doc_count)
+                }
             }
         })
         buckets.sort(sortBucketsAlphabetically)

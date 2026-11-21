@@ -1,10 +1,11 @@
-import search, { aggs, createQueryDslQueryContainer, getElasticSearchClient, populateFilters, SearchFilters, sortBucketsAlphabetically } from '@/core/elasticsearch';
+import search, { aggs, createQueryDslQueryContainer, getElasticSearchClient, populateFilters, SearchFilters, sortAlphabetically, sortBucketsAlphabetically } from '@/core/elasticsearch';
 import LoggerApi from '@/core/logger-api';
 import { authenticatedHandler } from '@/core/user/authenticate';
 import { DatalistObj } from '@/types/search';
 import { AggregationsAggregationContainer, AggregationsStringTermsAggregate } from '@elastic/elasticsearch/lib/api/types';
 import { JurisprudenciaVersion } from '@stjiris/jurisprudencia-document';
 import type { NextApiRequest, NextApiResponse } from 'next'
+import { mergeSeccaoBuckets, getSeccaoVariants } from '@/core/seccao-util';
 
 // ES terms-agg `include` uses Lucene's RegExp, which does NOT support the (?i)
 // inline flag (it matches literally and returns nothing). The aggregation runs on
@@ -38,14 +39,15 @@ export default LoggerApi(async function datalistHandler(
         return res.status(404).json([]);;
     }
     const prefix = Array.isArray(req.query.prefix) ? req.query.prefix[0] : req.query.prefix;
+    const isSeccao = aggKey === "Secção";
     let finalAgg: AggregationsAggregationContainer = {
         terms: {
             field: agg.terms?.field?.replace("keyword", "raw"),
-            size: prefix ? 20 : 50,
+            size: isSeccao ? 100 : (prefix ? 20 : 50),
             order: {
                 _key: "asc"
             },
-            ...(prefix ? { include: caseInsensitiveContains(prefix) } : {})
+            ...(!isSeccao && prefix ? { include: caseInsensitiveContains(prefix) } : {})
         }
     }
     const sfilters = { pre: [], after: [] } as SearchFilters;
@@ -56,6 +58,20 @@ export default LoggerApi(async function datalistHandler(
 
         let buckets = (body.aggregations[aggKey] as AggregationsStringTermsAggregate).buckets
         if (!Array.isArray(buckets)) throw new Error("Invalid aggregation bucket result");
+
+        if (isSeccao) {
+            let merged = mergeSeccaoBuckets(buckets);
+            if (prefix) {
+                const pfxLower = prefix.toLowerCase();
+                merged = merged.filter(item => {
+                    if (item.key.toLowerCase().includes(pfxLower)) return true;
+                    const variants = getSeccaoVariants(item.key);
+                    return variants.some(v => v.toLowerCase().includes(pfxLower));
+                });
+            }
+            merged.sort((a, b) => sortAlphabetically(a.key, b.key));
+            return res.json(merged);
+        }
 
         return res.json(buckets.sort(sortBucketsAlphabetically).map(({ key, doc_count }) => ({ key: key.toString(), count: doc_count })));
     }).catch(err => {

@@ -2,6 +2,7 @@ import { canBeActive } from "@/types/keys";
 import { Client } from "@elastic/elasticsearch";
 import { AggregationsAggregate, AggregationsAggregationContainer, AggregationsStringTermsBucket, AggregationsTermsAggregation, QueryDslQueryContainer, SearchRequest, SearchResponse, SortCombinations } from "@elastic/elasticsearch/lib/api/types";
 import { isJurisprudenciaDocumentGenericKey, JurisprudenciaDocument, JurisprudenciaDocumentDateKey, JurisprudenciaDocumentDateKeys, JurisprudenciaDocumentKeys, JurisprudenciaDocumentProperties, JurisprudenciaDocumentStateValue, JurisprudenciaDocumentStateValues, JurisprudenciaVersion } from "@stjiris/jurisprudencia-document";
+import { getSeccaoVariants, canonicalizeSeccao } from "./seccao-util";
 
 export const filterableProps = JurisprudenciaDocumentKeys.filter(canBeActive);
 
@@ -192,6 +193,24 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
                 const val = isQuoted ? o.slice(1, -1) : o;
                 const isGenericKeyword = fieldName.endsWith('.Index.keyword');
                 const rawField = isGenericKeyword ? fieldName.replace(/\.keyword$/, '.raw') : fieldName;
+
+                if (fieldName.startsWith("Secção")) {
+                    const variants = getSeccaoVariants(val);
+                    const shouldClauses: any[] = [];
+                    for (const v of variants) {
+                        shouldClauses.push({ term: { [rawField]: { value: v } } });
+                        shouldClauses.push({ term: { [fieldName]: { value: v } } });
+                        shouldClauses.push({ term: { [fieldName]: { value: asciiFold(v).toLowerCase() } } });
+                        shouldClauses.push({ term: { [fieldName]: { value: asciiFold(v).toUpperCase() } } });
+                        shouldClauses.push({ term: { [fieldName]: { value: v, case_insensitive: true } } });
+                    }
+                    return {
+                        bool: {
+                            should: shouldClauses,
+                            minimum_should_match: 1
+                        }
+                    };
+                }
 
                 if (isQuoted) {
                     if (isGenericKeyword) {

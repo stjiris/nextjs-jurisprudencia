@@ -1,4 +1,5 @@
 import { JurisprudenciaDocumentKey, PartialJurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
+import { canonicalizeSeccao } from "@/core/seccao-util";
 
 export type SimpleJurisprudenciaDocument = Record<JurisprudenciaDocumentKey, string>;
 
@@ -41,7 +42,8 @@ export function getSimpleEditorDefaults(ctx: PartialJurisprudenciaDocument = {})
 }
 
 function areaFromSeccao(seccao: string) {
-    const ÁreasFromSecções = {
+    const canonical = canonicalizeSeccao(seccao);
+    const ÁreasFromSecções: Record<string, string> = {
         "1.ª Secção (Cível)": "Área Cível",
         "2.ª Secção (Cível)": "Área Cível",
         "3.ª Secção (Criminal)": "Área Criminal",
@@ -51,5 +53,5 @@ function areaFromSeccao(seccao: string) {
         "7.ª Secção (Cível)": "Área Cível",
         "Contencioso": "Contencioso",
     }
-    return seccao in ÁreasFromSecções ? ÁreasFromSecções[seccao as keyof typeof ÁreasFromSecções] : "{sem Área}"
+    return canonical in ÁreasFromSecções ? ÁreasFromSecções[canonical] : (seccao in ÁreasFromSecções ? ÁreasFromSecções[seccao] : "{sem Área}")
 }
