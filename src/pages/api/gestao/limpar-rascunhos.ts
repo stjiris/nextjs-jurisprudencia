@@ -63,10 +63,10 @@ export default LoggerApi(async function limparRascunhosHandler(
         for (const hit of hits) {
             const id = hit._id;
             const src = hit._source;
-            if (!src) continue;
+            if (!id || !src) continue;
 
-            const processo = src["Número de Processo"];
-            const currState = src.STATE;
+            const processo = src["Número de Processo"] || "";
+            const currState = src.STATE || "";
 
             let shouldClean = mode === "all";
 
