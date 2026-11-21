@@ -13,7 +13,9 @@ export type AuditAction =
     | "criar"
     | "eliminar"
     | "importar"
-    | "exportar";
+    | "exportar"
+    | "limpar-rascunhos"
+    | "sincronizar";
 
 export interface AuditEvent {
     timestamp: string;

@@ -11,6 +11,7 @@ import { AuditAction, AuditEvent } from "@/core/audit-log";
 const ACTIONS: AuditAction[] = [
     "login", "logout", "publicar", "tornar-privado", "restaurar",
     "editar", "criar", "eliminar", "importar", "exportar",
+    "limpar-rascunhos", "sincronizar"
 ];
 
 export const getServerSideProps: GetServerSideProps = LoggerServerSideProps(

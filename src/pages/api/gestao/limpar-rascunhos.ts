@@ -113,11 +113,13 @@ export default LoggerApi(async function limparRascunhosHandler(
         }
 
         const username = getUsernameFromReq(req) || "admin";
-        logAuditEvent("limpar-rascunhos", username, {
-            cleaned,
-            totalFound: hits.length,
-            mode,
-            action,
+        await logAuditEvent("limpar-rascunhos", username, {
+            details: JSON.stringify({
+                cleaned,
+                totalFound: hits.length,
+                mode,
+                action,
+            }),
             ip: getIpFromReq(req),
         });
 
