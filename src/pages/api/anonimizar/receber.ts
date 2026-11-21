@@ -14,7 +14,8 @@ export default LoggerApi(async function receberHandler(req: NextApiRequest, res:
 
     const secret = process.env.ANONIMIZADOR_SECRET;
     if (secret && req.headers["x-service-secret"] !== secret) {
-        return res.status(401).json({ ok: false, message: "Unauthorized" });
+        console.warn("receber: unauthorized - x-service-secret header does not match ANONIMIZADOR_SECRET");
+        return res.status(401).json({ ok: false, message: "Unauthorized: segredo do serviço inválido ou em falta (x-service-secret)" });
     }
 
     const {
@@ -27,8 +28,11 @@ export default LoggerApi(async function receberHandler(req: NextApiRequest, res:
         images, // optional: Array<{ filename: string; data?: string; base64?: string }>
     } = req.body;
 
-    if (!jurisId || !anonimizedTexto) {
-        return res.status(400).json({ ok: false, message: "Missing jurisId or anonimizedTexto" });
+    if (!jurisId) {
+        return res.status(400).json({ ok: false, message: "Parâmetro em falta: jurisId" });
+    }
+    if (!anonimizedTexto) {
+        return res.status(400).json({ ok: false, message: "Parâmetro em falta: anonimizedTexto" });
     }
 
     try {
@@ -48,17 +52,30 @@ export default LoggerApi(async function receberHandler(req: NextApiRequest, res:
         if (!current || !current._source) {
             try {
                 const client = await getElasticSearchClient();
+                const altJurisId = typeof jurisId === "string"
+                    ? (jurisId.includes("/") ? jurisId.replace(/\//g, "-") : jurisId.replace(/-/g, "/"))
+                    : null;
+                const shouldClauses: any[] = [
+                    { term: { "UUID": jurisId } },
+                    { term: { "ECLI": jurisId } },
+                    { term: { "Número de Processo": jurisId } },
+                    { term: { "Número de Processo.Index": jurisId } },
+                    { term: { "Número de Processo.Index.keyword": jurisId } },
+                ];
+                if (altJurisId) {
+                    shouldClauses.push(
+                        { term: { "Número de Processo": altJurisId } },
+                        { term: { "Número de Processo.Index": altJurisId } },
+                        { term: { "Número de Processo.Index.keyword": altJurisId } }
+                    );
+                }
                 const searchRes = await client.search({
                     index: JurisprudenciaVersion,
                     size: 1,
                     query: {
                         bool: {
-                            should: [
-                                { term: { "UUID": jurisId } },
-                                { term: { "Número de Processo": jurisId } },
-                                { term: { "Número de Processo.Index": jurisId } },
-                                { term: { "Número de Processo.Index.keyword": jurisId } }
-                            ]
+                            should: shouldClauses,
+                            minimum_should_match: 1
                         }
                     }
                 });
@@ -73,7 +90,7 @@ export default LoggerApi(async function receberHandler(req: NextApiRequest, res:
 
         if (!current || !current._source) {
             console.error("receber: document not found in Elasticsearch for jurisId:", jurisId);
-            return res.status(404).json({ ok: false, message: `Document not found: ${jurisId}` });
+            return res.status(404).json({ ok: false, message: `Documento não encontrado no Juris com o identificador: ${jurisId}` });
         }
 
         const baseDir = process.env.IMAGES_PATH || path.join(process.cwd(), "images");
@@ -159,8 +176,8 @@ export default LoggerApi(async function receberHandler(req: NextApiRequest, res:
         }
 
         return res.status(200).json({ ok: true });
-    } catch (err) {
+    } catch (err: any) {
         console.error("Error in /api/anonimizar/receber:", err);
-        return res.status(500).json({ ok: false, message: "Internal server error" });
+        return res.status(500).json({ ok: false, message: `Erro ao guardar documento no Juris: ${err?.message || "Internal server error"}` });
     }
 });

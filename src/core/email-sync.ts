@@ -312,10 +312,20 @@ async function applySyncDoc(uuid: string, content: Record<string, any>): Promise
         query: { term: { UUID: uuid } },
         size: 1,
     });
+    const altProcesso = processo ? (processo.includes("/") ? processo.replace(/\//g, "-") : processo.replace(/-/g, "/")) : null;
     const processResult = processo
         ? await client.search<Record<string, any>>({
             index: JurisprudenciaVersion,
-            query: { term: { "Número de Processo": processo } },
+            query: {
+                bool: {
+                    should: [
+                        { term: { "Número de Processo": processo } },
+                        ...(altProcesso ? [{ term: { "Número de Processo": altProcesso } }] : []),
+                        { term: { "Número de Processo.Index.keyword": processo } },
+                        ...(altProcesso ? [{ term: { "Número de Processo.Index.keyword": altProcesso } }] : []),
+                    ]
+                }
+            },
             size: 50,
         })
         : null;

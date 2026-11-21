@@ -25,7 +25,7 @@ export default function ManageDecisionOptions(props: { doc: JurisprudenciaDocume
 
 	async function handleAnonimizar() {
 		try {
-			const result = await postAnonimizar({ id: props.id, doc: props.doc, jurisUrl: window.location.href });
+			const result = await postAnonimizar({ id: props.id, doc: props.doc, jurisUrl: window.location.origin });
 
 			if (!result.ok) {
 				alert("Falha ao anonimizar: " + result.message);

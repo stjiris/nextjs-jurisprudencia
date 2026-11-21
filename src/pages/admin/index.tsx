@@ -43,6 +43,7 @@ export default function IndexPage({ role, syncRole }: IndexPageProps) {
                         {can('manageUsers') && <LinkEntry link="/admin/logs" title="Registo de Atividade">
                             <p>Consultar o registo de ações realizadas no sistema</p>
                         </LinkEntry>}
+                        {can('manageUsers') && <CleanDraftsTrigger />}
                         {can('manageUsers') && syncRole === "interno" && <SyncTrigger
                             title="Pedir sincronização"
                             description="Pedir ao juris externo as últimas alterações (o externo sobrepõe os dados locais). As alterações chegam dentro de ~1 min."
@@ -112,4 +113,71 @@ function SyncTrigger({ title, description, endpoint, icon }: { title: string, de
             {result && <div className={`alert alert-${result.variant} mt-3 mb-0 py-2`} role="alert">{result.text}</div>}
         </div>
     </div>
+}
+
+function CleanDraftsTrigger() {
+    const router = useRouter();
+    const [running, setRunning] = useState(false);
+    const [result, setResult] = useState<{ variant: "success" | "warning" | "danger", text: string } | null>(null);
+
+    const trigger = async (mode: "published_only" | "all") => {
+        const confirmMsg = mode === "all"
+            ? "Tem a certeza que quer limpar TODOS os acórdãos em 'importação' e 'preparação'?"
+            : "Limpar apenas os acórdãos em 'importação' e 'preparação' que já se encontram publicados?";
+        if (!confirm(confirmMsg)) return;
+
+        setRunning(true);
+        setResult(null);
+        try {
+            const res = await fetch(`${router.basePath}/api/gestao/limpar-rascunhos`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ mode, action: "eliminar" })
+            });
+            const data = await res.json();
+            if (!data.ok) {
+                setResult({ variant: "danger", text: data.message || `Erro ${res.status}` });
+            } else {
+                setResult({ variant: "success", text: data.message || `${data.cleaned} acórdãos limpos.` });
+            }
+        } catch (err: any) {
+            setResult({ variant: "danger", text: err?.message || "Falha de rede." });
+        } finally {
+            setRunning(false);
+        }
+    };
+
+    return <div className="card m-1">
+        <div className="card-body">
+            <div className="card-title fw-bold">Limpeza de Rascunhos e Duplicados</div>
+            <p className="text-muted small">
+                Limpar acórdãos pendentes em 'importação' ou 'preparação' que já se encontram publicados noutras plataformas (ou limpar todos para permitir sincronização limpa).
+            </p>
+            <div className="d-flex gap-2">
+                <button
+                    type="button"
+                    className="btn btn-outline-warning btn-sm"
+                    disabled={running}
+                    onClick={() => trigger("published_only")}
+                >
+                    <i className="bi bi-eraser me-1"></i>
+                    {running ? "A processar..." : "Limpar Apenas Já Publicados"}
+                </button>
+                <button
+                    type="button"
+                    className="btn btn-outline-danger btn-sm"
+                    disabled={running}
+                    onClick={() => trigger("all")}
+                >
+                    <i className="bi bi-trash me-1"></i>
+                    {running ? "A processar..." : "Limpar Todas as Listas"}
+                </button>
+            </div>
+            {result && (
+                <div className={`alert alert-${result.variant} mt-2 py-1 px-2 small mb-0`} role="alert">
+                    {result.text}
+                </div>
+            )}
+        </div>
+    </div>;
 }

@@ -8,6 +8,8 @@ export const SHAREPOINT_FONTE = "STJ (Sharepoint)";
 export const DGSI_FONTE = "STJ (DGSI)";
 export const SYNC_REVIEW_INDEX = "juris-sync-review";
 
+export const normalizeProcessNumber = (p) => (p || "").trim().replace(/^(\d+)[\-_](\d{2}\.\d)/, "$1/$2");
+
 // Interno-only data that externo's copy doesn't carry and must survive the overwrite.
 const PRESERVED_FIELDS = ["Texto Não Anonimizado", "Sumário Não Anonimizado", "ENTITIES", "Original"];
 const PRESERVED_HASH_FIELDS = ["Texto Não Anonimizado", "Sumário Não Anonimizado"];
@@ -17,7 +19,7 @@ const isEmpty = (value) =>
     (typeof value === "object" && Object.keys(value).length === 0);
 
 const isAdoption = (existing, incoming) =>
-    existing.Fonte === SHAREPOINT_FONTE && incoming.Fonte === DGSI_FONTE;
+    (existing.Fonte === SHAREPOINT_FONTE || existing.STATE === "importação" || existing.STATE === "preparação") && incoming.Fonte === DGSI_FONTE;
 
 /**
  * Decides what to do with an incoming document.
@@ -40,9 +42,13 @@ export function planSyncDoc(incoming, uuidHit, processHits) {
 
     if (incoming.Fonte !== DGSI_FONTE) return { action: "create" };
 
-    const sharepoint = processHits.filter(h => h.source.Fonte === SHAREPOINT_FONTE);
-    const sameDate = sharepoint.filter(h => h.source.Data === incoming.Data);
-    if (sameDate.length === 0) return { action: "create", possibleDuplicate: sharepoint.length > 0 };
+    const candidates = processHits.filter(h =>
+        h.source.Fonte === SHAREPOINT_FONTE ||
+        h.source.STATE === "importação" ||
+        h.source.STATE === "preparação"
+    );
+    const sameDate = candidates.filter(h => h.source.Data === incoming.Data);
+    if (sameDate.length === 0) return { action: "create", possibleDuplicate: candidates.length > 0 };
     if (sameDate.length > 1) return { action: "hold", reason: "several-candidates" };
 
     return { action: "adopt", target: sameDate[0] };

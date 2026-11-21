@@ -48,6 +48,15 @@ export default LoggerApi(async function anonimizarHandler(
     try {
         const { doc, id, jurisUrl } = req.body;
 
+        let cleanJurisUrl = jurisUrl;
+        if (typeof jurisUrl === "string" && jurisUrl.startsWith("http")) {
+            try {
+                cleanJurisUrl = new URL(jurisUrl).origin;
+            } catch {
+                cleanJurisUrl = jurisUrl;
+            }
+        }
+
         if (!doc || !id) {
             return res.status(400).json({
                 ok: false,
@@ -139,7 +148,7 @@ export default LoggerApi(async function anonimizarHandler(
                 token,
                 document: doc,
                 nlp: nlpJson,
-                jurisUrl,
+                jurisUrl: cleanJurisUrl,
                 entities: savedEntities,
                 ts: Date.now(),
             }),
