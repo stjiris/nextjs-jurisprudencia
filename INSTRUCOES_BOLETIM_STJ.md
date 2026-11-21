@@ -122,3 +122,38 @@ npm run build
 npm run dev
 ```
 Aceder no navegador a: `http://localhost:3000/boletim` para pré-visualizar e descarregar os boletins.
+
+---
+
+## 5. Nota Técnica: Evolução da Exportação Direta para Microsoft Word (.docx)
+
+### 5.1. Contexto e Diagnóstico
+- **Estado Atual:** A plataforma produz boletins institucionais com 100% de fidelidade visual via template HTML/CSS para impressão A4 (`window.print()` / PDF de alta resolução com cabeçalho oficial, logótipo, caixas delimitadoras e índice remissivo com etiquetas).
+- **Desafio do Pandoc:** A conversão direta de Markdown/HTML para Word via Pandoc gera uma estrutura semântica simples (tabelas rígidas e formatação simplificada), não reproduzindo a riqueza gráfica do PDF.
+- **Validação de Referência:** A conversão do PDF pelo motor *Microsoft PDF Reflow* (abrindo o PDF diretamente no Word desktop) produz o documento Word ideal com molduras fechadas, logótipo alinhado e índice por etiquetas.
+
+### 5.2. Roteiro para Implementação Direta e Eficiente (Roadmap)
+
+Para atingir a criação direta de `.docx` com fidelidade visual idêntica ao PDF de forma performante no servidor, identificam-se as seguintes abordagens técnicas recomendadas:
+
+#### Abordagem 1: Geração Nativa via Biblioteca TypeScript `docx` (Altamente Recomendada)
+- **Tecnologia:** Biblioteca npm [`docx`](https://docx.js.org/) (pure TypeScript / Node.js).
+- **Princípio:** Em vez de converter Markdown ou HTML através de ferramentas de linha de comando, o servidor compila diretamente a árvore OpenXML (`w:document`, `w:tbl`, `w:p`, `w:tc`, `w:drawing`).
+- **Vantagens:**
+  - **Performance Extrema:** Gera o ficheiro `.docx` completo em memória em menos de **300 ms** (mesmo para compilações anuais de dezenas de páginas).
+  - **Zero Dependências Pesadas:** Não requer Chromium, nem Python, nem Pandoc, nem XeLaTeX no contentor Docker.
+  - **Fidelidade Total de Caixas:** Permite definir bordas exatas (`BorderStyle.SINGLE`, `color: "000000"`), células de 2 colunas para os descritores, linhas divisórias internas suaves e etiquetas estilizadas no índice com `Table` ou `TabStop`.
+  - **Manutenção Simplificada:** 100% integrado na stack Next.js / TypeScript do projeto.
+
+#### Abordagem 2: Formato Word HTML / MHTML Nativo com Namespaces Office
+- **Tecnologia:** HTML enriquecido com namespaces Office (`urn:schemas-microsoft-com:office:word`).
+- **Princípio:** O servidor serve o template HTML completo com o CSS institucional e o MIME-type `application/msword`.
+- **Vantagens:**
+  - Não requer compilação; o próprio Word desenha o CSS de impressão diretamente ao abrir o documento.
+  - Latência zero (< 100 ms).
+
+#### Abordagem 3: Microsserviço Assíncrono com Motor Gráfico (Chromium + `pdf2docx`)
+- **Tecnologia:** Fila assíncrona (Redis / BullMQ) com Chromium Headless e script Python `pdf2docx`.
+- **Princípio:** Caso seja estritamente necessário utilizar a renderização gráfica do PDF para alimentar o Word, a conversão deve ser desacoplada do pedido HTTP principal para evitar *timeouts* e bloqueio de CPU na VM 940.
+- **Requisitos:** Adicionar `chromium` e `pdf2docx` num contentor de processamento em segundo plano (*worker* dedicado).
+

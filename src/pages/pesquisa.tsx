@@ -1,3 +1,5 @@
+import { useState } from "react"
+import { useRouter } from "next/router"
 import { GenericPageWithForm } from "@/components/main_pages/genericPageStructure"
 import { Loading } from "@/components/loading"
 import { FormProps, withForm } from "@/components/main_pages/pageWithForm"
@@ -12,7 +14,7 @@ import dynamic from "next/dynamic"
 import { modifySearchParams, SelectNavigate } from "@/components/main_pages/SelectNavigate"
 import JurisprudenciaItem from "@/components/main_pages/search/JurisprudenciaItem"
 import JurisprudenciaTable from "@/components/main_pages/search/JurisprudenciaTable"
-import { useAuth } from "@/contexts/auth"
+import { useAuth, useCanAccess } from "@/contexts/auth"
 
 const SavedSessionsModal = dynamic(() => import("@/components/saved_sessions/SavedSessionsModal"), { ssr: false });
 
@@ -20,6 +22,7 @@ interface PesquisaProps extends FormProps{
     searchedArray: string[]
     searchId?: string
     pages: number
+    syncRole?: string | null
 }
 
 export const getServerSideProps = LoggerServerSideProps(withForm<PesquisaProps>(async (ctx, formProps) => {
@@ -32,7 +35,8 @@ export const getServerSideProps = LoggerServerSideProps(withForm<PesquisaProps>(
         ...formProps,
         searchedArray,
         pages,
-        searchId
+        searchId,
+        syncRole: process.env.SYNC_ROLE || null
     }
 }))
 
@@ -44,7 +48,7 @@ export default function Pesquisa(props: PesquisaProps){
         {results ? 
             results.length > 0 ? 
                 <ShowResults results={results} searchParams={searchParams} searchInfo={props}/> :
-                <NoResults /> :
+                <NoResults searchInfo={props} /> :
             <Loading />
         }
         <SavedSessionsModal />
@@ -96,6 +100,7 @@ function ShowResults({results, searchParams, searchInfo}: {results: SearchHandle
                 <i className="bi bi-bookmarks"></i>
                 <span>Pesquisas Guardadas</span>
             </button>
+            <AdminSyncButton syncRole={searchInfo.syncRole} />
         </div>
         {auth ? (
             <JurisprudenciaTable results={results} searchId={searchInfo.searchId} />
@@ -134,13 +139,101 @@ function NavLink({page, icon, searchParams}: {page: number, icon: string, search
     return <Link className="page-link" href={`?${tmp.toString()}`} title={`Ir para a página ${page+1}`}><i className={`bi ${icon}`}></i></Link>
 }
 
-function NoResults(){
-    return <div className="alert alert-info" role="alert">
-        <h4 className="alert-heading">Sem resultados...</h4>
-        <strong><i className="bi bi-lightbulb-fill"></i> Sugestões:</strong>
-        <ol>
-            <li>Verifique os filtros utilizados (tribunais, relator, , data)</li>
-            <li>Verifique o termo pesquisado</li>
-        </ol>
-    </div>
+function NoResults({ searchInfo }: { searchInfo?: PesquisaProps }){
+    return <>
+        <div className="mb-2 d-flex align-items-center gap-2">
+            <AdminSyncButton syncRole={searchInfo?.syncRole} />
+        </div>
+        <div className="alert alert-info" role="alert">
+            <h4 className="alert-heading">Sem resultados...</h4>
+            <strong><i className="bi bi-lightbulb-fill"></i> Sugestões:</strong>
+            <ol>
+                <li>Verifique os filtros utilizados (tribunais, relator, data)</li>
+                <li>Verifique o termo pesquisado</li>
+            </ol>
+        </div>
+    </>
+}
+
+function AdminSyncButton({ syncRole }: { syncRole?: string | null }) {
+    const router = useRouter();
+    const canManage = useCanAccess("manageUsers");
+    const [running, setRunning] = useState(false);
+    const [status, setStatus] = useState<{ variant: "success" | "warning" | "danger"; text: string } | null>(null);
+
+    if (!canManage) return null;
+
+    const isExterno = syncRole === "externo";
+    const endpoint = isExterno ? "/api/gestao/sync-export" : "/api/gestao/sync-request";
+    const title = isExterno ? "Exportar para Interno" : "Sincronizar";
+    const tooltip = isExterno
+        ? "Exportar acórdãos alterados para o Juris Interno por email"
+        : "Pedir sincronização ao Juris Externo (as alterações chegam dentro de ~1 min)";
+
+    const handleSync = async () => {
+        if (running) return;
+        setRunning(true);
+        setStatus(null);
+        try {
+            const res = await fetch(`${router.basePath}${endpoint}`, { method: "POST" });
+            const data = await res.json();
+            if (!data.ok) {
+                setStatus({ variant: "danger", text: data.message || `Erro ${res.status}` });
+            } else if (data.refused) {
+                setStatus({ variant: "warning", text: data.message || "Sincronização recusada." });
+            } else {
+                const text = data.message
+                    || (typeof data.sent === "number" ? `${data.sent} doc(s) enviado(s).`
+                        : typeof data.processed === "number" ? `${data.processed} doc(s) aplicado(s).`
+                            : "Sincronização pedida com sucesso.");
+                setStatus({ variant: "success", text });
+            }
+        } catch (err: any) {
+            setStatus({ variant: "danger", text: err?.message || "Falha de comunicação." });
+        } finally {
+            setRunning(false);
+            setTimeout(() => {
+                setStatus((prev) => (prev?.variant === "success" ? null : prev));
+            }, 6000);
+        }
+    };
+
+    return (
+        <div className="d-inline-flex align-items-center gap-1">
+            <button
+                type="button"
+                className="results-toolbar-control border-primary text-primary"
+                onClick={handleSync}
+                disabled={running}
+                title={tooltip}
+                style={{ fontWeight: 600 }}
+            >
+                {running ? (
+                    <>
+                        <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" style={{ width: "12px", height: "12px" }}></span>
+                        <span>A sincronizar...</span>
+                    </>
+                ) : (
+                    <>
+                        <i className={`bi ${isExterno ? "bi-box-arrow-up" : "bi-arrow-repeat"}`}></i>
+                        <span>{title}</span>
+                    </>
+                )}
+            </button>
+            {status && (
+                <span
+                    className={`badge bg-${status.variant} d-inline-flex align-items-center gap-1`}
+                    style={{ fontSize: "11.5px", padding: "4px 8px", cursor: "pointer", verticalAlign: "middle" }}
+                    onClick={() => setStatus(null)}
+                    title="Clique para fechar aviso"
+                >
+                    {status.variant === "success" && <i className="bi bi-check-circle"></i>}
+                    {status.variant === "warning" && <i className="bi bi-exclamation-triangle"></i>}
+                    {status.variant === "danger" && <i className="bi bi-x-circle"></i>}
+                    <span>{status.text}</span>
+                    <i className="bi bi-x ms-1" style={{ opacity: 0.8 }}></i>
+                </span>
+            )}
+        </div>
+    );
 }
