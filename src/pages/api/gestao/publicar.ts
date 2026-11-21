@@ -17,17 +17,17 @@ export default LoggerApi(async function publicarHandler(
 
     const authed = await authenticatedHandler(req);
     if (!authed) {
-        return res.status(401).json({ ok: false, message: "Unauthorized" });
+        return res.status(401).json({ ok: false, message: "Sessão não autenticada. Por favor inicie sessão novamente." });
     }
 
     const { id } = req.body;
     if (!id || typeof id !== "string") {
-        return res.status(400).json({ ok: false, message: "Missing document id" });
+        return res.status(400).json({ ok: false, message: "Identificador de documento não especificado." });
     }
 
     try {
         if (!(await existsDoc(id))) {
-            return res.status(404).json({ ok: false, message: "Document not found" });
+            return res.status(404).json({ ok: false, message: "Documento não encontrado na base de dados do Juris." });
         }
 
         const doc = await getDoc(id);
@@ -35,7 +35,7 @@ export default LoggerApi(async function publicarHandler(
         const uuid = doc._source?.UUID;
 
         if (state === "importação" || state === "eliminado" || state === "público") {
-            return res.status(409).json({ ok: false, message: `Cannot publicar a document in state '${state}'` });
+            return res.status(409).json({ ok: false, message: `Não é possível publicar: o documento encontra-se no estado '${state}'. Apenas decisões em 'preparação' ou 'privado' podem ser publicadas.` });
         }
 
         // On interno, send sync email first — if it fails, abort the state change
@@ -56,9 +56,9 @@ export default LoggerApi(async function publicarHandler(
             ip: getIpFromReq(req),
         });
 
-        return res.status(200).json({ ok: true });
-    } catch (err) {
+        return res.status(200).json({ ok: true, message: "Acórdão publicado com sucesso no Juris." });
+    } catch (err: any) {
         console.error("Error in /api/gestao/publicar:", err);
-        return res.status(500).json({ ok: false, message: "Internal server error" });
+        return res.status(500).json({ ok: false, message: `Erro ao publicar documento: ${err?.message || "falha na base de dados"}` });
     }
 });

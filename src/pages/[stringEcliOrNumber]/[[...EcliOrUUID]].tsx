@@ -93,14 +93,33 @@ export default function MaybeDocumentPage(props: { doc?: JurisprudenciaDocument 
 function NoDocumentPage() {
     return <>
         <Head>
-            <title>Documento Não Encontrado - Jurisprudência - STJ</title>
+            <title>Acórdão Não Encontrado (404) - Jurisprudência - STJ</title>
         </Head>
-        <div className="alert alert-info" role="alert">
-            <h4 className="alert-heading">Sem resultados...</h4>
-            <strong><i className="bi bi-lightbulb-fill"></i>Sugestões:</strong>
-            <ol>
-                <li>O recurso não foi encontrado ou ainda não foi publicado neste arquivo</li>
-            </ol>
+        <div className="container py-4">
+            <div className="alert alert-warning shadow-sm" role="alert">
+                <h4 className="alert-heading">
+                    <i className="bi bi-search me-2"></i>
+                    Acórdão não encontrado (404)
+                </h4>
+                <p className="mb-2">
+                    Não foi encontrado nenhum acórdão com os dados de identificação fornecidos neste endereço.
+                </p>
+                <hr />
+                <strong><i className="bi bi-lightbulb me-1"></i>Possíveis causas:</strong>
+                <ul className="mb-3 mt-1 small">
+                    <li>O número de processo ou ECLI indicado não existe no acervo;</li>
+                    <li>O acórdão ainda se encontra em fase de preparação ou importação e não está público (requer início de sessão);</li>
+                    <li>O acórdão pode ter sido movido ou o link de acesso está incompleto.</li>
+                </ul>
+                <div className="d-flex gap-2">
+                    <Link href="/pesquisa" className="btn btn-primary btn-sm">
+                        <i className="bi bi-search me-1"></i> Ir para a Pesquisa
+                    </Link>
+                    <Link href="/" className="btn btn-outline-secondary btn-sm">
+                        <i className="bi bi-house me-1"></i> Início
+                    </Link>
+                </div>
+            </div>
         </div>
     </>
 }

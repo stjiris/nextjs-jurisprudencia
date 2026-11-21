@@ -52,8 +52,28 @@ export function useFetchPost<TReq = any, TRes = any>(relativeUrl: string) {
                     signal: init?.signal,
                 });
 
-                if (!res.ok)
-                    throw new Error(`Request failed ${res.status}`);
+                if (!res.ok) {
+                    let errMsg = "";
+                    try {
+                        const errJson = await res.json();
+                        errMsg = errJson.message || errJson.error || "";
+                    } catch {
+                        // Response body not JSON
+                    }
+
+                    if (!errMsg) {
+                        if (res.status === 404) errMsg = "Página ou documento não encontrado (404)";
+                        else if (res.status === 401) errMsg = "Sessão expirada ou não autenticado (401)";
+                        else if (res.status === 403) errMsg = "Acesso negado: sem permissões necessárias (403)";
+                        else if (res.status === 409) errMsg = "Conflito com o estado atual do documento (409)";
+                        else if (res.status === 502 || res.status === 503) errMsg = "Serviço externo temporariamente indisponível (502/503)";
+                        else errMsg = `Erro ${res.status}: ${res.statusText || "Falha na operação"}`;
+                    }
+
+                    const customError: any = new Error(errMsg);
+                    customError.status = res.status;
+                    throw customError;
+                }
                 const data = await res.json();
                 setResponse(data);
                 return data;

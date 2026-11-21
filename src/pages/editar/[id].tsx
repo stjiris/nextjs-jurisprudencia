@@ -2,6 +2,7 @@ import { withAuthentication } from "@/core/user/authenticate"
 import { JurisprudenciaDocument, JurisprudenciaDocumentDateKey, JurisprudenciaDocumentExactKey, JurisprudenciaDocumentGenericKey, JurisprudenciaDocumentStateKey, JurisprudenciaDocumentStateValue, JurisprudenciaDocumentStateValues, JurisprudenciaDocumentTextKey, PartialJurisprudenciaDocument, isJurisprudenciaDocumentContentKey, isJurisprudenciaDocumentDateKey, isJurisprudenciaDocumentExactKey, isJurisprudenciaDocumentGenericKey, isJurisprudenciaDocumentHashKey, isJurisprudenciaDocumentObjectKey, isJurisprudenciaDocumentStateKey, isJurisprudenciaDocumentTextKey } from "@stjiris/jurisprudencia-document";
 import { useContext, useState } from "react";
 import { useRouter } from "next/router";
+import Link from "next/link";
 import { Loading } from "@/components/loading";
 import { useFetch } from "@/components/useFetch";
 import { GetResponse, WriteResponseBase } from "@elastic/elasticsearch/lib/api/types";
@@ -31,9 +32,28 @@ export default function UpdatePage() {
     return <GenericPage title="Jurisprudência STJ - Editar Documento">
         {response && response._source && id && <Update doc={response._source} id={id} />}
         {!response && <Loading text="A carregar documento" />}
-        {response && !response._source && <div className="alert alert-danger">
-            <h3>Erro ao carregar o documento</h3>
-        </div>}
+        {response && !response._source && (
+            <div className="container py-4">
+                <div className="alert alert-danger shadow-sm">
+                    <h4 className="alert-heading">
+                        <i className="bi bi-exclamation-triangle-fill me-2"></i>
+                        Não foi possível carregar o documento
+                    </h4>
+                    <p className="mb-2">
+                        {(response as any)?.message || `O documento com o identificador "${id}" não foi encontrado na base de dados do Juris ou a sua sessão expirou.`}
+                    </p>
+                    <hr />
+                    <div className="d-flex gap-2">
+                        <button type="button" className="btn btn-outline-danger" onClick={() => router.back()}>
+                            <i className="bi bi-arrow-left me-1"></i> Voltar
+                        </button>
+                        <Link href="/pesquisa" className="btn btn-secondary">
+                            <i className="bi bi-search me-1"></i> Ir para a Pesquisa
+                        </Link>
+                    </div>
+                </div>
+            </div>
+        )}
     </GenericPage>
 }
 

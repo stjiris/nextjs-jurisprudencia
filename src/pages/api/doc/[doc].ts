@@ -11,12 +11,12 @@ export default LoggerApi(async function docApiHandler(
 ){
     const authed = await authenticatedHandler(req);
     if( !authed ){
-        return res.status(401).json({});
+        return res.status(401).json({ ok: false, message: "Sessão não autenticada. Por favor inicie sessão novamente." });
     }
 
     const id = req.query.doc as string;
     if( !(await existsDoc(id)) ){
-        return res.status(404).json({})
+        return res.status(404).json({ ok: false, message: `Documento "${id}" não encontrado na base de dados.` });
     }
 
     if( req.method === "GET" ){
@@ -58,8 +58,9 @@ export default LoggerApi(async function docApiHandler(
 
             return res.json(result);
         }
-        catch(e){
-            return res.status(400).json({})
+        catch(e: any){
+            console.error("doc PUT error:", e);
+            return res.status(400).json({ ok: false, message: `Erro ao guardar alterações no documento: ${e?.message || "dados inválidos"}` });
         }
     }
 
@@ -90,5 +91,5 @@ export default LoggerApi(async function docApiHandler(
             return res.json(await updateDoc(id, {STATE: "eliminado"}))
         }
     }
-    return res.status(405).json({})
+    return res.status(405).json({ ok: false, message: `Método ${req.method} não suportado neste endpoint.` })
 });
