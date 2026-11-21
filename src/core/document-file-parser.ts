@@ -279,8 +279,8 @@ export async function parseDocumentFile(
     }
 
     if (extractedImageHashes.length > 0) {
-        doc["hasImages"] = true;
-        doc["imageHashes"] = extractedImageHashes;
+        (doc as any)["hasImages"] = true;
+        (doc as any)["imageHashes"] = extractedImageHashes;
     }
 
     return {
