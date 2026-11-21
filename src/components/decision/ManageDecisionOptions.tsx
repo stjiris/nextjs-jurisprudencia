@@ -7,7 +7,7 @@ import { BadgeFromState } from "../BadgeFromState";
 
 
 export default function ManageDecisionOptions(props: { doc: JurisprudenciaDocument, id: string, keys: JurisprudenciaKey[], isExterno?: boolean }) {
-	const { post: postAnonimizar, loading: loadingAnon } = useFetchPost<{ id: string; doc: JurisprudenciaDocument; jurisUrl?: string }, { ok: boolean; message: string, token?: string }>('/api/anonimizar/enviar');
+	const { post: postAnonimizar, loading: loadingAnon } = useFetchPost<{ id: string; doc: JurisprudenciaDocument; jurisUrl?: string; returnUrl?: string }, { ok: boolean; message: string, token?: string }>('/api/anonimizar/enviar');
 	const { post: postPublicar, loading: loadingPublicar } = useFetchPost<{ id: string }, { ok: boolean; message?: string }>('/api/gestao/publicar');
 	const { post: postTornarPrivado, loading: loadingPrivado } = useFetchPost<{ id: string }, { ok: boolean; message?: string }>('/api/gestao/tornar-privado');
 	const { post: postRestaurar, loading: loadingRestaurar } = useFetchPost<{ id: string }, { ok: boolean; message?: string }>('/api/gestao/restaurar');
@@ -25,7 +25,12 @@ export default function ManageDecisionOptions(props: { doc: JurisprudenciaDocume
 
 	async function handleAnonimizar() {
 		try {
-			const result = await postAnonimizar({ id: props.id, doc: props.doc, jurisUrl: window.location.origin });
+			const result = await postAnonimizar({ 
+				id: props.id, 
+				doc: props.doc, 
+				jurisUrl: window.location.origin,
+				returnUrl: window.location.href 
+			});
 
 			if (!result.ok) {
 				alert("Falha ao anonimizar: " + result.message);

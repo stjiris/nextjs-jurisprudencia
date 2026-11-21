@@ -1,8 +1,6 @@
 import { withAuthentication } from "@/core/user/authenticate"
 import { JurisprudenciaDocument, JurisprudenciaDocumentDateKey, JurisprudenciaDocumentExactKey, JurisprudenciaDocumentGenericKey, JurisprudenciaDocumentStateKey, JurisprudenciaDocumentStateValue, JurisprudenciaDocumentStateValues, JurisprudenciaDocumentTextKey, PartialJurisprudenciaDocument, isJurisprudenciaDocumentContentKey, isJurisprudenciaDocumentDateKey, isJurisprudenciaDocumentExactKey, isJurisprudenciaDocumentGenericKey, isJurisprudenciaDocumentHashKey, isJurisprudenciaDocumentObjectKey, isJurisprudenciaDocumentStateKey, isJurisprudenciaDocumentTextKey } from "@stjiris/jurisprudencia-document";
 import { useContext, useState } from "react";
-
-import { useRouter as useNavRouter, useSearchParams } from "next/navigation";
 import { useRouter } from "next/router";
 import { Loading } from "@/components/loading";
 import { useFetch } from "@/components/useFetch";
@@ -117,14 +115,29 @@ function UpdateDocument({ id, doc }: { id: string, doc: JurisprudenciaDocument }
     let keys = useKeysFromContext().records;
     let [updateObject,] = useContext(UpdateContext);
     let router = useRouter();
-    let navRouter = useNavRouter();
-    let update = async () => {
-        await fetch(`${router.basePath}/api/doc/${id}`, {
-            method: "PUT",
-            body: JSON.stringify(updateObject)
-        });
-        navRouter.refresh();
-    }
+    const [saving, setSaving] = useState(false);
+
+    let update = async (): Promise<boolean> => {
+        setSaving(true);
+        try {
+            const res = await fetch(`${router.basePath}/api/doc/${id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(updateObject)
+            });
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                alert(`Erro ao guardar documento: ${errData.message || res.statusText}`);
+                return false;
+            }
+            return true;
+        } catch (e: any) {
+            alert(`Erro ao guardar documento: ${e?.message || e}`);
+            return false;
+        } finally {
+            setSaving(false);
+        }
+    };
 
     // URL of the decision's view page, using the *new* process number if it was
     // edited — otherwise a save that changes it leaves the return link pointing at
@@ -132,20 +145,27 @@ function UpdateDocument({ id, doc }: { id: string, doc: JurisprudenciaDocument }
     let decisionUrl = () => {
         const numeroProcesso = (updateObject as PartialJurisprudenciaDocument)["Número de Processo"] ?? doc["Número de Processo"];
         return `/${encodeURIComponent(numeroProcesso!)}/${doc.UUID}`;
-    }
+    };
 
     let deleteDoc = async () => {
         if (!confirm("Tem a certeza que quer eliminar o documento?")) return;
-        let writeResponseBase = await fetch(`${router.basePath}/api/doc/${id}`, {
-            method: "DELETE",
-        }).then(r => r.json() as Promise<WriteResponseBase>);
-        if (writeResponseBase.result === "updated") {
-            navRouter.back();
+        setSaving(true);
+        try {
+            const res = await fetch(`${router.basePath}/api/doc/${id}`, {
+                method: "DELETE",
+            });
+            const writeResponseBase = await res.json() as WriteResponseBase;
+            if (writeResponseBase.result === "updated") {
+                router.back();
+            } else {
+                router.push("/pesquisa/");
+            }
+        } catch (e: any) {
+            alert(`Erro ao eliminar documento: ${e?.message || e}`);
+        } finally {
+            setSaving(false);
         }
-        else {
-            navRouter.push("/pesquisa/")
-        }
-    }
+    };
 
     return <div className="container-fluid alert alert-info col-12 mt-2">
         <div className="row">
@@ -155,15 +175,57 @@ function UpdateDocument({ id, doc }: { id: string, doc: JurisprudenciaDocument }
             </div>
             <div className="col-6 text-end">
                 <div className="btn-group">
-                    <button className="btn btn-secondary" onClick={() => navRouter.back()}>Voltar</button>
-                    <button className="btn btn-danger" onClick={deleteDoc} disabled={Object.keys(updateObject).length > 0}>Eliminar</button>
-                    <button className="btn btn-warning" onClick={() => navRouter.refresh()} disabled={Object.keys(updateObject).length === 0}>Cancelar</button>
-                    <button className="btn btn-success" onClick={update} disabled={Object.keys(updateObject).length === 0}>Guardar</button>
-                    <button className="btn btn-primary" onClick={async () => {
-                        const url = decisionUrl();
-                        await update();
-                        navRouter.push(url);
-                    }} disabled={Object.keys(updateObject).length === 0}>Guardar e Voltar</button>
+                    <button 
+                        className="btn btn-secondary" 
+                        type="button"
+                        onClick={() => {
+                            if (Object.keys(updateObject).length > 0 && !confirm("Existem alterações por guardar. Tem a certeza que pretende voltar sem guardar?")) {
+                                return;
+                            }
+                            router.back();
+                        }}>
+                        Voltar
+                    </button>
+                    <button 
+                        className="btn btn-danger" 
+                        type="button"
+                        onClick={deleteDoc} 
+                        disabled={Object.keys(updateObject).length > 0 || saving}>
+                        Eliminar
+                    </button>
+                    <button 
+                        className="btn btn-warning" 
+                        type="button"
+                        onClick={() => router.reload()} 
+                        disabled={Object.keys(updateObject).length === 0 || saving}>
+                        Cancelar
+                    </button>
+                    <button 
+                        className="btn btn-success" 
+                        type="button"
+                        onClick={async () => {
+                            const ok = await update();
+                            if (ok) {
+                                alert("Documento guardado com sucesso!");
+                                router.reload();
+                            }
+                        }} 
+                        disabled={Object.keys(updateObject).length === 0 || saving}>
+                        {saving ? "A guardar…" : "Guardar"}
+                    </button>
+                    <button 
+                        className="btn btn-primary" 
+                        type="button"
+                        onClick={async () => {
+                            const url = decisionUrl();
+                            const ok = await update();
+                            if (ok) {
+                                router.push(url);
+                            }
+                        }} 
+                        disabled={Object.keys(updateObject).length === 0 || saving}>
+                        {saving ? "A guardar…" : "Guardar e Voltar"}
+                    </button>
                 </div>
             </div>
         </div>

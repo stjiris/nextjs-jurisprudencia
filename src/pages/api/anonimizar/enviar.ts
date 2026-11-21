@@ -7,6 +7,7 @@ type AnonimizarResponse = {
     ok: boolean;
     token?: string;
     message?: string;
+    returnUrl?: string;
 };
 
 export default LoggerApi(async function anonimizarHandler(
@@ -46,7 +47,7 @@ export default LoggerApi(async function anonimizarHandler(
     }
 
     try {
-        const { doc, id, jurisUrl } = req.body;
+        const { doc, id, jurisUrl, returnUrl } = req.body;
 
         let cleanJurisUrl = jurisUrl;
         if (typeof jurisUrl === "string" && jurisUrl.startsWith("http")) {
@@ -56,6 +57,10 @@ export default LoggerApi(async function anonimizarHandler(
                 cleanJurisUrl = jurisUrl;
             }
         }
+
+        const canonicalReturnUrl = returnUrl || (cleanJurisUrl && doc?.["Número de Processo"] && doc?.UUID
+            ? `${cleanJurisUrl}/${encodeURIComponent(doc["Número de Processo"])}/${encodeURIComponent(doc.UUID)}`
+            : undefined);
 
         if (!doc || !id) {
             return res.status(400).json({
@@ -149,6 +154,7 @@ export default LoggerApi(async function anonimizarHandler(
                 document: doc,
                 nlp: nlpJson,
                 jurisUrl: cleanJurisUrl,
+                returnUrl: canonicalReturnUrl,
                 entities: savedEntities,
                 ts: Date.now(),
             }),

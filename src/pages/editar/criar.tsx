@@ -3,7 +3,6 @@ import { JurisprudenciaDocumentDateKey, JurisprudenciaDocumentExactKey, Jurispru
 import { useContext, useState } from "react";
 
 import Link from "next/link";
-import { useParams, useRouter as useNavRouter, useSearchParams } from "next/navigation";
 import { useRouter } from "next/router";
 import { WriteResponseBase } from "@elastic/elasticsearch/lib/api/types";
 import { useKeysFromContext } from "@/contexts/keys";
@@ -78,23 +77,61 @@ function CreateDocument() {
     let keys = useKeysFromContext().records;
     let [updateObject,] = useContext(UpdateContext);
     let router = useRouter();
-    let navRouter = useNavRouter();
+    const [saving, setSaving] = useState(false);
+
     let update = async () => {
-        let writeResponseBase = await fetch(`${router.basePath}/api/doc`, {
-            method: "POST",
-            body: JSON.stringify(updateObject)
-        }).then(r => r.json() as Promise<WriteResponseBase>);
-        navRouter.push(`./${writeResponseBase._id}`)
-    }
+        setSaving(true);
+        try {
+            const res = await fetch(`${router.basePath}/api/doc`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(updateObject)
+            });
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                alert(`Erro ao criar documento: ${errData.message || res.statusText}`);
+                return;
+            }
+            const writeResponseBase = await res.json() as WriteResponseBase;
+            alert("Documento criado com sucesso!");
+            router.push(`/editar/${encodeURIComponent(writeResponseBase._id)}`);
+        } catch (e: any) {
+            alert(`Erro ao criar documento: ${e?.message || e}`);
+        } finally {
+            setSaving(false);
+        }
+    };
 
     return <div className="alert alert-info">
         <div className="d-flex">
             <h4 className="flex-shrink-1">Documento <code>(novo)</code></h4>
             <div className="flex-grow-1"></div>
             <div className="btn-group">
-                <button className="btn btn-secondary" onClick={() => navRouter.back()}>Voltar</button>
-                <button className="btn btn-warning" onClick={() => navRouter.refresh()} disabled={Object.keys(updateObject).length === 0}>Cancelar</button>
-                <button className="btn btn-success" onClick={update} disabled={Object.keys(updateObject).length === 0}>Guardar</button>
+                <button 
+                    className="btn btn-secondary" 
+                    type="button"
+                    onClick={() => {
+                        if (Object.keys(updateObject).length > 0 && !confirm("Existem alterações não guardadas. Tem a certeza que pretende voltar?")) {
+                            return;
+                        }
+                        router.back();
+                    }}>
+                    Voltar
+                </button>
+                <button 
+                    className="btn btn-warning" 
+                    type="button"
+                    onClick={() => router.reload()} 
+                    disabled={Object.keys(updateObject).length === 0 || saving}>
+                    Cancelar
+                </button>
+                <button 
+                    className="btn btn-success" 
+                    type="button"
+                    onClick={update} 
+                    disabled={Object.keys(updateObject).length === 0 || saving}>
+                    {saving ? "A criar…" : "Guardar"}
+                </button>
             </div>
         </div>
         <ul>

@@ -175,7 +175,15 @@ export default LoggerApi(async function receberHandler(req: NextApiRequest, res:
             }
         }
 
-        return res.status(200).json({ ok: true });
+        const decisionPath = current?._source?.["Número de Processo"] && current?._source?.UUID
+            ? `/${encodeURIComponent(current._source["Número de Processo"])}/${encodeURIComponent(current._source.UUID)}`
+            : `/${encodeURIComponent(jurisId)}`;
+
+        return res.status(200).json({ 
+            ok: true, 
+            returnUrl: decisionPath,
+            message: "Documento anonimizado guardado com sucesso no Juris"
+        });
     } catch (err: any) {
         console.error("Error in /api/anonimizar/receber:", err);
         return res.status(500).json({ ok: false, message: `Erro ao guardar documento no Juris: ${err?.message || "Internal server error"}` });

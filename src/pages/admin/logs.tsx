@@ -3,9 +3,9 @@ import { withRole } from "@/core/user/authenticate";
 import { LoggerServerSideProps } from "@/core/logger-api";
 import GenericPage from "@/components/main_pages/genericPageStructure";
 import { useFetch } from "@/components/useFetch";
-import { useSearchParams } from "next/navigation";
+import { useRouter } from "next/router";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AuditAction, AuditEvent } from "@/core/audit-log";
 
 const ACTIONS: AuditAction[] = [
@@ -18,10 +18,17 @@ export const getServerSideProps: GetServerSideProps = LoggerServerSideProps(
 );
 
 export default function LogsPage() {
-    const searchParams = useSearchParams();
-    const [action, setAction] = useState(searchParams.get("action") || "");
-    const [user, setUser] = useState(searchParams.get("user") || "");
+    const router = useRouter();
+    const [action, setAction] = useState<string>("");
+    const [user, setUser] = useState<string>("");
     const [page, setPage] = useState(0);
+
+    useEffect(() => {
+        if (router.isReady) {
+            if (typeof router.query.action === "string") setAction(router.query.action);
+            if (typeof router.query.user === "string") setUser(router.query.user);
+        }
+    }, [router.isReady, router.query.action, router.query.user]);
 
     const params = new URLSearchParams();
     if (action) params.set("action", action);
