@@ -1,5 +1,5 @@
 import { GenericPageWithForm } from "@/components/main_pages/genericPageStructure";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ReadonlyURLSearchParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Script from "next/script";
@@ -235,9 +235,26 @@ function HistogramModal(){
 function TermInfo(props: {term: string}){
     let termInfo = useFetch<JurisprudenciaKey>(`/api/keys/${encodeURIComponent(props.term)}`, [])
 
+    const displayDescription = useMemo(() => {
+        if (!termInfo?.description) return "";
+        let desc = termInfo.description;
+        // Harmonizar com a regra adotada no Boletim e Índices: apóstrofe foi removida da exibição e substituída por itálico
+        if (props.term === "Descritores") {
+            desc = desc.replace(
+                /precedidos de uma ap[oó]strofe/gi,
+                "mostrados em itálico (sem a apóstrofe original)"
+            );
+            desc = desc.replace(
+                /sem essa ap[oó]strofe/gi,
+                "com a formatação normal (não itálico)"
+            );
+        }
+        return desc;
+    }, [termInfo?.description, props.term]);
+
     return <>
         {termInfo !== undefined ? 
-            <div className="alert alert-info m-1 p-1" role="alert" dangerouslySetInnerHTML={{__html: termInfo.description}}></div>
+            <div className="alert alert-info m-1 p-1" role="alert" dangerouslySetInnerHTML={{__html: displayDescription}}></div>
             :
             <div className="alert alert-info m-1 p-1" role="alert">
                 <p className="m-0">
