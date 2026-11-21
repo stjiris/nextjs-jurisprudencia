@@ -126,6 +126,7 @@ export default function SavedSessionsModal({ id = "modal-saved-sessions", onSess
             modalEl.addEventListener("show.bs.modal", handleShow);
             return () => modalEl.removeEventListener("show.bs.modal", handleShow);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
 
     const handleSaveSuggestion = async (e?: React.FormEvent) => {

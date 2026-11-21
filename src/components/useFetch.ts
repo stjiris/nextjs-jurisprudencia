@@ -28,6 +28,7 @@ export function useFetch<T>(relativeUrl: string | null, otherDeps: any[]) {
             });
 
         return () => abort.abort();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [relativeUrl, router.basePath, ...otherDeps]);
 
     return resp;

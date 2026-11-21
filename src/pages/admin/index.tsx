@@ -154,7 +154,7 @@ function CleanDraftsTrigger() {
         <div className="card-body">
             <div className="card-title fw-bold">Limpeza de Rascunhos e Duplicados</div>
             <p className="text-muted small">
-                Limpar acórdãos pendentes em 'importação' ou 'preparação' que já se encontram publicados noutras plataformas (ou limpar todos para permitir sincronização limpa).
+                Limpar acórdãos pendentes em &apos;importação&apos; ou &apos;preparação&apos; que já se encontram publicados noutras plataformas (ou limpar todos para permitir sincronização limpa).
             </p>
             <div className="d-flex gap-2">
                 <button
