@@ -56,6 +56,7 @@ describe('JurisprudenciaTable Component', () => {
     );
 
     // Headers
+    expect(screen.getByText('#')).toBeInTheDocument();
     expect(screen.getByText('Processo')).toBeInTheDocument();
     expect(screen.getByText('Data')).toBeInTheDocument();
     expect(screen.getByText('Relator')).toBeInTheDocument();
@@ -65,6 +66,7 @@ describe('JurisprudenciaTable Component', () => {
     expect(screen.getByText('Estado')).toBeInTheDocument();
 
     // Row 1
+    expect(screen.getByText('1')).toBeInTheDocument();
     expect(screen.getByText('1234/20.5YFLSB')).toBeInTheDocument();
     expect(screen.getByText('15/05/2024')).toBeInTheDocument();
     expect(screen.getByText('Conselheiro Silva')).toBeInTheDocument();
@@ -72,6 +74,7 @@ describe('JurisprudenciaTable Component', () => {
     expect(screen.getByText('Responsabilidade Civil, Contrato de Empreitada')).toBeInTheDocument();
 
     // Row 2
+    expect(screen.getByText('2')).toBeInTheDocument();
     expect(screen.getByText('5678/22.1T8LRA')).toBeInTheDocument();
     expect(screen.getByText('10/06/2024')).toBeInTheDocument();
     expect(screen.getByText('Conselheira Santos')).toBeInTheDocument();

@@ -43,6 +43,9 @@ export default function IndexPage({ role, syncRole }: IndexPageProps) {
                         {can('manageUsers') && <LinkEntry link="/admin/logs" title="Registo de Atividade">
                             <p>Consultar o registo de ações realizadas no sistema</p>
                         </LinkEntry>}
+                        <LinkEntry link="/changelog" title="Registo de Alterações (Changelog)">
+                            <p>Consultar histórico de versões, notas de lançamento e melhorias do sistema</p>
+                        </LinkEntry>
                         {can('manageUsers') && <CleanDraftsTrigger />}
                         {can('manageUsers') && syncRole === "interno" && <SyncTrigger
                             title="Pedir sincronização"

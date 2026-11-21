@@ -174,10 +174,12 @@ export default function JurisprudenciaTable({ results, searchId }: { results: Se
     }, [filteredRows, sortColumn, sortDirection]);
 
     const exportToCsv = () => {
-        const headers = ["Processo", "Data", "Relator", "Meio Processual", "Decisão", "Descritores", "Estado", "ECLI"];
+        const headers = ["#", "Processo", "Data", "Relator", "Meio Processual", "Decisão", "Descritores", "Estado", "ECLI"];
         const csvLines = [headers.join(";")];
-        for (const r of sortedRows) {
+        for (let i = 0; i < sortedRows.length; i++) {
+            const r = sortedRows[i];
             const line = [
+                i + 1,
                 `"${r.numeroProcesso.replace(/"/g, '""')}"`,
                 `"${r.data.replace(/"/g, '""')}"`,
                 `"${r.relator.replace(/"/g, '""')}"`,
@@ -265,6 +267,13 @@ export default function JurisprudenciaTable({ results, searchId }: { results: Se
                     <thead className="table-light text-nowrap">
                         <tr>
                             <th
+                                style={{ width: "48px", minWidth: "44px" }}
+                                className="text-center bg-light text-muted user-select-none py-2"
+                                title="Número da Linha (Metadado de Posição)"
+                            >
+                                #
+                            </th>
+                            <th
                                 className="user-select-none py-2"
                                 style={{ cursor: "pointer", width: "16%" }}
                                 onClick={() => handleSort("processo")}
@@ -335,6 +344,9 @@ export default function JurisprudenciaTable({ results, searchId }: { results: Se
                         {/* Excel Filter Inputs Row */}
                         {showFilters && (
                             <tr className="bg-light border-bottom">
+                                <th className="p-1 text-center text-muted" style={{ fontSize: "0.75rem" }} title="Linha de Filtros das Colunas">
+                                    <i className="bi bi-funnel"></i>
+                                </th>
                                 <th className="p-1">
                                     <input
                                         type="text"
@@ -426,7 +438,7 @@ export default function JurisprudenciaTable({ results, searchId }: { results: Se
                     <tbody>
                         {sortedRows.length === 0 ? (
                             <tr>
-                                <td colSpan={7} className="text-center py-4 text-muted">
+                                <td colSpan={8} className="text-center py-4 text-muted">
                                     <i className="bi bi-funnel text-muted fs-4 d-block mb-1"></i>
                                     Nenhum acórdão corresponde aos filtros aplicados na tabela.
                                     {isFiltered && (
@@ -444,7 +456,7 @@ export default function JurisprudenciaTable({ results, searchId }: { results: Se
                             </tr>
                         ) : (
                             sortedRows.map((row, i) => (
-                                <TableRow key={i} row={row} keys={keys} />
+                                <TableRow key={row.hit._source?.UUID || i} row={row} keys={keys} index={i + 1} />
                             ))
                         )}
                     </tbody>
@@ -454,9 +466,12 @@ export default function JurisprudenciaTable({ results, searchId }: { results: Se
     );
 }
 
-function TableRow({ row, keys }: { row: RowData; keys: any }) {
+function TableRow({ row, keys, index }: { row: RowData; keys: any; index: number }) {
     return (
         <tr>
+            <td className="text-center text-muted bg-light border-end fw-semibold user-select-none" style={{ width: "48px", fontSize: "0.82rem" }}>
+                {index}
+            </td>
             <td className="fw-semibold">
                 <Link href={row.href} className="text-decoration-none text-nowrap">
                     {row.numeroProcesso}

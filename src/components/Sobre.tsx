@@ -58,8 +58,12 @@ export default function Sobre() {
                             <a href="https://docs.google.com/document/d/1jz8CVWifPHAZS1BBm6Vi3YWVb-xS5vJk8UbblsWRz-A/edit?usp=sharing" target="_blank"> Notas Pesquisa</a>
                         </small></div>
                         <div><small><Link href="/admin" target="_blank">Admin</Link></small></div>
+                        <div><small><Link href="/changelog"><i className="bi bi-clock-history me-1"></i>Registo de Alterações (Changelog)</Link></small></div>
                         <div><small><Link href="https://www.github.com/stjiris/jurisprudencia" target="_blank"><i className="bi bi-github"></i> @stjiris/jurisprudencia</Link></small></div>
                     </div>
+                    <Link href="/changelog" className="btn btn-outline-primary me-2">
+                        <i className="bi bi-journal-text me-1"></i>Registo de Alterações
+                    </Link>
                     <button className="btn btn-secondary" type="button" data-bs-dismiss="modal">Fechar</button>
                 </div>
             </div>
@@ -69,10 +73,29 @@ export default function Sobre() {
 
 function ShowVersion() {
     let info = useFetch<{ version: string, mostRecent?: string, publicStates?: JurisprudenciaDocumentStateValue[] }>("/api/index-info", []);
+    const appVersion = info?.version || "0.4.0";
 
-    return <p className="m-0">
-        {info?.version && <><small>Versão: {info?.version}</small><br /></>}
-        {info?.mostRecent && <small>Documento mais recente: {info?.mostRecent}<br /></small>}
-        {info?.publicStates && <small>Estados visiveis: {info?.publicStates.map((s, i) => <span key={i}><BadgeFromState state={s} /> </span>)}</small>}
-    </p >
+    return <div className="m-0 mt-1">
+        <div className="d-flex align-items-center flex-wrap gap-2 mb-1">
+            <small className="fw-semibold">Versão: {appVersion}</small>
+            <Link
+                href="/changelog"
+                className="badge bg-primary text-white text-decoration-none shadow-sm"
+                title="Consultar histórico de alterações e notas de versão"
+            >
+                <i className="bi bi-clock-history me-1"></i>Registo de alterações
+            </Link>
+            <a
+                href="/CHANGELOG.md"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="badge bg-light text-secondary border text-decoration-none shadow-sm"
+                title="Aceder diretamente ao ficheiro CHANGELOG.md bruto"
+            >
+                <i className="bi bi-filetype-md me-1"></i>.md
+            </a>
+        </div>
+        {info?.mostRecent && <small className="text-muted d-block">Documento mais recente: {info?.mostRecent}</small>}
+        {info?.publicStates && <small className="text-muted d-block">Estados visíveis: {info?.publicStates.map((s, i) => <span key={i}><BadgeFromState state={s} /> </span>)}</small>}
+    </div>
 }

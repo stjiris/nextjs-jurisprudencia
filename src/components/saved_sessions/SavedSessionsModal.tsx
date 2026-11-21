@@ -321,6 +321,9 @@ export default function SavedSessionsModal({ id = "modal-saved-sessions", onSess
                                 <table className="table table-hover align-middle mb-0" style={{ fontSize: "0.875rem" }}>
                                     <thead className="table-light border-bottom text-muted">
                                         <tr>
+                                            <th style={{ width: "45px", minWidth: "40px" }} className="text-center py-2 text-muted fw-bold user-select-none" title="Número da Linha (Metadado de Posição)">
+                                                #
+                                            </th>
                                             <th style={{ width: "40px" }} className="text-center py-2">
                                                 <input
                                                     type="checkbox"
@@ -349,6 +352,9 @@ export default function SavedSessionsModal({ id = "modal-saved-sessions", onSess
                                         {/* Row #1: Active Search Suggestion (if currently has unsaved active search) */}
                                         {showSuggestionRow && (
                                             <tr className="table-primary table-opacity-10">
+                                                <td className="text-center text-muted fw-bold bg-light border-end user-select-none" style={{ width: "45px", fontSize: "0.82rem" }}>
+                                                    1
+                                                </td>
                                                 <td className="text-center">
                                                     <span className="badge bg-primary text-white" title="Pesquisa ativa atualmente na página">
                                                         Nova
@@ -420,11 +426,15 @@ export default function SavedSessionsModal({ id = "modal-saved-sessions", onSess
                                         )}
 
                                         {/* Saved Sessions Rows */}
-                                        {saves.map((save) => {
+                                        {saves.map((save, idx) => {
                                             const isSelected = selectedSaveIds.includes(save.id);
                                             const currentDisplayVal = editingNames[save.id] ?? save.name;
+                                            const rowNum = showSuggestionRow ? idx + 2 : idx + 1;
                                             return (
                                                 <tr key={save.id} className={isSelected ? "table-active" : ""}>
+                                                    <td className="text-center text-muted fw-bold bg-light border-end user-select-none" style={{ width: "45px", fontSize: "0.82rem" }}>
+                                                        {rowNum}
+                                                    </td>
                                                     <td className="text-center">
                                                         <input
                                                             type="checkbox"
