@@ -29,7 +29,7 @@ export default function IndexPage({ role, syncRole }: IndexPageProps) {
                             <p>Pesquise normalmente pelos acórdãos. Terá acesso a mais informação e poderá abrir em modo de edição os acórdãos</p>
                         </LinkEntry>
                         <LinkEntry link="/editar/criar" title="Criar Acórdão">
-                            <p>Criar acordão manualmente</p>
+                            <p>Criar acórdão manualmente ou por importação automática de ficheiro (.docx / .pdf)</p>
                         </LinkEntry>
                         {can('importExport') && <LinkEntry link="/admin/excel" title="Importar/Exportar">
                             <p>Importar ou exportar excel para atualização dos dados</p>
