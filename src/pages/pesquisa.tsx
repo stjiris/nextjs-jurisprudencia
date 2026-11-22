@@ -239,7 +239,7 @@ function AdminSyncButton({ syncRole }: { syncRole?: string | null }) {
 
     const isExterno = syncRole === "externo";
     const endpoint = isExterno ? "/api/gestao/sync-export" : "/api/gestao/sync-request";
-    const title = isExterno ? "Exportar para Interno" : "Sincronizar";
+    const title = isExterno ? "Exportar para Interno" : "Sincronizar com externo";
     const tooltip = isExterno
         ? "Exportar acórdãos alterados para o Juris Interno por email"
         : "Pedir sincronização ao Juris Externo (as alterações chegam dentro de ~1 min)";
@@ -285,7 +285,7 @@ function AdminSyncButton({ syncRole }: { syncRole?: string | null }) {
                 {running ? (
                     <>
                         <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" style={{ width: "12px", height: "12px" }}></span>
-                        <span>A sincronizar...</span>
+                        <span>{isExterno ? "A exportar..." : "A sincronizar com externo..."}</span>
                     </>
                 ) : (
                     <>

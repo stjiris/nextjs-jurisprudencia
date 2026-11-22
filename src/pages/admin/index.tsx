@@ -54,7 +54,7 @@ export default function IndexPage({ role, syncRole }: IndexPageProps) {
                             icon="bi-cloud-arrow-down"
                         />}
                         {can('manageUsers') && syncRole === "interno" && <SyncTrigger
-                            title="Pedir sincronização"
+                            title="Sincronizar com externo"
                             description="Pedir ao juris externo as últimas alterações (o externo sobrepõe os dados locais). As alterações chegam dentro de ~1 min."
                             endpoint="/api/gestao/sync-request"
                             icon="bi-arrow-repeat"
