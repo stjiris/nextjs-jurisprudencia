@@ -41,6 +41,7 @@ RUN git clone https://github.com/stjiris/jurisprudencia-rss.git && cd jurisprude
 RUN (crontab -l; echo "45 9-18/3 * * 1-5 cd /home/clitools/jurisprudencia-rss && /usr/local/bin/node dist >> ../jurisprudencia-rss.stdout.log 2>> ../jurisprudencia-rss.stderr.log") | crontab -
 
 COPY entrypoint.sh .
+COPY trigger-server.mjs .
 
 USER root
 

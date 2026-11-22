@@ -25,8 +25,14 @@ O formato baseia-se nas diretrizes de [Keep a Changelog](https://keepachangelog.
 - **Páginas de Erro Personalizadas e Diagnóstico Explícito:**
   - Criação de páginas de erro 404 (Página Não Encontrada) e 500 (Erro Interno do Servidor) alinhadas com a identidade visual do STJ.
   - Mensagens de erro humanas e descritivas nas operações de publicação, eliminação, restauro e comunicação com APIs.
-- **Sincronização Manual na Pesquisa (Admin):**
-  - Adicionado botão de sincronização com o SharePoint e ambientes externos diretamente na barra de ferramentas de pesquisa para utilizadores autenticados.
+- **Sincronização Manual com o SharePoint do STJ (Exclusivo Modo Admin):**
+  - Adicionado botão dedicado `[☁️ Sincronizar SharePoint]` na barra de ferramentas de pesquisa e no painel de administração (`/admin`).
+  - Visível exclusivamente no modo administrador (`manageUsers`), permanecendo totalmente oculto para utilizadores regulares e editores.
+  - Consulta em tempo real via Microsoft Graph API (delta) das pastas vigiadas (`Anonimização` e `Jurisprudência/Acórdãos`) com reporte imediato de novos acórdãos pendentes.
+  - Despoleta o serviço de ingestão `clitools` (`jurisprudencia-privada-etl`) via daemon HTTP e sinalizador partilhado em volume, mantendo registo em log de auditoria.
+  - Salvaguarda estrita de RGPD: restrito ao ambiente interno (`SYNC_ROLE=interno`), impedindo importações não anonimizadas no ambiente público/externo.
+- **Sincronização Manual com o Juris Externo (Admin):**
+  - Botão `[🔄 Sincronizar]` na barra de ferramentas para troca assíncrona de alterações com o servidor externo.
 
 ### Melhorado
 - **Reformulação do Modal de Pesquisas Guardadas:**

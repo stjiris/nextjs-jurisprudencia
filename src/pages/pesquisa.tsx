@@ -100,6 +100,7 @@ function ShowResults({results, searchParams, searchInfo}: {results: SearchHandle
                 <i className="bi bi-bookmarks"></i>
                 <span>Pesquisas Guardadas</span>
             </button>
+            <AdminSharepointSyncButton syncRole={searchInfo.syncRole} />
             <AdminSyncButton syncRole={searchInfo.syncRole} />
         </div>
         {auth ? (
@@ -142,6 +143,7 @@ function NavLink({page, icon, searchParams}: {page: number, icon: string, search
 function NoResults({ searchInfo }: { searchInfo?: PesquisaProps }){
     return <>
         <div className="mb-2 d-flex align-items-center gap-2">
+            <AdminSharepointSyncButton syncRole={searchInfo?.syncRole} />
             <AdminSyncButton syncRole={searchInfo?.syncRole} />
         </div>
         <div className="alert alert-info" role="alert">
@@ -153,6 +155,78 @@ function NoResults({ searchInfo }: { searchInfo?: PesquisaProps }){
             </ol>
         </div>
     </>
+}
+
+function AdminSharepointSyncButton({ syncRole }: { syncRole?: string | null }) {
+    const router = useRouter();
+    const canManage = useCanAccess("manageUsers");
+    const [running, setRunning] = useState(false);
+    const [status, setStatus] = useState<{ variant: "success" | "warning" | "danger"; text: string } | null>(null);
+
+    // Visível estritamente no modo admin e apenas em ambiente interno/dev (SharePoint é estritamente interno)
+    if (!canManage || syncRole === "externo") return null;
+
+    const handleSharepointSync = async () => {
+        if (running) return;
+        setRunning(true);
+        setStatus(null);
+        try {
+            const res = await fetch(`${router.basePath}/api/gestao/sync-sharepoint`, { method: "POST" });
+            const data = await res.json();
+            if (!data.ok) {
+                setStatus({ variant: "danger", text: data.message || `Erro ${res.status}` });
+            } else {
+                const text = data.message || (typeof data.found === "number" ? `${data.found} novos acórdãos encontrados.` : "Sincronização SharePoint concluída.");
+                setStatus({ variant: "success", text });
+            }
+        } catch (err: any) {
+            setStatus({ variant: "danger", text: err?.message || "Falha de comunicação com o SharePoint." });
+        } finally {
+            setRunning(false);
+            setTimeout(() => {
+                setStatus((prev) => (prev?.variant === "success" ? null : prev));
+            }, 7000);
+        }
+    };
+
+    return (
+        <div className="d-inline-flex align-items-center gap-1">
+            <button
+                type="button"
+                className="results-toolbar-control border-success text-success"
+                onClick={handleSharepointSync}
+                disabled={running}
+                title="Verificar se existem novos acórdãos nas pastas do SharePoint do STJ e importá-los para o sistema"
+                style={{ fontWeight: 600 }}
+            >
+                {running ? (
+                    <>
+                        <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" style={{ width: "12px", height: "12px" }}></span>
+                        <span>A verificar SharePoint...</span>
+                    </>
+                ) : (
+                    <>
+                        <i className="bi bi-cloud-arrow-down"></i>
+                        <span>Sincronizar SharePoint</span>
+                    </>
+                )}
+            </button>
+            {status && (
+                <span
+                    className={`badge bg-${status.variant} d-inline-flex align-items-center gap-1`}
+                    style={{ fontSize: "11.5px", padding: "4px 8px", cursor: "pointer", verticalAlign: "middle" }}
+                    onClick={() => setStatus(null)}
+                    title="Clique para fechar aviso"
+                >
+                    {status.variant === "success" && <i className="bi bi-check-circle"></i>}
+                    {status.variant === "warning" && <i className="bi bi-exclamation-triangle"></i>}
+                    {status.variant === "danger" && <i className="bi bi-x-circle"></i>}
+                    <span>{status.text}</span>
+                    <i className="bi bi-x ms-1" style={{ opacity: 0.8 }}></i>
+                </span>
+            )}
+        </div>
+    );
 }
 
 function AdminSyncButton({ syncRole }: { syncRole?: string | null }) {

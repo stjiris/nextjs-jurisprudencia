@@ -47,6 +47,12 @@ export default function IndexPage({ role, syncRole }: IndexPageProps) {
                             <p>Consultar histórico de versões, notas de lançamento e melhorias do sistema</p>
                         </LinkEntry>
                         {can('manageUsers') && <CleanDraftsTrigger />}
+                        {can('manageUsers') && syncRole !== "externo" && <SyncTrigger
+                            title="Sincronizar SharePoint"
+                            description="Verificar novas minutas e acórdãos nas pastas do SharePoint do STJ (Anonimização e Jurisprudência/Acórdãos) e importar para o estado de 'importação'."
+                            endpoint="/api/gestao/sync-sharepoint"
+                            icon="bi-cloud-arrow-down"
+                        />}
                         {can('manageUsers') && syncRole === "interno" && <SyncTrigger
                             title="Pedir sincronização"
                             description="Pedir ao juris externo as últimas alterações (o externo sobrepõe os dados locais). As alterações chegam dentro de ~1 min."

@@ -75,6 +75,12 @@ services:
             SYNC_MS_RECIPIENT: ${SYNC_MS_RECIPIENT:-}
             SYNC_MS_CC: ${SYNC_MS_CC:-}
             IMAGES_PATH: ${IMAGES_PATH:-/images}
+            CLITOOLS_URL: ${CLITOOLS_URL:-http://clitools_interno:4000}
+            TENANT_ID: ${TENANT_ID:-}
+            CLIENT_ID: ${CLIENT_ID:-}
+            CLIENT_SECRET: ${CLIENT_SECRET:-}
+            SITE_ID: ${SITE_ID:-}
+            DRIVES: ${DRIVES:-}
         ports:
             - "${SERVER_HOST:-0.0.0.0}:${SERVER_PORT:-3000}:3000"
         volumes:

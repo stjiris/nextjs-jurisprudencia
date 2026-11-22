@@ -154,7 +154,7 @@ function getMsConfig() {
     };
 }
 
-async function getGraphToken(tenantId: string, clientId: string, clientSecret: string): Promise<string> {
+export async function getGraphToken(tenantId: string, clientId: string, clientSecret: string): Promise<string> {
     if (cachedToken && Date.now() < cachedToken.expiresAt - 60_000) {
         return cachedToken.token;
     }
