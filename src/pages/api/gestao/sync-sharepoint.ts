@@ -1,7 +1,7 @@
 import LoggerApi from "@/core/logger-api";
-import { authenticatedHandler, getUserRole, getUsernameFromReq } from "@/core/user/authenticate";
+import { authenticatedHandler, getUserRole } from "@/core/user/authenticate";
 import { roleCanAccess } from "@/core/user/roles";
-import { logAuditEvent } from "@/core/audit-log";
+import { logAuditEvent, getUsernameFromReq, getIpFromReq } from "@/core/audit-log";
 import { syncSharepoint, checkSharepointDelta } from "@/core/sharepoint-sync";
 import type { NextApiRequest, NextApiResponse } from "next";
 
@@ -58,9 +58,12 @@ export default LoggerApi(authenticatedHandler(async function syncSharepointHandl
     try {
         const result = await syncSharepoint({ username });
         await logAuditEvent("sincronizar", username, {
-            target: "sharepoint",
-            found: result.found,
-            message: result.message,
+            details: JSON.stringify({
+                target: "sharepoint",
+                found: result.found,
+                message: result.message,
+            }),
+            ip: getIpFromReq(req),
         });
         return res.status(result.ok ? 200 : 500).json(result);
     } catch (err: any) {
