@@ -21,12 +21,17 @@ type Response = {
  * Strictly restricted to administrators ('manageUsers' permission) on
  * internal deployments.
  */
-export default LoggerApi(authenticatedHandler(async function syncSharepointHandler(
+export default LoggerApi(async function syncSharepointHandler(
     req: NextApiRequest,
     res: NextApiResponse<Response>
 ) {
     if (req.method !== "POST" && req.method !== "GET") {
         return res.status(405).json({ ok: false, message: "Método não permitido" });
+    }
+
+    const authed = await authenticatedHandler(req);
+    if (!authed) {
+        return res.status(401).json({ ok: false, message: "Não autorizado" });
     }
 
     const role = (await getUserRole(req)) ?? "editor";
@@ -70,4 +75,4 @@ export default LoggerApi(authenticatedHandler(async function syncSharepointHandl
         console.error("Error in POST /api/gestao/sync-sharepoint:", err);
         return res.status(500).json({ ok: false, message: err?.message || "Erro interno ao sincronizar SharePoint" });
     }
-}));
+});
