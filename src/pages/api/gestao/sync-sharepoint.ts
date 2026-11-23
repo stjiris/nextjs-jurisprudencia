@@ -1,6 +1,5 @@
 import LoggerApi from "@/core/logger-api";
-import { authenticatedHandler, getUserRole } from "@/core/user/authenticate";
-import { roleCanAccess } from "@/core/user/roles";
+import { authenticatedHandler } from "@/core/user/authenticate";
 import { logAuditEvent, getUsernameFromReq, getIpFromReq } from "@/core/audit-log";
 import { syncSharepoint, checkSharepointDelta } from "@/core/sharepoint-sync";
 import type { NextApiRequest, NextApiResponse } from "next";
@@ -32,11 +31,6 @@ export default LoggerApi(async function syncSharepointHandler(
     const authed = await authenticatedHandler(req);
     if (!authed) {
         return res.status(401).json({ ok: false, message: "Não autorizado" });
-    }
-
-    const role = (await getUserRole(req)) ?? "editor";
-    if (!roleCanAccess(role, "manageUsers")) {
-        return res.status(403).json({ ok: false, message: "Acesso reservado ao modo de administração (requer 'admin')" });
     }
 
     if (process.env.SYNC_ROLE === "externo") {

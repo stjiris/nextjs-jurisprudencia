@@ -1,6 +1,5 @@
 import LoggerApi from "@/core/logger-api";
-import { authenticatedHandler, getUserRole } from "@/core/user/authenticate";
-import { roleCanAccess } from "@/core/user/roles";
+import { authenticatedHandler } from "@/core/user/authenticate";
 import { getElasticSearchClient } from "@/core/elasticsearch";
 import { deleteDoc, updateDoc } from "@/core/doc";
 import { JurisprudenciaVersion } from "@stjiris/jurisprudencia-document";
@@ -33,11 +32,6 @@ export default LoggerApi(async function limparRascunhosHandler(
     const authed = await authenticatedHandler(req);
     if (!authed) {
         return res.status(401).json({ ok: false, message: "Não autorizado" });
-    }
-
-    const role = await getUserRole(req) ?? "editor";
-    if (!roleCanAccess(role, "manageUsers")) {
-        return res.status(403).json({ ok: false, message: "Permissão insuficiente (requer 'manageUsers')" });
     }
 
     const {

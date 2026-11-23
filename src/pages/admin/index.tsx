@@ -46,20 +46,20 @@ export default function IndexPage({ role, syncRole }: IndexPageProps) {
                         <LinkEntry link="/changelog" title="Registo de Alterações (Changelog)">
                             <p>Consultar histórico de versões, notas de lançamento e melhorias do sistema</p>
                         </LinkEntry>
-                        {can('manageUsers') && <CleanDraftsTrigger />}
-                        {can('manageUsers') && syncRole !== "externo" && <SyncTrigger
+                        <CleanDraftsTrigger />
+                        {syncRole !== "externo" && <SyncTrigger
                             title="Sincronizar SharePoint"
                             description="Verificar novas minutas e acórdãos nas pastas do SharePoint do STJ (Anonimização e Jurisprudência/Acórdãos) e importar para o estado de 'importação'."
                             endpoint="/api/gestao/sync-sharepoint"
                             icon="bi-cloud-arrow-down"
                         />}
-                        {can('manageUsers') && syncRole === "interno" && <SyncTrigger
+                        {syncRole === "interno" && <SyncTrigger
                             title="Sincronizar com externo"
                             description="Pedir ao juris externo as últimas alterações (o externo sobrepõe os dados locais). As alterações chegam dentro de ~1 min."
                             endpoint="/api/gestao/sync-request"
                             icon="bi-arrow-repeat"
                         />}
-                        {can('manageUsers') && syncRole === "externo" && <SyncTrigger
+                        {syncRole === "externo" && <SyncTrigger
                             title="Exportar para Interno"
                             description="Enviar por email todos os documentos alterados desde a última exportação."
                             endpoint="/api/gestao/sync-export"

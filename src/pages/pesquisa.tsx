@@ -159,12 +159,12 @@ function NoResults({ searchInfo }: { searchInfo?: PesquisaProps }){
 
 function AdminSharepointSyncButton({ syncRole }: { syncRole?: string | null }) {
     const router = useRouter();
-    const canManage = useCanAccess("manageUsers");
+    const user = useAuth();
     const [running, setRunning] = useState(false);
     const [status, setStatus] = useState<{ variant: "success" | "warning" | "danger"; text: string } | null>(null);
 
-    // Visível estritamente no modo admin e apenas em ambiente interno/dev (SharePoint é estritamente interno)
-    if (!canManage || syncRole === "externo") return null;
+    // Visível para todos os utilizadores autenticados e apenas em ambiente interno/dev (SharePoint é estritamente interno)
+    if (!user || syncRole === "externo") return null;
 
     const handleSharepointSync = async () => {
         if (running) return;
@@ -231,11 +231,11 @@ function AdminSharepointSyncButton({ syncRole }: { syncRole?: string | null }) {
 
 function AdminSyncButton({ syncRole }: { syncRole?: string | null }) {
     const router = useRouter();
-    const canManage = useCanAccess("manageUsers");
+    const user = useAuth();
     const [running, setRunning] = useState(false);
     const [status, setStatus] = useState<{ variant: "success" | "warning" | "danger"; text: string } | null>(null);
 
-    if (!canManage) return null;
+    if (!user) return null;
 
     const isExterno = syncRole === "externo";
     const endpoint = isExterno ? "/api/gestao/sync-export" : "/api/gestao/sync-request";

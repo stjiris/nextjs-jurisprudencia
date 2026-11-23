@@ -25,9 +25,10 @@ O formato baseia-se nas diretrizes de [Keep a Changelog](https://keepachangelog.
 - **Páginas de Erro Personalizadas e Diagnóstico Explícito:**
   - Criação de páginas de erro 404 (Página Não Encontrada) e 500 (Erro Interno do Servidor) alinhadas com a identidade visual do STJ.
   - Mensagens de erro humanas e descritivas nas operações de publicação, eliminação, restauro e comunicação com APIs.
-- **Sincronização Manual com o SharePoint do STJ (Exclusivo Modo Admin):**
-  - Adicionado botão dedicado `[☁️ Sincronizar SharePoint]` na barra de ferramentas de pesquisa e no painel de administração (`/admin`).
-  - Visível exclusivamente no modo administrador (`manageUsers`), permanecendo totalmente oculto para utilizadores regulares e editores.
+- **Sincronização com SharePoint, Sincronização com Externo e Limpeza de Rascunhos para Todos os Utilizadores Autenticados:**
+  - Botões `[Sincronizar SharePoint]` e `[Sincronizar com externo]` na barra de ferramentas de pesquisa e no painel `/admin` agora disponíveis para todos os utilizadores autenticados (editores e administradores).
+  - Funcionalidade de limpeza de rascunhos obsoletos (`CleanDraftsTrigger`) no `/admin` disponibilizada a todos os utilizadores com sessão iniciada.
+  - Endpoints de backend `/api/gestao/sync-sharepoint` e `/api/gestao/limpar-rascunhos` atualizados para permitir execução por qualquer utilizador autenticado com registo em auditoria.
   - Consulta em tempo real via Microsoft Graph API (delta) das pastas vigiadas (`Anonimização` e `Jurisprudência/Acórdãos`) com reporte imediato de novos acórdãos pendentes.
   - Despoleta o serviço de ingestão `clitools` (`jurisprudencia-privada-etl`) via daemon HTTP e sinalizador partilhado em volume, mantendo registo em log de auditoria.
   - Salvaguarda estrita de RGPD: restrito ao ambiente interno (`SYNC_ROLE=interno`), impedindo importações não anonimizadas no ambiente público/externo.
