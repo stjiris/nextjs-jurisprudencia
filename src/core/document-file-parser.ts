@@ -2,6 +2,7 @@ import mammoth from "mammoth";
 import path from "node:path";
 import fs from "node:fs";
 import crypto from "node:crypto";
+import { execFileSync } from "node:child_process";
 import { parseFilename } from "./filename-parser";
 import { canonicalizeSeccao } from "./seccao-util";
 import { PartialJurisprudenciaDocument, matchCanonical, ControlledField } from "@stjiris/jurisprudencia-document";
@@ -31,7 +32,9 @@ const SECCAO_TO_AREA: Record<string, string> = {
     "6.ª Secção (Cível)": "Área Cível",
     "7.ª Secção (Cível)": "Área Cível",
     "Contencioso": "Contencioso",
-    "Conflitos": "Conflitos"
+    "Tribunal de Conflitos": "Conflitos",
+    "Conflitos": "Conflitos",
+    "Formação": "Formação"
 };
 
 export type ParsedDocumentResult = {
@@ -54,26 +57,104 @@ export type ParsedDocumentResult = {
     };
 };
 
-function parsePortugueseDate(text: string): string | undefined {
-    // 1. Matches DD/MM/YYYY or DD-MM-YYYY
-    const numericMatch = text.match(/\b([0-3]?[0-9])[\/\-]([0-1]?[0-9])[\/\-](20\d\d|19\d\d)\b/);
-    if (numericMatch) {
-        const d = numericMatch[1].padStart(2, "0");
-        const m = numericMatch[2].padStart(2, "0");
-        const y = numericMatch[3];
-        return `${d}/${m}/${y}`;
+function formatValidPtDate(dayNum: number, monthNum: number, yearNum: number): string | undefined {
+    if (yearNum < 1900 || yearNum > 2099) return undefined;
+    if (monthNum < 1 || monthNum > 12) return undefined;
+    if (dayNum < 1 || dayNum > 31) return undefined;
+    const d = String(dayNum).padStart(2, "0");
+    const m = String(monthNum).padStart(2, "0");
+    return `${d}/${m}/${yearNum}`;
+}
+
+function formatTodayPt(): string {
+    const now = new Date();
+    return formatValidPtDate(now.getDate(), now.getMonth() + 1, now.getFullYear())!;
+}
+
+function matchAllTextDates(text: string): string[] {
+    const results: string[] = [];
+    const regex = /\b([0-3]?[0-9])\s+de\s+([a-zA-ZçÇãõáéíóú]+)\s+de\s+(20\d\d|19\d\d)\b/gi;
+    let m: RegExpExecArray | null;
+    while ((m = regex.exec(text)) !== null) {
+        const day = parseInt(m[1], 10);
+        const monthName = m[2].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const monthStr = MONTHS_PT[monthName] || MONTHS_PT[m[2].toLowerCase()];
+        const year = parseInt(m[3], 10);
+        if (monthStr) {
+            const formatted = formatValidPtDate(day, parseInt(monthStr, 10), year);
+            if (formatted) results.push(formatted);
+        }
+    }
+    return results;
+}
+
+function matchAllNumericDates(text: string): string[] {
+    const results: string[] = [];
+    // DD/MM/YYYY or DD-MM-YYYY
+    const dmyRegex = /\b([0-3]?[0-9])[\/\-]([0-1]?[0-9])[\/\-](20\d\d|19\d\d)\b/g;
+    let m: RegExpExecArray | null;
+    while ((m = dmyRegex.exec(text)) !== null) {
+        const formatted = formatValidPtDate(parseInt(m[1], 10), parseInt(m[2], 10), parseInt(m[3], 10));
+        if (formatted) results.push(formatted);
+    }
+    // YYYY-MM-DD or YYYY/MM/DD
+    const ymdRegex = /\b(20\d\d|19\d\d)[\/\-]([0-1]?[0-9])[\/\-]([0-3]?[0-9])\b/g;
+    while ((m = ymdRegex.exec(text)) !== null) {
+        const formatted = formatValidPtDate(parseInt(m[3], 10), parseInt(m[2], 10), parseInt(m[1], 10));
+        if (formatted) results.push(formatted);
+    }
+    return results;
+}
+
+function parsePortugueseDate(text: string, filename?: string): string | undefined {
+    // 1. Explicit "Data:" / "Data do Acórdão:" field
+    const explicitMatch = text.match(/(?:Data(?:\s+do\s+Ac[óo]rd[ãa]o)?)\s*[:\-]\s*([^\r\n]{6,40})/i);
+    if (explicitMatch) {
+        const txtDates = matchAllTextDates(explicitMatch[1]);
+        if (txtDates.length > 0) return txtDates[0];
+        const numDates = matchAllNumericDates(explicitMatch[1]);
+        if (numDates.length > 0) return numDates[0];
     }
 
-    // 2. Matches "28 de Outubro de 2026"
-    const textMatch = text.match(/\b([0-3]?[0-9])\s+de\s+([a-zA-ZçÇãõáéíóú]+)\s+de\s+(20\d\d|19\d\d)\b/i);
-    if (textMatch) {
-        const d = textMatch[1].padStart(2, "0");
-        const monthName = textMatch[2].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        const m = MONTHS_PT[monthName] || MONTHS_PT[textMatch[2].toLowerCase()];
-        const y = textMatch[3];
-        if (m) {
-            return `${d}/${m}/${y}`;
-        }
+    // 2. Closing signature date: "Lisboa, 18 de Novembro de 2026" or "STJ, 18/11/2026" (take last match)
+    const closingRegex = /(?:Lisboa|Supremo\s+Tribunal\s+de\s+Justi[çc]a|STJ)[,\s]+(?:em\s+)?([^\r\n]{6,45})/gi;
+    const closingDates: string[] = [];
+    let cm: RegExpExecArray | null;
+    while ((cm = closingRegex.exec(text)) !== null) {
+        const td = matchAllTextDates(cm[1]);
+        if (td.length > 0) closingDates.push(td[td.length - 1]);
+        const nd = matchAllNumericDates(cm[1]);
+        if (nd.length > 0) closingDates.push(nd[nd.length - 1]);
+    }
+    if (closingDates.length > 0) {
+        return closingDates[closingDates.length - 1];
+    }
+
+    // 3. Opening header: "Acordam no Supremo Tribunal de Justiça em 28 de Outubro de 2026"
+    const openingMatch = text.match(/Acordam[^.\r\n]{0,120}\bem\s+([^\r\n.]{6,40})/i);
+    if (openingMatch) {
+        const td = matchAllTextDates(openingMatch[1]);
+        if (td.length > 0) return td[0];
+        const nd = matchAllNumericDates(openingMatch[1]);
+        if (nd.length > 0) return nd[0];
+    }
+
+    // 4. Last textual Portuguese date ("DD de Mês de YYYY") — avoids factual case dates in the Relatório
+    const allTextDates = matchAllTextDates(text);
+    if (allTextDates.length > 0) {
+        return allTextDates[allTextDates.length - 1];
+    }
+
+    // 5. Filename date fallback (e.g. DD-MM-YYYY or YYYY-MM-DD)
+    if (filename) {
+        const fnDates = matchAllNumericDates(filename.replace(/_/g, "-"));
+        if (fnDates.length > 0) return fnDates[fnDates.length - 1];
+    }
+
+    // 6. Last valid numeric date in the document
+    const allNumDates = matchAllNumericDates(text);
+    if (allNumDates.length > 0) {
+        return allNumDates[allNumDates.length - 1];
     }
 
     return undefined;
@@ -135,6 +216,19 @@ export async function parseDocumentFile(
 
         const textResult = await mammoth.extractRawText({ buffer });
         rawText = textResult.value || "";
+    } else if (ext === ".pdf") {
+        try {
+            rawText = execFileSync("pdftotext", ["-", "-"], { input: buffer, encoding: "utf-8", timeout: 10000 }) || "";
+        } catch {
+            // pdftotext unavailable: avoid decoding binary %PDF streams as raw UTF-8 text
+            const asciiHead = buffer.subarray(0, 16).toString("ascii");
+            rawText = asciiHead.startsWith("%PDF") ? "" : buffer.toString("utf-8");
+        }
+        htmlContent = rawText
+            .split(/\r?\n\r?\n/)
+            .filter(p => p.trim().length > 0)
+            .map(p => `<p>${p.replace(/\r?\n/g, "<br>")}</p>`)
+            .join("");
     } else {
         // Fallback for plain text or simple extraction
         rawText = buffer.toString("utf-8");
@@ -169,11 +263,16 @@ export async function parseDocumentFile(
     }
 
     // 3. Data
-    let data = parsePortugueseDate(rawText) || new Date().toLocaleDateString("pt-PT");
+    let data = parsePortugueseDate(rawText, filename) || formatTodayPt();
 
     // 4. Secção & Área
+    // Check explicit numbered sections, Contencioso, Tribunal de Conflitos, and explicit Formação headers first
+    // so common legal nouns like "formação do contrato" or "conflitos de competência" don't override a numbered section.
     let seccaoCandidate = "";
-    const seccaoMatch = rawText.match(/\b([1-7]\.?[ªa]?\s*Secção(?:\s*\([A-Za-záéíóú]+\))?|Secção\s*(?:Cível|Criminal|Social)|Contencioso|Conflitos)\b/i);
+    const seccaoMatch =
+        rawText.match(/\b([1-7]\.?[ªa]?\s*Secção(?:\s*\([A-Za-záéíóú]+\))?|Secção\s*(?:Cível|Criminal|Social|de\s+Contencioso|do\s+Contencioso|de\s+Formação|da\s+Formação|de\s+Conflitos)|Tribunal\s+(?:de|dos)\s+Conflitos|Formação\s+de\s+Apreciação\s+Preliminar)\b/i)
+        || rawText.match(/(?:Acordam\s+na|Secção\s+da?)\s+(Formação)\b/)
+        || rawText.match(/\b(Contencioso|Conflitos)\b/);
     if (seccaoMatch) {
         seccaoCandidate = seccaoMatch[1].trim();
     }

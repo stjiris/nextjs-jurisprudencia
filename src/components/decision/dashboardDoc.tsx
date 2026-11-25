@@ -10,6 +10,7 @@ import Createable from "react-select/creatable";
 import AsyncCreatable from "react-select/async-creatable";
 import { useFetch } from "../useFetch";
 import { createFilter } from "react-select";
+import { CANONICAL_SECCAO_NAMES } from "@/core/seccao-util";
 
 export const ReactQuill = dynamic(
     () => import('react-quill').then(mod => mod.default),
@@ -108,13 +109,25 @@ export function TextPairInput({ leftKey, rightKey, doc }: { leftKey: Jurispruden
 }
 
 
+function toInputDateValue(raw?: string): string {
+    if (!raw) return "";
+    const clean = raw.trim();
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(clean)) {
+        return clean.split("/").reverse().join("-");
+    }
+    if (/^\d{4}[\/\-]\d{2}[\/\-]\d{2}$/.test(clean)) {
+        return clean.replace(/\//g, "-");
+    }
+    return "";
+}
+
 export function DateInput({ accessKey, doc }: InputProps<JurisprudenciaDocumentDateKey>) {
     let [, setUpdateObject] = useContext(UpdateContext);
-    let initialValue = doc[accessKey.key] || "1900/01/01"
-    let defaultValue = initialValue.split("/").reverse().join("-")
+    let initialValue = doc[accessKey.key] || "";
+    let defaultValue = toInputDateValue(initialValue);
     let [toSave, setToSave] = useState<boolean>(false);
     let update = (newValue: string) => {
-        let newValueD = newValue.split("-").reverse().join("/")
+        let newValueD = newValue ? newValue.split("-").reverse().join("/") : "";
         if (JSON.stringify(newValueD) === JSON.stringify(initialValue)) {
             setUpdateObject(({ [accessKey.key]: _key_to_remove, ...old }) => ({ ...old }));
             setToSave(false);
@@ -312,10 +325,26 @@ function GenericTokenSelection({ accessKey, doc, editorSuggestions, editorRestri
     const loadOptions = useCallback(async (inputValue: string) => {
         const params = new URLSearchParams({ agg: accessKey.key });
         if (inputValue) params.set("prefix", inputValue);
-        const res = await fetch(`${router.basePath}/api/datalist?${params}`);
-        if (!res.ok) return [];
-        const data: DatalistObj[] = await res.json();
-        return data.map(d => ({ value: d.key, label: d.key }));
+        let options: { value: string; label: string }[] = [];
+        try {
+            const res = await fetch(`${router.basePath}/api/datalist?${params}`);
+            if (res.ok) {
+                const data: DatalistObj[] = await res.json();
+                options = data.map(d => ({ value: d.key, label: d.key }));
+            }
+        } catch {
+            // Fall through to canonical fallback if available
+        }
+        if (accessKey.key === "Secção") {
+            const seen = new Set(options.map(o => o.value.toLowerCase()));
+            const pfx = inputValue.trim().toLowerCase();
+            for (const name of CANONICAL_SECCAO_NAMES) {
+                if (!seen.has(name.toLowerCase()) && (!pfx || name.toLowerCase().includes(pfx))) {
+                    options.push({ value: name, label: name });
+                }
+            }
+        }
+        return options;
     }, [accessKey.key, router.basePath]);
 
     const handleChange = useCallback((evt: readonly { value: string; label: string }[]) => {

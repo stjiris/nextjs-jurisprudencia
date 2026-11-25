@@ -41,13 +41,13 @@ export const getServerSideProps: GetServerSideProps<BoletimProps> = LoggerServer
         const minYear = parseInt((result.aggregations?.minYear as any)?.value_as_string || "2000") || 2000
         const maxYear = parseInt((result.aggregations?.maxYear as any)?.value_as_string || new Date().getFullYear().toString()) || new Date().getFullYear()
 
-        return { props: { areas: areas.length > 0 ? areas : ["Área Social", "Área Cível", "Área Criminal", "Contencioso"], minYear, maxYear } }
+        return { props: { areas: areas.length > 0 ? areas : ["Área Social", "Área Cível", "Área Criminal", "Contencioso", "Conflitos", "Formação"], minYear, maxYear } }
     } catch (e) {
         console.warn("[Boletim] Elasticsearch indisponível ou offline. A utilizar dados e secções por omissão.");
         const currentYear = new Date().getFullYear();
         return {
             props: {
-                areas: ["Área Social", "Área Cível", "Área Criminal", "Contencioso"],
+                areas: ["Área Social", "Área Cível", "Área Criminal", "Contencioso", "Conflitos", "Formação"],
                 minYear: 2020,
                 maxYear: currentYear
             }
@@ -65,6 +65,8 @@ function getAreaLabel(area: string): string {
     if (area.includes("Cível") || area.includes("Civel")) return "Secções Cíveis (1.ª, 2.ª e 7.ª Secções)";
     if (area.includes("Criminal")) return "Secções Criminais (3.ª e 5.ª Secções)";
     if (area.includes("Contencioso")) return "Secção de Contencioso";
+    if (/c[o]?nflitos/i.test(area)) return "Tribunal de Conflitos";
+    if (/forma[cç][aã]o/i.test(area)) return "Formação de Apreciação Preliminar";
     return area;
 }
 

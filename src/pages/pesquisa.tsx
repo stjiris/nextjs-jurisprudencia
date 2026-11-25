@@ -178,6 +178,9 @@ function AdminSharepointSyncButton({ syncRole }: { syncRole?: string | null }) {
             } else {
                 const text = data.message || (typeof data.found === "number" ? `${data.found} novos acórdãos encontrados.` : "Sincronização SharePoint concluída.");
                 setStatus({ variant: "success", text });
+                if ((data.importedCount ?? 0) > 0) {
+                    router.replace(router.asPath);
+                }
             }
         } catch (err: any) {
             setStatus({ variant: "danger", text: err?.message || "Falha de comunicação com o SharePoint." });

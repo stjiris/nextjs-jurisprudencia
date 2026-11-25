@@ -1,63 +1,272 @@
 import fs from "fs";
 import path from "path";
 import { getGraphToken } from "@/core/email-sync";
+import { getElasticSearchClient } from "@/core/elasticsearch";
+import { parseDocumentFile } from "@/core/document-file-parser";
+import { parseFilename } from "@/core/filename-parser";
+import { canonicalizeSeccao } from "@/core/seccao-util";
+import { createDoc, updateDoc } from "@/core/doc";
+import { JurisprudenciaVersion, PartialJurisprudenciaDocument } from "@stjiris/jurisprudencia-document";
+
+export interface SharepointDriveFile {
+    driveId: string;
+    driveName: string;
+    itemId: string;
+    name: string;
+    webUrl: string;
+    parentPath: string;
+    lastModifiedDateTime: string;
+}
 
 export interface SharepointDeltaResult {
     ok: boolean;
     configured: boolean;
     found: number;
     drives: { name: string; count: number }[];
+    files?: SharepointDriveFile[];
+    siteId?: string;
+    token?: string;
     message: string;
 }
 
 export interface SharepointSyncResult {
     ok: boolean;
     found?: number;
+    importedCount?: number;
+    totalImportacao?: number;
+    running?: boolean;
     message: string;
+}
+
+function parseFolderMetadata(parentPath: string): { data?: string; seccao?: string; area?: string } {
+    const result: { data?: string; seccao?: string; area?: string } = {};
+    const dateMatches = [...parentPath.matchAll(/(\d{1,2})-(\d{1,2})(?:-(\d{2,4}))?/g)];
+    const last = dateMatches.at(-1);
+    if (last) {
+        const day = parseInt(last[1], 10);
+        const month = parseInt(last[2], 10);
+        let year = parseInt(last[3] ?? String(new Date().getFullYear()), 10);
+        if (year < 100) year += 2000;
+        if (day >= 1 && day <= 31 && month >= 1 && month <= 12) {
+            result.data = `${String(day).padStart(2, "0")}/${String(month).padStart(2, "0")}/${year}`;
+        }
+    }
+
+    const lower = parentPath.toLowerCase();
+    const secMatch = lower.match(/\b([1-7])\s*(?:\.?[ºªa])?\s*(?:se[cç][aã]o)?\b/i);
+    if (secMatch) {
+        const can = canonicalizeSeccao(`${secMatch[1]}ª Secção`);
+        result.seccao = can;
+        if (["1", "2", "6", "7"].includes(secMatch[1])) result.area = "Área Cível";
+        else if (["3", "5"].includes(secMatch[1])) result.area = "Área Criminal";
+        else if (secMatch[1] === "4") result.area = "Área Social";
+    } else if (/contencioso/i.test(lower)) {
+        result.seccao = "Contencioso";
+        result.area = "Contencioso";
+    } else if (/c[o]?nflitos/i.test(lower)) {
+        result.seccao = "Tribunal de Conflitos";
+        result.area = "Conflitos";
+    } else if (/forma[cç][aã]o/i.test(lower)) {
+        result.seccao = "Formação";
+        result.area = "Formação";
+    }
+    return result;
+}
+
+type ExistingMatch = { action: "skip" } | { action: "create" } | { action: "merge"; id: string };
+
+async function findExistingMatch(
+    webUrl: string,
+    nrProcesso: string,
+    isSumario: boolean,
+    folderDate?: string
+): Promise<ExistingMatch> {
+    try {
+        const es = await getElasticSearchClient();
+        const should: any[] = [];
+        if (webUrl) should.push({ term: { "URL": webUrl } });
+        if (nrProcesso && nrProcesso.length >= 4) {
+            const slash = nrProcesso.replace(/^(\d+)[\-_](\d{2}\.\d)/, "$1/$2");
+            const hyphen = nrProcesso.replace(/^(\d+)[\/_](\d{2}\.\d)/, "$1-$2");
+            should.push({ term: { "Número de Processo": slash } });
+            should.push({ term: { "Número de Processo": hyphen } });
+        }
+        if (should.length === 0) return { action: "create" };
+
+        const res = await es.search<any>({
+            index: JurisprudenciaVersion,
+            size: 10,
+            _source: ["URL", "Data", "STATE", "Sumário Não Anonimizado", "Texto Não Anonimizado"],
+            query: {
+                bool: {
+                    should,
+                    minimum_should_match: 1,
+                    must_not: [{ term: { "STATE": "eliminado" } }],
+                },
+            },
+        });
+
+        for (const hit of res.hits.hits) {
+            const src = hit._source || {};
+            if (webUrl && src["URL"] === webUrl) return { action: "skip" };
+            if (folderDate && src["Data"] && src["Data"] !== folderDate) continue;
+
+            const hasSumario = Boolean(src["Sumário Não Anonimizado"]?.trim());
+            const hasTexto = Boolean(src["Texto Não Anonimizado"]?.trim());
+            if (isSumario && hasSumario) return { action: "skip" };
+            if (!isSumario && hasTexto) return { action: "skip" };
+            if (hit._id && ((isSumario && !hasSumario && hasTexto) || (!isSumario && !hasTexto && hasSumario))) {
+                return { action: "merge", id: hit._id };
+            }
+            return { action: "skip" };
+        }
+        return { action: "create" };
+    } catch {
+        return { action: "create" };
+    }
+}
+
+async function ingestMissingSharepointFiles(delta: SharepointDeltaResult, maxBatch = 20): Promise<number> {
+    if (!delta.ok || !delta.token || !delta.siteId || !delta.files || delta.files.length === 0) {
+        return 0;
+    }
+
+    const supportedExts = [".docx", ".pdf", ".doc"];
+    const candidates = delta.files
+        .filter((f) => {
+            const lower = f.name.toLowerCase();
+            if (/tabela.*\.pdf$/i.test(lower)) return false;
+            return supportedExts.some((ext) => lower.endsWith(ext));
+        })
+        .sort((a, b) => (b.lastModifiedDateTime || "").localeCompare(a.lastModifiedDateTime || ""));
+
+    let imported = 0;
+    for (const file of candidates) {
+        if (imported >= maxBatch) break;
+        const parsedName = parseFilename(file.name);
+        const folderMeta = parseFolderMetadata(file.parentPath);
+        const isSumario = parsedName.tipoDocumento === "sumario";
+
+        const match = await findExistingMatch(file.webUrl, parsedName.nrProcesso, isSumario, folderMeta.data);
+        if (match.action === "skip") {
+            continue;
+        }
+
+        try {
+            const contentResp = await fetch(
+                `https://graph.microsoft.com/v1.0/sites/${delta.siteId}/drives/${file.driveId}/items/${file.itemId}/content`,
+                { headers: { Authorization: `Bearer ${delta.token}` } }
+            );
+            if (!contentResp.ok) continue;
+
+            const arrayBuf = await contentResp.arrayBuffer();
+            const buffer = Buffer.from(arrayBuf);
+            const parsed = await parseDocumentFile(file.name, buffer);
+            const doc = parsed.parsedDoc;
+
+            if (folderMeta.data) doc["Data"] = folderMeta.data;
+            if (folderMeta.seccao && !doc["Secção"]) {
+                doc["Secção"] = { Index: [folderMeta.seccao], Original: [folderMeta.seccao], Show: [folderMeta.seccao] };
+            }
+            if (folderMeta.area && !doc["Área"]) {
+                doc["Área"] = { Index: [folderMeta.area], Original: [folderMeta.area], Show: [folderMeta.area] };
+            }
+
+            doc["STATE"] = "importação";
+            doc["Fonte"] = "STJ (Sharepoint)";
+            if (file.webUrl) doc["URL"] = file.webUrl;
+
+            if (match.action === "merge") {
+                const mergeFields: PartialJurisprudenciaDocument = { STATE: "importação" };
+                if (doc["Texto Não Anonimizado"]) mergeFields["Texto Não Anonimizado"] = doc["Texto Não Anonimizado"];
+                if (doc["Sumário Não Anonimizado"]) mergeFields["Sumário Não Anonimizado"] = doc["Sumário Não Anonimizado"];
+                await updateDoc(match.id, mergeFields);
+            } else {
+                await createDoc(doc);
+            }
+            imported++;
+        } catch (err) {
+            console.warn(`[sharepoint-sync] Failed direct import of ${file.name}:`, err);
+        }
+    }
+
+    return imported;
+}
+
+async function countImportacaoDocs(): Promise<number | null> {
+    try {
+        const es = await getElasticSearchClient();
+        const res = await es.count({
+            index: JurisprudenciaVersion,
+            query: { term: { STATE: "importação" } },
+        });
+        return typeof res.count === "number" ? res.count : null;
+    } catch {
+        return null;
+    }
 }
 
 /**
  * Triggers the clitools ingestion process in clitools_interno either via HTTP
- * (port 4000) or via a trigger flag file in the shared etl_results volume.
+ * (port 4000, waiting up to 45s for completion) or via trigger flag file.
  */
-export async function triggerClitoolsSync(requestedBy: string): Promise<{ ok: boolean; message?: string }> {
+export async function triggerClitoolsSync(requestedBy: string): Promise<{
+    ok: boolean;
+    running?: boolean;
+    httpReachable?: boolean;
+    stderrTail?: string;
+    message?: string;
+}> {
     const clitoolsUrl = process.env.CLITOOLS_URL || "http://clitools_interno:4000";
     const localRoot = process.env.LOCAL_ROOT || "/filesystem-results";
 
-    let fileTriggered = false;
-    try {
-        if (fs.existsSync(localRoot)) {
-            const triggerFile = path.join(localRoot, ".trigger_sharepoint_sync");
-            fs.writeFileSync(triggerFile, JSON.stringify({ requestedBy, timestamp: new Date().toISOString() }));
-            fileTriggered = true;
-        }
-    } catch (err) {
-        console.warn("[sharepoint-sync] Could not write trigger file:", err);
-    }
-
     try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 3500);
-        const resp = await fetch(`${clitoolsUrl}/sync`, {
+        const timeout = setTimeout(() => controller.abort(), 50_000);
+        const resp = await fetch(`${clitoolsUrl}/sync?wait=true`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ requestedBy, timestamp: Date.now() }),
             signal: controller.signal,
         });
         clearTimeout(timeout);
+        const data = await resp.json().catch(() => ({}));
         if (resp.ok) {
-            const data = await resp.json().catch(() => ({}));
-            return { ok: true, message: data.message || "Sincronização iniciada com sucesso no serviço clitools." };
+            return {
+                ok: data.ok !== false,
+                running: Boolean(data.running),
+                httpReachable: true,
+                stderrTail: data.stderrTail,
+                message: data.message || "Sincronização executada no serviço clitools.",
+            };
         }
+        return {
+            ok: false,
+            running: Boolean(data.running),
+            httpReachable: true,
+            stderrTail: data.stderrTail,
+            message: data.message || `Falha no serviço clitools (HTTP ${resp.status}).`,
+        };
     } catch {
-        // clitools service offline or unreachable via HTTP
+        // clitools HTTP unreachable — try disk trigger only as fallback
     }
 
-    if (fileTriggered) {
-        return { ok: true, message: "Pedido de sincronização registado em disco para processamento imediato pelo clitools." };
+    try {
+        if (fs.existsSync(localRoot)) {
+            const triggerFile = path.join(localRoot, ".trigger_sharepoint_sync");
+            fs.writeFileSync(triggerFile, JSON.stringify({ requestedBy, timestamp: new Date().toISOString() }));
+            return {
+                ok: true,
+                running: true,
+                httpReachable: false,
+                message: "Serviço clitools HTTP indisponível; pedido de sincronização gravado em disco.",
+            };
+        }
+    } catch (err) {
+        console.warn("[sharepoint-sync] Could not write trigger file:", err);
     }
 
-    return { ok: false, message: "Serviço de ingestão clitools não acessível neste instante." };
+    return { ok: false, httpReachable: false, message: "Serviço de ingestão clitools não acessível neste instante." };
 }
 
 /**
@@ -106,6 +315,7 @@ export async function checkSharepointDelta(): Promise<SharepointDeltaResult> {
 
         let totalFound = 0;
         const driveStats: { name: string; count: number }[] = [];
+        const collectedFiles: SharepointDriveFile[] = [];
 
         for (const drive of monitoredDrives) {
             const deltaUrl = `https://graph.microsoft.com/v1.0/sites/${siteId}/drives/${drive.id}/root/delta`;
@@ -120,6 +330,17 @@ export async function checkSharepointDelta(): Promise<SharepointDeltaResult> {
             const files = items.filter((item) => !item.deleted && !item.folder && item.file);
             totalFound += files.length;
             driveStats.push({ name: drive.name, count: files.length });
+            for (const f of files) {
+                collectedFiles.push({
+                    driveId: drive.id,
+                    driveName: drive.name,
+                    itemId: f.id,
+                    name: f.name || "",
+                    webUrl: f.webUrl || "",
+                    parentPath: f.parentReference?.path || "",
+                    lastModifiedDateTime: f.lastModifiedDateTime || "",
+                });
+            }
         }
 
         return {
@@ -127,6 +348,9 @@ export async function checkSharepointDelta(): Promise<SharepointDeltaResult> {
             configured: true,
             found: totalFound,
             drives: driveStats,
+            files: collectedFiles,
+            siteId,
+            token,
             message: totalFound > 0
                 ? `Encontrados ${totalFound} ficheiro(s) no SharePoint (${driveStats.map((d) => `${d.name}: ${d.count}`).join(", ")}).`
                 : "SharePoint verificado: sem novos acórdãos pendentes (tudo atualizado).",
@@ -144,32 +368,72 @@ export async function checkSharepointDelta(): Promise<SharepointDeltaResult> {
 }
 
 /**
- * Main coordinator for SharePoint sync: queries delta and triggers ingestion.
+ * Main coordinator for SharePoint sync: counts current 'importação' docs,
+ * queries delta, triggers clitools ingestion synchronously (up to 45s),
+ * and reports the actual delta imported into 'importação'.
  */
 export async function syncSharepoint({ username }: { username: string }): Promise<SharepointSyncResult> {
+    const beforeImportacao = await countImportacaoDocs();
     const deltaStatus = await checkSharepointDelta();
     const clitoolsTrigger = await triggerClitoolsSync(username);
+    let afterImportacao = await countImportacaoDocs();
+    let importedCount =
+        beforeImportacao !== null && afterImportacao !== null
+            ? Math.max(0, afterImportacao - beforeImportacao)
+            : 0;
 
-    if (deltaStatus.ok) {
-        if (clitoolsTrigger.ok) {
-            const msg = deltaStatus.found > 0
-                ? `Sincronização iniciada com sucesso. Encontrados ${deltaStatus.found} ficheiros no SharePoint a serem processados.`
-                : "Sincronização executada: o SharePoint não tem novos acórdãos pendentes (tudo atualizado).";
-            return { ok: true, found: deltaStatus.found, message: msg };
-        } else {
-            const msg = deltaStatus.found > 0
-                ? `Encontrados ${deltaStatus.found} ficheiros no SharePoint. Pedido de importação registado no sistema.`
-                : "SharePoint verificado: sem novos acórdãos pendentes.";
-            return { ok: true, found: deltaStatus.found, message: msg };
+    // Direct fallback ingestion if clitools didn't bring missing SharePoint files into 'importação'
+    // (e.g. clitools offline, stale delta cursor, or folders/drives not handled by legacy ETL)
+    if (!clitoolsTrigger.running && deltaStatus.ok && (deltaStatus.files?.length || 0) > 0 && importedCount === 0) {
+        const directImported = await ingestMissingSharepointFiles(deltaStatus);
+        if (directImported > 0) {
+            importedCount += directImported;
+            afterImportacao = await countImportacaoDocs();
         }
     }
 
-    if (clitoolsTrigger.ok) {
-        return { ok: true, message: "Sincronização com o SharePoint iniciada com sucesso no serviço clitools." };
+    if (!clitoolsTrigger.ok && importedCount === 0) {
+        const errDetail = clitoolsTrigger.stderrTail
+            ? ` Detalhe: ${clitoolsTrigger.stderrTail.trim().split(/\r?\n/).slice(-2).join(" | ")}`
+            : "";
+        return {
+            ok: false,
+            found: deltaStatus.found,
+            importedCount,
+            totalImportacao: afterImportacao ?? undefined,
+            message: `${clitoolsTrigger.message || "Falha ao executar ingestão do SharePoint."}${errDetail}`,
+        };
+    }
+
+    if (clitoolsTrigger.running) {
+        return {
+            ok: true,
+            running: true,
+            found: deltaStatus.found,
+            importedCount,
+            totalImportacao: afterImportacao ?? undefined,
+            message: clitoolsTrigger.httpReachable
+                ? `Sincronização em execução no clitools (${deltaStatus.found} ficheiro(s) visíveis no SharePoint). Atualize "Por Anonimizar" dentro de instantes.`
+                : `${clitoolsTrigger.message} (${deltaStatus.found} ficheiro(s) visíveis no SharePoint).`,
+        };
+    }
+
+    const totalInfo = afterImportacao !== null ? ` (total em 'importação': ${afterImportacao})` : "";
+    if (importedCount > 0) {
+        return {
+            ok: true,
+            found: deltaStatus.found,
+            importedCount,
+            totalImportacao: afterImportacao ?? undefined,
+            message: `Sincronização concluída: ${importedCount} novo(s) acórdão(s) colocado(s) em 'importação'${totalInfo}.`,
+        };
     }
 
     return {
-        ok: false,
-        message: deltaStatus.message || clitoolsTrigger.message || "Não foi possível contactar o SharePoint nem o serviço de ingestão.",
+        ok: true,
+        found: deltaStatus.found,
+        importedCount: 0,
+        totalImportacao: afterImportacao ?? undefined,
+        message: `Sincronização concluída: nenhum novo acórdão colocado em 'importação' (${deltaStatus.found} ficheiro(s) no SharePoint já importados ou sem alterações)${totalInfo}.`,
     };
 }

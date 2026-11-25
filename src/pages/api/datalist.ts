@@ -43,7 +43,7 @@ export default LoggerApi(async function datalistHandler(
     let finalAgg: AggregationsAggregationContainer = {
         terms: {
             field: agg.terms?.field?.replace("keyword", "raw"),
-            size: isSeccao ? 100 : (prefix ? 20 : 50),
+            size: isSeccao ? 500 : (prefix ? 20 : 50),
             order: {
                 _key: "asc"
             },

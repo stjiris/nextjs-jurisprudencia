@@ -84,6 +84,8 @@ export function normalizeSeccao(raw?: string): string | undefined {
     s = s.replace(/\bse[cç][oõ]es\s*criminais\b/gi, "Secções Criminais");
     s = s.replace(/\bse[cç][aã]o\s*criminal\b/gi, "Secção Criminal");
     s = s.replace(/\bse[cç][aã]o\s*(?:do\s*)?contencioso\b/gi, "Secção do Contencioso");
+    s = s.replace(/\bse[cç][aã]o\s*(?:de\s*|da\s*)?forma[cç][aã]o\b/gi, "Formação");
+    s = s.replace(/\bforma[cç][aã]o(?:\s+de\s+aprecia[cç][aã]o\s+preliminar)?\b/gi, "Formação");
     
     // Normalizar ordinais: "1ª", "1a", "1 ª", "1.ª"
     s = s.replace(/\b([1-7])\s*[ºªa]\s*(?:se[cç][aã]o)?\b/gi, "$1.ª Secção");
@@ -98,7 +100,8 @@ export function formatSubtitle(area: string): string {
     if (/c[ií]vel|c[ií]veis/i.test(clean)) return "Sumários de Acórdãos das Secções Cíveis (1.ª, 2.ª e 7.ª Secções)";
     if (/criminal|criminais/i.test(clean)) return "Sumários de Acórdãos das Secções Criminais (3.ª e 5.ª Secções)";
     if (/contencioso/i.test(clean)) return "Sumários de Acórdãos da Secção de Contencioso";
-    if (/conflitos/i.test(clean)) return "Sumários de Acórdãos do Tribunal de Conflitos";
+    if (/c[o]?nflitos/i.test(clean)) return "Sumários de Acórdãos do Tribunal de Conflitos";
+    if (/forma[cç][aã]o/i.test(clean)) return "Sumários de Acórdãos da Formação de Apreciação Preliminar";
 
     let normalized = clean
         .replace(/^Area\b/i, "Área")

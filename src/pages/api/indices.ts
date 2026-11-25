@@ -62,8 +62,9 @@ export default LoggerApi(async function indicesCsvHandler(
         })
         buckets.sort(sortBucketsAlphabetically)
         sortedGroup = Object.entries(groupObj).sort((a, b) => sortAlphabetically(a[0], b[0]))
-        sortedGroup.slice(10).forEach(a => othersCount += groupObj[a[0]])
-        sortedGroup.splice(10)
+        const maxCols = group === "Secção" ? 25 : 10;
+        sortedGroup.slice(maxCols).forEach(a => othersCount += groupObj[a[0]])
+        sortedGroup.splice(maxCols)
         if (othersCount > 0) {
             sortedGroup.push([INDICES_OTHERS, othersCount])
         }

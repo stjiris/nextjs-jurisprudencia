@@ -29,6 +29,7 @@ WORKDIR /home/clitools
 RUN (crontab -l; echo "*/10 * * * * cd /home/clitools/jurisprudencia-privada-etl && /usr/local/bin/node dist/sharepoint/index.js >> ../jurisprudencia-sharepoint-etl.stdout.log 2>> ../jurisprudencia-sharepoint-etl.stderr.log") | crontab -
 
 COPY entrypoint.sh .
+COPY trigger-server.mjs .
 
 USER root
 

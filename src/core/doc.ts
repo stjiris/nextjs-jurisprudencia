@@ -89,11 +89,13 @@ export const createDoc = (newdoc: PartialJurisprudenciaDocument) => getElasticSe
             continue;
         }
     }
-    doc.Fonte = "STJ (Manual)"
+    doc.Fonte = doc.Fonte || "STJ (Manual)"
     doc.CONTENT = CONTENT
     doc.Original = {
         "Sem Original": "Documento criado nesta aplicação"
     }
+    if ((newdoc as any).hasImages) (doc as any).hasImages = (newdoc as any).hasImages;
+    if ((newdoc as any).imageHashes) (doc as any).imageHashes = (newdoc as any).imageHashes;
     doc.HASH = calculateHASH(doc);
     doc.UUID = calculateUUID(doc.HASH)
     doc.STATE = doc.STATE || "preparação"

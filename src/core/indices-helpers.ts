@@ -33,7 +33,7 @@ export function listAggregation(term: string, group?: string): Record<string, Ag
         new_aggs[term].aggs!.Group = {
             terms: {
                 field: groupFieldName.replace("keyword","raw"),
-                size: 10,
+                size: group === "Secção" ? 500 : 10,
                 min_doc_count: 1,
                 order: {
                     _key: "desc"

@@ -82,5 +82,41 @@ describe('Filename & Document File Parser', () => {
             expect(result.parsedDoc['STATE']).toBe('importação');
             expect(result.summary.temSumario).toBe(true);
         });
+
+        it('should prefer closing court signature date over earlier factual dates in Relatório', async () => {
+            const mockText = `
+                SUPREMO TRIBUNAL DE JUSTIÇA
+                Formação de Apreciação Preliminar
+
+                Processo n.º 900/20.1T8LSB.L1.S1
+
+                I - Relatório
+                1. Por contrato celebrado em 15/03/2019, o autor pagou a quantia...
+                2. A sentença de primeira instância de 10-02-2024 julgou improcedente...
+                3. Por acórdão inválido 35/18/2022 ou referência numérica antiga...
+
+                Decisão:
+                Pelo exposto, acordam em admitir a revista excecional.
+                Lisboa, 25 de Novembro de 2026.
+            `;
+
+            const result = await parseDocumentFile('900-20.1T8LSB.L1.S1 - Acordao.txt', Buffer.from(mockText, 'utf-8'));
+
+            expect(result.parsedDoc['Data']).toBe('25/11/2026');
+            expect(result.parsedDoc['Secção']?.Show[0]).toBe('Formação');
+            expect(result.parsedDoc['Área']?.Show[0]).toBe('Formação');
+        });
+
+        it('should recognize Conflitos section on drag-and-drop import', async () => {
+            const mockText = `
+                Tribunal de Conflitos
+                Processo n.º 12/25.0YFLSB.S1
+                Data: 04/11/2026
+            `;
+            const result = await parseDocumentFile('12-25.0YFLSB.S1 - Acordao.txt', Buffer.from(mockText, 'utf-8'));
+            expect(result.parsedDoc['Data']).toBe('04/11/2026');
+            expect(result.parsedDoc['Secção']?.Show[0]).toBe('Tribunal de Conflitos');
+            expect(result.parsedDoc['Área']?.Show[0]).toBe('Conflitos');
+        });
     });
 });

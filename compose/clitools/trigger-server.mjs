@@ -9,6 +9,7 @@ const TRIGGER_FILE = path.join(ETL_DIR, "results", ".trigger_sharepoint_sync");
 
 let isRunning = false;
 let lastRun = null;
+let waitCallbacks = [];
 
 function runSync(onStarted) {
     if (isRunning) {
@@ -51,11 +52,33 @@ function runSync(onStarted) {
             stderrTail: stderr.slice(-2000),
         };
         console.log(`[trigger-server] Sincronização do SharePoint terminada com código ${code} em ${endTime.toISOString()}`);
+        const cbs = waitCallbacks.splice(0, waitCallbacks.length);
+        for (const cb of cbs) cb(lastRun);
     });
 
     if (onStarted) {
-        onStarted(true, "Sincronização do SharePoint iniciada em segundo plano.");
+        onStarted(true, "Sincronização do SharePoint iniciada.");
     }
+}
+
+function waitForFinish(timeoutMs) {
+    return new Promise((resolve) => {
+        if (!isRunning) return resolve({ finished: true, lastRun });
+        let settled = false;
+        const timer = setTimeout(() => {
+            if (!settled) {
+                settled = true;
+                resolve({ finished: false, lastRun });
+            }
+        }, timeoutMs);
+        waitCallbacks.push((runInfo) => {
+            if (!settled) {
+                settled = true;
+                clearTimeout(timer);
+                resolve({ finished: true, lastRun: runInfo });
+            }
+        });
+    });
 }
 
 // Background poller for trigger flag file
@@ -71,14 +94,48 @@ setInterval(() => {
     } catch {}
 }, 10_000);
 
-const server = http.createServer((req, res) => {
+const server = http.createServer(async (req, res) => {
     const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
 
     if (req.method === "POST" && url.pathname === "/sync") {
-        runSync((started, message) => {
-            res.writeHead(started ? 200 : 409, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ ok: started, running: isRunning, message }));
+        const shouldWait = url.searchParams.get("wait") === "true" || url.searchParams.get("wait") === "1";
+        let alreadyRunning = false;
+        runSync((started) => {
+            if (!started) alreadyRunning = true;
         });
+
+        if (shouldWait) {
+            const { finished, lastRun: runInfo } = await waitForFinish(45_000);
+            if (!finished) {
+                res.writeHead(202, { "Content-Type": "application/json" });
+                res.end(JSON.stringify({
+                    ok: true,
+                    running: true,
+                    message: "Sincronização do SharePoint em execução em segundo plano (a processar ficheiros).",
+                }));
+                return;
+            }
+            const exitCode = runInfo?.code ?? 0;
+            res.writeHead(exitCode === 0 ? 200 : 500, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({
+                ok: exitCode === 0,
+                running: false,
+                code: exitCode,
+                stdoutTail: runInfo?.stdoutTail || "",
+                stderrTail: runInfo?.stderrTail || "",
+                message: exitCode === 0
+                    ? "Sincronização do SharePoint concluída."
+                    : `Sincronização do SharePoint terminou com erro (código ${exitCode}).`,
+            }));
+            return;
+        }
+
+        res.writeHead(alreadyRunning ? 409 : 200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({
+            ok: !alreadyRunning,
+            running: isRunning,
+            message: alreadyRunning ? "Sincronização já em curso." : "Sincronização do SharePoint iniciada em segundo plano.",
+        }));
     } else if (req.method === "GET" && url.pathname === "/status") {
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ ok: true, running: isRunning, lastRun }));
