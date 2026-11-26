@@ -253,6 +253,7 @@ services:
             IMAGES_PATH: ${IMAGES_PATH:-/images}
         volumes:
             - ../jurisprudencia-privada-etl:/home/clitools/jurisprudencia-privada-etl:rw
+            - etl_results:/home/clitools/jurisprudencia-privada-etl/results
             - ../jurisprudencia-etl:/home/clitools/jurisprudencia-etl:rw
             - ../version-converter:/home/clitools/version-converter:rw
             - ../backup-jurisprudencia:/home/clitools/backup-jurisprudencia:rw

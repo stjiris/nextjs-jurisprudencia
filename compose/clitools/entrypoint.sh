@@ -11,7 +11,7 @@ if [ -d "$ETL_DIR" ]; then
     mkdir -p "$ETL_DIR/results"
     chown -R clitools:clitools "$ETL_DIR/results"
     if [ -f "/home/clitools/trigger-server.mjs" ]; then
-        su -s /bin/sh clitools -c "node /home/clitools/trigger-server.mjs" >> /home/clitools/trigger-server.log 2>&1 &
+        su -s /bin/sh clitools -c "/usr/local/bin/node /home/clitools/trigger-server.mjs" >> /home/clitools/trigger-server.log 2>&1 &
     fi
 fi
 

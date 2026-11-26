@@ -217,38 +217,50 @@ export async function triggerClitoolsSync(requestedBy: string): Promise<{
     stderrTail?: string;
     message?: string;
 }> {
-    const clitoolsUrl = process.env.CLITOOLS_URL || "http://clitools_interno:4000";
+    const candidateUrls = Array.from(
+        new Set(
+            [
+                process.env.CLITOOLS_URL,
+                "http://clitools_interno:4000",
+                "http://clitools_dev:4000",
+                "http://clitools:4000",
+            ].filter((u): u is string => Boolean(u && u.trim()))
+        )
+    );
     const localRoot = process.env.LOCAL_ROOT || "/filesystem-results";
+    let lastHttpError = "";
 
-    try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 50_000);
-        const resp = await fetch(`${clitoolsUrl}/sync?wait=true`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ requestedBy, timestamp: Date.now() }),
-            signal: controller.signal,
-        });
-        clearTimeout(timeout);
-        const data = await resp.json().catch(() => ({}));
-        if (resp.ok) {
+    for (const clitoolsUrl of candidateUrls) {
+        try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 50_000);
+            const resp = await fetch(`${clitoolsUrl.replace(/\/$/, "")}/sync?wait=true`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ requestedBy, timestamp: Date.now() }),
+                signal: controller.signal,
+            });
+            clearTimeout(timeout);
+            const data = await resp.json().catch(() => ({}));
+            if (resp.ok) {
+                return {
+                    ok: data.ok !== false,
+                    running: Boolean(data.running),
+                    httpReachable: true,
+                    stderrTail: data.stderrTail,
+                    message: data.message || "Sincronização executada no serviço clitools.",
+                };
+            }
             return {
-                ok: data.ok !== false,
+                ok: false,
                 running: Boolean(data.running),
                 httpReachable: true,
                 stderrTail: data.stderrTail,
-                message: data.message || "Sincronização executada no serviço clitools.",
+                message: data.message || `Falha no serviço clitools (HTTP ${resp.status}).`,
             };
+        } catch (err: any) {
+            lastHttpError = err?.cause?.code || err?.message || String(err);
         }
-        return {
-            ok: false,
-            running: Boolean(data.running),
-            httpReachable: true,
-            stderrTail: data.stderrTail,
-            message: data.message || `Falha no serviço clitools (HTTP ${resp.status}).`,
-        };
-    } catch {
-        // clitools HTTP unreachable — try disk trigger only as fallback
     }
 
     try {
@@ -266,7 +278,12 @@ export async function triggerClitoolsSync(requestedBy: string): Promise<{
         console.warn("[sharepoint-sync] Could not write trigger file:", err);
     }
 
-    return { ok: false, httpReachable: false, message: "Serviço de ingestão clitools não acessível neste instante." };
+    const reason = lastHttpError ? ` (${lastHttpError})` : "";
+    return {
+        ok: false,
+        httpReachable: false,
+        message: `Serviço de ingestão clitools não acessível neste instante${reason}.`,
+    };
 }
 
 /**
@@ -318,29 +335,36 @@ export async function checkSharepointDelta(): Promise<SharepointDeltaResult> {
         const collectedFiles: SharepointDriveFile[] = [];
 
         for (const drive of monitoredDrives) {
-            const deltaUrl = `https://graph.microsoft.com/v1.0/sites/${siteId}/drives/${drive.id}/root/delta`;
-            const deltaResp = await fetch(deltaUrl, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            let nextUrl: string | null = `https://graph.microsoft.com/v1.0/sites/${siteId}/drives/${drive.id}/root/delta`;
+            let driveFileCount = 0;
+            let pageCount = 0;
 
-            if (!deltaResp.ok) continue;
-
-            const deltaData = await deltaResp.json();
-            const items: any[] = deltaData.value || [];
-            const files = items.filter((item) => !item.deleted && !item.folder && item.file);
-            totalFound += files.length;
-            driveStats.push({ name: drive.name, count: files.length });
-            for (const f of files) {
-                collectedFiles.push({
-                    driveId: drive.id,
-                    driveName: drive.name,
-                    itemId: f.id,
-                    name: f.name || "",
-                    webUrl: f.webUrl || "",
-                    parentPath: f.parentReference?.path || "",
-                    lastModifiedDateTime: f.lastModifiedDateTime || "",
+            while (nextUrl && pageCount < 50) {
+                pageCount++;
+                const deltaResp: globalThis.Response = await fetch(nextUrl, {
+                    headers: { Authorization: `Bearer ${token}` },
                 });
+                if (!deltaResp.ok) break;
+
+                const deltaData: { value?: any[]; [k: string]: any } = await deltaResp.json();
+                const items: any[] = deltaData.value || [];
+                const files = items.filter((item) => !item.deleted && !item.folder && item.file);
+                driveFileCount += files.length;
+                totalFound += files.length;
+                for (const f of files) {
+                    collectedFiles.push({
+                        driveId: drive.id,
+                        driveName: drive.name,
+                        itemId: f.id,
+                        name: f.name || "",
+                        webUrl: f.webUrl || "",
+                        parentPath: f.parentReference?.path || "",
+                        lastModifiedDateTime: f.lastModifiedDateTime || "",
+                    });
+                }
+                nextUrl = typeof deltaData["@odata.nextLink"] === "string" ? deltaData["@odata.nextLink"] : null;
             }
+            driveStats.push({ name: drive.name, count: driveFileCount });
         }
 
         return {
@@ -393,15 +417,26 @@ export async function syncSharepoint({ username }: { username: string }): Promis
     }
 
     if (!clitoolsTrigger.ok && importedCount === 0) {
+        if (deltaStatus.ok) {
+            const totalInfo = afterImportacao !== null ? ` (total em 'importação': ${afterImportacao})` : "";
+            return {
+                ok: true,
+                found: deltaStatus.found,
+                importedCount: 0,
+                totalImportacao: afterImportacao ?? undefined,
+                message: `SharePoint verificado diretamente via Microsoft Graph (clitools indisponível): ${deltaStatus.found} ficheiro(s) encontrados, todos já importados${totalInfo}.`,
+            };
+        }
         const errDetail = clitoolsTrigger.stderrTail
             ? ` Detalhe: ${clitoolsTrigger.stderrTail.trim().split(/\r?\n/).slice(-2).join(" | ")}`
             : "";
+        const graphNote = deltaStatus.message ? ` | Graph: ${deltaStatus.message}` : "";
         return {
             ok: false,
             found: deltaStatus.found,
             importedCount,
             totalImportacao: afterImportacao ?? undefined,
-            message: `${clitoolsTrigger.message || "Falha ao executar ingestão do SharePoint."}${errDetail}`,
+            message: `${clitoolsTrigger.message || "Falha ao executar ingestão do SharePoint."}${errDetail}${graphNote}`,
         };
     }
 
