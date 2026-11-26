@@ -1,11 +1,41 @@
-import search, { aggs, createQueryDslQueryContainer, getElasticSearchClient, populateFilters, SearchFilters, sortAlphabetically, sortBucketsAlphabetically } from '@/core/elasticsearch';
+import search, { aggs, asciiFold, createQueryDslQueryContainer, getElasticSearchClient, populateFilters, SearchFilters, sortAlphabetically, sortBucketsAlphabetically } from '@/core/elasticsearch';
 import LoggerApi from '@/core/logger-api';
 import { authenticatedHandler } from '@/core/user/authenticate';
 import { DatalistObj } from '@/types/search';
-import { AggregationsAggregationContainer, AggregationsStringTermsAggregate } from '@elastic/elasticsearch/lib/api/types';
+import { AggregationsAggregationContainer, AggregationsStringTermsAggregate, QueryDslQueryContainer } from '@elastic/elasticsearch/lib/api/types';
 import { JurisprudenciaVersion } from '@stjiris/jurisprudencia-document';
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { mergeSeccaoBuckets, getSeccaoVariants } from '@/core/seccao-util';
+
+const CROSS_FIELD_SECCAO_FROM_AREA = ["Formação", "Tribunal de Conflitos"] as const;
+
+function buildFieldVariantClauses(rawField: string, keywordField: string, variants: string[]) {
+    return variants.flatMap(v => [
+        { term: { [rawField]: { value: v } } },
+        { term: { [keywordField]: { value: v } } },
+        { term: { [keywordField]: { value: asciiFold(v).toLowerCase() } } },
+        { term: { [keywordField]: { value: asciiFold(v).toUpperCase() } } },
+        { term: { [keywordField]: { value: v, case_insensitive: true } } },
+    ]);
+}
+
+function buildAreaFallbackFilter(canonicalName: string): QueryDslQueryContainer {
+    const variants = getSeccaoVariants(canonicalName);
+    const areaShould = buildFieldVariantClauses("Área.Index.raw", "Área.Index.keyword", variants);
+    const seccaoShould = buildFieldVariantClauses("Secção.Index.raw", "Secção.Index.keyword", variants);
+    return {
+        bool: {
+            should: areaShould,
+            minimum_should_match: 1,
+            must_not: [{
+                bool: {
+                    should: seccaoShould,
+                    minimum_should_match: 1,
+                },
+            }],
+        },
+    };
+}
 
 // ES terms-agg `include` uses Lucene's RegExp, which does NOT support the (?i)
 // inline flag (it matches literally and returns nothing). The aggregation runs on
@@ -53,14 +83,35 @@ export default LoggerApi(async function datalistHandler(
     const sfilters = { pre: [], after: [] } as SearchFilters;
     populateFilters(sfilters, req.query, [aggKey]);
     const authed = await authenticatedHandler(req);
-    return search(createQueryDslQueryContainer(req.query.q), sfilters, 0, { [aggKey]: finalAgg }, 10, {}, authed).then(body => {
+    const saggs: Record<string, AggregationsAggregationContainer> = {
+        [aggKey]: finalAgg,
+        ...(isSeccao ? {
+            _seccao_from_area: {
+                filters: {
+                    filters: Object.fromEntries(
+                        CROSS_FIELD_SECCAO_FROM_AREA.map(name => [name, buildAreaFallbackFilter(name)])
+                    ),
+                },
+            },
+        } : {}),
+    };
+    return search(createQueryDslQueryContainer(req.query.q), sfilters, 0, saggs, 10, {}, authed).then(body => {
         if (!body.aggregations || !body.aggregations[aggKey] || !("buckets" in body.aggregations[aggKey])) throw new Error("Invalid aggregation result")
 
         let buckets = (body.aggregations[aggKey] as AggregationsStringTermsAggregate).buckets
         if (!Array.isArray(buckets)) throw new Error("Invalid aggregation bucket result");
 
         if (isSeccao) {
-            let merged = mergeSeccaoBuckets(buckets);
+            const combinedBuckets: { key: string | number; doc_count?: number }[] = [...buckets];
+            const areaFallback = (body.aggregations._seccao_from_area as { buckets?: Record<string, { doc_count?: number }> } | undefined)?.buckets;
+            if (areaFallback) {
+                for (const [name, b] of Object.entries(areaFallback)) {
+                    if ((b?.doc_count || 0) > 0) {
+                        combinedBuckets.push({ key: name, doc_count: b.doc_count });
+                    }
+                }
+            }
+            let merged = mergeSeccaoBuckets(combinedBuckets);
             if (prefix) {
                 const pfxLower = prefix.toLowerCase();
                 merged = merged.filter(item => {

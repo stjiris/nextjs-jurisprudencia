@@ -52,6 +52,8 @@ function areaFromSeccao(seccao: string) {
         "6.ª Secção (Cível)": "Área Cível",
         "7.ª Secção (Cível)": "Área Cível",
         "Contencioso": "Contencioso",
+        "Tribunal de Conflitos": "Conflitos",
+        "Formação": "Formação",
     }
     return canonical in ÁreasFromSecções ? ÁreasFromSecções[canonical] : (seccao in ÁreasFromSecções ? ÁreasFromSecções[seccao] : "{sem Área}")
 }

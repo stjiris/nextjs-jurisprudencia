@@ -195,14 +195,21 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
                 const rawField = isGenericKeyword ? fieldName.replace(/\.keyword$/, '.raw') : fieldName;
 
                 if (fieldName.startsWith("Secção")) {
+                    const canonical = canonicalizeSeccao(val);
                     const variants = getSeccaoVariants(val);
+                    const targetPairs: [string, string][] = [[rawField, fieldName]];
+                    if (canonical === "Formação" || canonical === "Tribunal de Conflitos") {
+                        targetPairs.push(["Área.Index.raw", "Área.Index.keyword"]);
+                    }
                     const shouldClauses: any[] = [];
-                    for (const v of variants) {
-                        shouldClauses.push({ term: { [rawField]: { value: v } } });
-                        shouldClauses.push({ term: { [fieldName]: { value: v } } });
-                        shouldClauses.push({ term: { [fieldName]: { value: asciiFold(v).toLowerCase() } } });
-                        shouldClauses.push({ term: { [fieldName]: { value: asciiFold(v).toUpperCase() } } });
-                        shouldClauses.push({ term: { [fieldName]: { value: v, case_insensitive: true } } });
+                    for (const [tRaw, tKeyword] of targetPairs) {
+                        for (const v of variants) {
+                            shouldClauses.push({ term: { [tRaw]: { value: v } } });
+                            shouldClauses.push({ term: { [tKeyword]: { value: v } } });
+                            shouldClauses.push({ term: { [tKeyword]: { value: asciiFold(v).toLowerCase() } } });
+                            shouldClauses.push({ term: { [tKeyword]: { value: asciiFold(v).toUpperCase() } } });
+                            shouldClauses.push({ term: { [tKeyword]: { value: v, case_insensitive: true } } });
+                        }
                     }
                     return {
                         bool: {
