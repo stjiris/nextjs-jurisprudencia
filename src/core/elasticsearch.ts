@@ -198,7 +198,7 @@ export function populateFilters(filters: SearchFilters, body: Partial<Record<str
                     const canonical = canonicalizeSeccao(val);
                     const variants = getSeccaoVariants(val);
                     const targetPairs: [string, string][] = [[rawField, fieldName]];
-                    if (canonical === "Formação" || canonical === "Tribunal de Conflitos") {
+                    if (canonical === "Formação" || canonical === "Conflitos") {
                         targetPairs.push(["Área.Index.raw", "Área.Index.keyword"]);
                     }
                     const shouldClauses: any[] = [];

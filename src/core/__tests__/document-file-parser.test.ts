@@ -115,7 +115,7 @@ describe('Filename & Document File Parser', () => {
             `;
             const result = await parseDocumentFile('12-25.0YFLSB.S1 - Acordao.txt', Buffer.from(mockText, 'utf-8'));
             expect(result.parsedDoc['Data']).toBe('04/11/2026');
-            expect(result.parsedDoc['Secção']?.Show[0]).toBe('Tribunal de Conflitos');
+            expect(result.parsedDoc['Secção']?.Show[0]).toBe('Conflitos');
             expect(result.parsedDoc['Área']?.Show[0]).toBe('Conflitos');
         });
     });

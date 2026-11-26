@@ -7,7 +7,7 @@ import { JurisprudenciaVersion } from '@stjiris/jurisprudencia-document';
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { CANONICAL_SECCAO_NAMES, mergeSeccaoBuckets, getSeccaoVariants } from '@/core/seccao-util';
 
-const CROSS_FIELD_SECCAO_FROM_AREA = ["Formação", "Tribunal de Conflitos"] as const;
+const CROSS_FIELD_SECCAO_FROM_AREA = ["Formação", "Conflitos"] as const;
 
 function buildFieldVariantClauses(rawField: string, keywordField: string, variants: string[]) {
     return variants.flatMap(v => [

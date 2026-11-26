@@ -52,6 +52,7 @@ function areaFromSeccao(seccao: string) {
         "6.ª Secção (Cível)": "Área Cível",
         "7.ª Secção (Cível)": "Área Cível",
         "Contencioso": "Contencioso",
+        "Conflitos": "Conflitos",
         "Tribunal de Conflitos": "Conflitos",
         "Formação": "Formação",
     }

@@ -17,7 +17,7 @@ export const CANONICAL_SECCAO_NAMES = [
     "6.ª Secção (Cível)",
     "7.ª Secção (Cível)",
     "Contencioso",
-    "Tribunal de Conflitos",
+    "Conflitos",
     "Formação",
 ] as const;
 
@@ -36,9 +36,9 @@ export function canonicalizeSeccao(raw?: string | null): string {
     if (/contencioso/i.test(trimmed)) {
         return "Contencioso";
     }
-    // Conflitos (including legacy typo "Cnflitos")
+    // Conflitos (including legacy typo "Cnflitos" and "Tribunal de Conflitos")
     if (/c[o]?nflitos/i.test(trimmed)) {
-        return "Tribunal de Conflitos";
+        return "Conflitos";
     }
     // Formação (Formação de Apreciação Preliminar / Secção de Formação)
     if (/forma[cç][aã]o/i.test(trimmed)) {
@@ -103,11 +103,11 @@ export function getSeccaoVariants(rawOrCanonical: string): string[] {
 
     if (/c[o]?nflitos/i.test(canonical)) {
         return [
+            "Conflitos",
+            "Cnflitos",
             "Tribunal de Conflitos",
             "Tribunal dos Conflitos",
             "Secção de Conflitos",
-            "Conflitos",
-            "Cnflitos",
         ];
     }
 

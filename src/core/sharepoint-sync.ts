@@ -64,7 +64,7 @@ function parseFolderMetadata(parentPath: string): { data?: string; seccao?: stri
         result.seccao = "Contencioso";
         result.area = "Contencioso";
     } else if (/c[o]?nflitos/i.test(lower)) {
-        result.seccao = "Tribunal de Conflitos";
+        result.seccao = "Conflitos";
         result.area = "Conflitos";
     } else if (/forma[cç][aã]o/i.test(lower)) {
         result.seccao = "Formação";

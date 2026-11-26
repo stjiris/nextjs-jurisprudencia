@@ -116,7 +116,7 @@ describe('Elasticsearch Query Building & Search Utilities', () => {
       expect(serialized).toContain('Secção.Index.raw');
       expect(serialized).toContain('Área.Index.raw');
       expect(serialized).toContain('Formação');
-      expect(serialized).toContain('Tribunal de Conflitos');
+      expect(serialized).toContain('Conflitos');
     });
   });
 
