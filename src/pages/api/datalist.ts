@@ -5,7 +5,7 @@ import { DatalistObj } from '@/types/search';
 import { AggregationsAggregationContainer, AggregationsStringTermsAggregate, QueryDslQueryContainer } from '@elastic/elasticsearch/lib/api/types';
 import { JurisprudenciaVersion } from '@stjiris/jurisprudencia-document';
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { mergeSeccaoBuckets, getSeccaoVariants } from '@/core/seccao-util';
+import { CANONICAL_SECCAO_NAMES, mergeSeccaoBuckets, getSeccaoVariants } from '@/core/seccao-util';
 
 const CROSS_FIELD_SECCAO_FROM_AREA = ["Formação", "Tribunal de Conflitos"] as const;
 
@@ -112,6 +112,12 @@ export default LoggerApi(async function datalistHandler(
                 }
             }
             let merged = mergeSeccaoBuckets(combinedBuckets);
+            const existingKeys = new Set(merged.map(m => m.key));
+            for (const canonical of CANONICAL_SECCAO_NAMES) {
+                if (!existingKeys.has(canonical)) {
+                    merged.push({ key: canonical, count: 0 });
+                }
+            }
             if (prefix) {
                 const pfxLower = prefix.toLowerCase();
                 merged = merged.filter(item => {
