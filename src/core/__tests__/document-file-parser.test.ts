@@ -118,5 +118,20 @@ describe('Filename & Document File Parser', () => {
             expect(result.parsedDoc['Secção']?.Show[0]).toBe('Conflitos');
             expect(result.parsedDoc['Área']?.Show[0]).toBe('Conflitos');
         });
+
+        it('should keep closing signature date even when footnotes cite older STJ decisions after it', async () => {
+            const mockText = `
+                Processo n.º 277/26.1YRPRT.S1
+                Acordam em Conferência na 3ª Secção (criminal) do Supremo Tribunal de Justiça
+                I - Relatório
+                O Tribunal da Comarca de Aveiro, Instância Central, 2ª Secção Cível julgou...
+                Supremo Tribunal de Justiça, 4 de novembro de 2026
+                7. Acórdão do STJ, de 22/04/2020, proferido no Processo nº 499/18.9YRLSB.S1
+                59. Neste sentido, Acórdão do Supremo Tribunal de Justiça de 30 de maio de 2017.
+            `;
+            const result = await parseDocumentFile('277-26.1YRPRT.S1.txt', Buffer.from(mockText, 'utf-8'));
+            expect(result.parsedDoc['Data']).toBe('04/11/2026');
+            expect(result.parsedDoc['Secção']?.Show[0]).toBe('3.ª Secção (Criminal)');
+        });
     });
 });

@@ -116,8 +116,10 @@ function parsePortugueseDate(text: string, filename?: string): string | undefine
         if (numDates.length > 0) return numDates[0];
     }
 
-    // 2. Closing signature date: "Lisboa, 18 de Novembro de 2026" or "STJ, 18/11/2026" (take last match)
-    const closingRegex = /(?:Lisboa|Supremo\s+Tribunal\s+de\s+Justi[çc]a|STJ)[,\s]+(?:em\s+)?([^\r\n]{6,45})/gi;
+    // 2. Closing signature date: "Lisboa, 18 de Novembro de 2026" or "Supremo Tribunal de Justiça, 4 de novembro de 2026"
+    // Require comma/dash directly followed by the date (or "em <date>") so footnote precedent citations like
+    // "Acórdão do STJ, de 22/04/2020" or "Acórdão do Supremo Tribunal de Justiça de 30 de maio de 2017" never match.
+    const closingRegex = /(?:^|[.\s])(?:Lisboa|Supremo\s+Tribunal\s+de\s+Justi[çc]a|STJ)\s*[,\-–—]\s*(?:em\s+)?(\d{1,2}\s+de\s+[A-Za-zÀ-ÿ]+\s+de\s+\d{4}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/gi;
     const closingDates: string[] = [];
     let cm: RegExpExecArray | null;
     while ((cm = closingRegex.exec(text)) !== null) {
@@ -158,6 +160,15 @@ function parsePortugueseDate(text: string, filename?: string): string | undefine
     }
 
     return undefined;
+}
+
+function plainTextToHtml(text: string): string {
+    return text
+        .split(/\r?\n/)
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .map(line => `<p>${line}</p>`)
+        .join("");
 }
 
 function canonicalGeneric(field: ControlledField, raw: string[]) {
@@ -224,19 +235,11 @@ export async function parseDocumentFile(
             const asciiHead = buffer.subarray(0, 16).toString("ascii");
             rawText = asciiHead.startsWith("%PDF") ? "" : buffer.toString("utf-8");
         }
-        htmlContent = rawText
-            .split(/\r?\n\r?\n/)
-            .filter(p => p.trim().length > 0)
-            .map(p => `<p>${p.replace(/\r?\n/g, "<br>")}</p>`)
-            .join("");
+        htmlContent = plainTextToHtml(rawText);
     } else {
         // Fallback for plain text or simple extraction
         rawText = buffer.toString("utf-8");
-        htmlContent = rawText
-            .split(/\r?\n\r?\n/)
-            .filter(p => p.trim().length > 0)
-            .map(p => `<p>${p.replace(/\r?\n/g, "<br>")}</p>`)
-            .join("");
+        htmlContent = plainTextToHtml(rawText);
     }
 
     // --- Metadata Detection from Filename & Raw Text ---
@@ -266,13 +269,21 @@ export async function parseDocumentFile(
     let data = parsePortugueseDate(rawText, filename) || formatTodayPt();
 
     // 4. Secção & Área
-    // Check explicit numbered sections, Contencioso, Tribunal de Conflitos, and explicit Formação headers first
-    // so common legal nouns like "formação do contrato" or "conflitos de competência" don't override a numbered section.
+    // Prefer explicit Secção header, STJ "Acordam ... Secção ... STJ" opening, or special tribunals,
+    // ignoring lower-court section mentions ("Tribunal da Comarca / Relação / Instância Central ... 2ª Secção").
     let seccaoCandidate = "";
+    const explicitSeccaoMatch = rawText.match(/^\s*Sec[cç][aã]o\s*[:\-]\s*([^\r\n]+)/im);
+    const acordamSeccaoMatch = rawText.match(/Acordam[^.\r\n]{0,80}?\b([1-7]\.?[ºªa]?\s*Secção(?:\s*\(?[A-Za-záéíóú]+\)?)?|Secção\s+(?:Social|Cível|Criminal|de\s+Contencioso|do\s+Contencioso|de\s+Formação|da\s+Formação|de\s+Conflitos)|Formação)\b[^.\r\n]{0,80}?(?:Supremo\s+Tribunal\s+de\s+Justi[çc]a|STJ|\r?\n|$)/i);
+    const filteredTextForSeccao = rawText
+        .split(/\r?\n/)
+        .filter(line => !/(?:Tribunal\s+da\s+(?:Comarca|Rela[cç][aã]o)|Inst[aâ]ncia\s+Central|Ju[ií]zo\s)/i.test(line))
+        .join("\n");
     const seccaoMatch =
-        rawText.match(/\b([1-7]\.?[ªa]?\s*Secção(?:\s*\([A-Za-záéíóú]+\))?|Secção\s*(?:Cível|Criminal|Social|de\s+Contencioso|do\s+Contencioso|de\s+Formação|da\s+Formação|de\s+Conflitos)|Tribunal\s+(?:de|dos)\s+Conflitos|Formação\s+de\s+Apreciação\s+Preliminar)\b/i)
-        || rawText.match(/(?:Acordam\s+na|Secção\s+da?)\s+(Formação)\b/)
-        || rawText.match(/\b(Contencioso|Conflitos)\b/);
+        explicitSeccaoMatch
+        || acordamSeccaoMatch
+        || filteredTextForSeccao.match(/\b([1-7]\.?[ªa]?\s*Secção(?:\s*\([A-Za-záéíóú]+\))?|Secção\s*(?:Cível|Criminal|Social|de\s+Contencioso|do\s+Contencioso|de\s+Formação|da\s+Formação|de\s+Conflitos)|Tribunal\s+(?:de|dos)\s+Conflitos|Formação\s+de\s+Apreciação\s+Preliminar)\b/i)
+        || filteredTextForSeccao.match(/(?:Acordam\s+na|Secção\s+da?)\s+(Formação)\b/)
+        || filteredTextForSeccao.match(/\b(Contencioso|Conflitos)\b/);
     if (seccaoMatch) {
         seccaoCandidate = seccaoMatch[1].trim();
     }
